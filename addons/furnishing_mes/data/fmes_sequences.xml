@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Document sequences, per docs/03-data-model.md section 12.
+
+            noupdate="1" so a module upgrade never resets a live counter.
+            Sequences for models that arrive in later phases are created now,
+            because an ir.sequence is standalone and creating it early costs
+            nothing while keeping the numbering scheme in one reviewable place.
+        -->
+
+        <record id="seq_fmes_production_plan" model="ir.sequence">
+            <field name="name">Production Plan</field>
+            <field name="code">fmes.production.plan</field>
+            <field name="prefix">PLAN/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="seq_fmes_production_entry" model="ir.sequence">
+            <field name="name">Production Entry</field>
+            <field name="code">fmes.production.entry</field>
+            <field name="prefix">PE/%(year)s%(month)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="seq_fmes_maintenance_schedule" model="ir.sequence">
+            <field name="name">Preventive Maintenance Schedule</field>
+            <field name="code">fmes.maintenance.schedule</field>
+            <field name="prefix">PM/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="seq_fmes_support_ticket" model="ir.sequence">
+            <field name="name">Support Ticket</field>
+            <field name="code">fmes.support.ticket</field>
+            <field name="prefix">TKT/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="seq_fmes_import_batch" model="ir.sequence">
+            <field name="name">Import Batch</field>
+            <field name="code">fmes.import.batch</field>
+            <field name="prefix">IMP/%(year)s%(month)s%(day)s/</field>
+            <field name="padding">3</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+    </data>
+</odoo>

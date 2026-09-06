@@ -125,7 +125,12 @@ The heart of Requirement 1.2. One row = "what this machine can do with this item
 | `company_id`, `active` | | |
 
 Resolution order used by the planning engine:
-**exact product row → product category row → `workcenter.default_capacity`.**
+**exact product row → product category row (walking up the category tree) → no rate.**
+
+A missing rate resolves to `0.0`, not to `workcenter.default_capacity`. That
+field means "pieces produced in parallel", not an hourly rate, so substituting
+it would yield plausible-looking plans built on an unrelated number. A machine
+with no defined rate is skipped by the planner and shown as such.
 
 `_sql_constraints`: `std_output_qty > 0`; no overlapping validity window for the
 same `(workcenter_id, product_id)`.

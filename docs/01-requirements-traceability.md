@@ -16,11 +16,11 @@ completeness at handover.
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
 | 1.1 | Automatically generate production plans | NEW | `fmes.planning.engine`, `fmes.plan.generator` wizard | 3 |
-| 1.2 | Planning based on machine capacity matrix | NEW | `fmes.capacity.matrix` | 2, 3 |
+| 1.2 | Planning based on machine capacity matrix | NEW | `fmes.capacity.matrix` | 2 ✅, 3 |
 | 1.3 | Consider available manpower | NEW | `fmes.manpower.log`, `std_manpower` on capacity matrix | 3, 8 |
 | 1.4 | Consider machine availability | EXTEND | `resource.calendar` + maintenance windows + downtime history | 3 |
 | 1.5 | Machine-wise production schedules | NEW | `fmes.production.plan.line` grouped by `workcenter_id` | 3 |
-| 1.6 | Shift-wise production plans | NEW | `fmes.shift` + `shift_id` on every plan line | 2, 3 |
+| 1.6 | Shift-wise production plans | NEW | `fmes.shift` + `shift_id` on every plan line | 2 ✅, 3 |
 | 1.7 | Reduce Excel dependency | NEW | Scheduling Board (OWL) + XLSX import/export | 3, 4 |
 
 ## R2 — Daily Production Plan & Output Tracking
@@ -39,7 +39,7 @@ completeness at handover.
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
 | 3.1 | Monitor machine-wise | REUSE + NEW | `mrp.workcenter` kanban + live status board | 4, 6 |
-| 3.2 | Monitor department-wise | EXTEND | `department_id` (`hr.department`) on `mrp.workcenter` | 2, 6 |
+| 3.2 | Monitor department-wise | EXTEND | `department_id` (`hr.department`) on `mrp.workcenter` | 2 ✅, 6 |
 | 3.3 | Centralised production database | REUSE | PostgreSQL 15, single Odoo database | 1 ✅ |
 | 3.4 | Historical production records | NEW | `fmes.production.entry`, locked after approval | 4 |
 | 3.5 | Real-time production status | NEW | OWL live board over `mrp.workorder` state | 4, 10 |
@@ -70,7 +70,7 @@ completeness at handover.
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 6.1 | Capture downtime reasons digitally | EXTEND | `mrp.workcenter.productivity.loss` + `fmes_category` | 5 |
+| 6.1 | Capture downtime reasons digitally | EXTEND | `mrp.workcenter.productivity.loss` + `fmes_category` | 2 (taxonomy) ✅, 5 |
 | 6.2 | Measure downtime hours | REUSE | `mrp.workcenter.productivity.duration` | 5 |
 | 6.3 | Analyse loss reasons | NEW | `fmes.downtime.report` pivot and Pareto view | 5, 10 |
 | 6.4 | Generate downtime reports | NEW | QWeb PDF + XLSX Downtime Report | 5, 12 |
@@ -86,7 +86,7 @@ drawn from the customer's existing process:
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 7.1 | Machine master management | REUSE + EXTEND | `maintenance.equipment` to `mrp.workcenter` bridge | 2, 7 |
+| 7.1 | Machine master management | REUSE + EXTEND | `maintenance.equipment` to `mrp.workcenter` bridge | 2 ✅, 7 |
 | 7.2 | Preventive maintenance scheduling | REUSE + NEW | `maintenance.request` recurrence + `fmes.maintenance.schedule` | 7 |
 | 7.3 | Breakdown maintenance tracking | REUSE | `maintenance_type='corrective'` linked to downtime log | 7 |
 | 7.4 | Maintenance history records | REUSE | `maintenance.request` history on equipment | 7 |

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_capacity_matrix_view_list" model="ir.ui.view">
+            <field name="name">fmes.capacity.matrix.list</field>
+            <field name="model">fmes.capacity.matrix</field>
+            <field name="arch" type="xml">
+                <list string="Capacity Matrix" editable="bottom"
+                      multi_edit="1" sample="1">
+                    <field name="workcenter_id"
+                           options="{'no_create': True}"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="product_id"
+                           options="{'no_create': True}"/>
+                    <field name="product_category_id"
+                           options="{'no_create': True}"/>
+                    <field name="scope" optional="hide"/>
+                    <field name="std_output_qty"/>
+                    <field name="time_basis"/>
+                    <field name="basis_hours"
+                           column_invisible="False"
+                           readonly="time_basis == 'per_hour'"
+                           optional="show"/>
+                    <field name="std_output_per_hour" optional="show"
+                           decoration-bf="1"/>
+                    <field name="efficiency_factor" optional="hide"
+                           groups="furnishing_mes.group_fmes_manager"/>
+                    <field name="effective_output_per_hour" optional="hide"/>
+                    <field name="std_manpower"/>
+                    <field name="changeover_minutes" optional="hide"/>
+                    <field name="priority" optional="hide"/>
+                    <field name="date_from" optional="hide"/>
+                    <field name="date_to" optional="hide"/>
+                    <field name="std_output_uom_id" optional="hide"
+                           groups="uom.group_uom"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_capacity_matrix_view_form" model="ir.ui.view">
+            <field name="name">fmes.capacity.matrix.form</field>
+            <field name="model">fmes.capacity.matrix</field>
+            <field name="arch" type="xml">
+                <form string="Capacity Rate">
+                    <sheet>
+                        <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                                invisible="active"/>
+                        <group>
+                            <group string="Applies To">
+                                <field name="workcenter_id"
+                                       options="{'no_create': True}"/>
+                                <field name="department_id"/>
+                                <field name="product_id"
+                                       options="{'no_create': True}"/>
+                                <field name="product_category_id"
+                                       options="{'no_create': True}"
+                                       help="Used when no rate exists for the specific product."/>
+                                <field name="scope"/>
+                                <field name="active" invisible="1"/>
+                                <field name="company_id"
+                                       groups="base.group_multi_company"/>
+                            </group>
+                            <group string="Standard Output">
+                                <field name="std_output_qty"/>
+                                <field name="std_output_uom_id"
+                                       groups="uom.group_uom"/>
+                                <field name="time_basis"/>
+                                <field name="basis_hours"
+                                       readonly="time_basis == 'per_hour'"/>
+                                <field name="std_output_per_hour"/>
+                                <field name="efficiency_factor"
+                                       groups="furnishing_mes.group_fmes_manager"/>
+                                <field name="effective_output_per_hour"
+                                       decoration-bf="1"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Resources">
+                                <field name="std_manpower"/>
+                                <field name="changeover_minutes"/>
+                            </group>
+                            <group string="Validity and Preference">
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="priority"/>
+                            </group>
+                        </group>
+                        <div class="alert alert-info" role="status">
+                            When the planner asks for a rate, the system looks
+                            for a row on the exact product first, then walks up
+                            the product category tree. If nothing matches, the
+                            rate is reported as undefined rather than guessed.
+                        </div>
+                        <notebook>
+                            <page string="Notes" name="notes">
+                                <field name="note"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_capacity_matrix_view_search" model="ir.ui.view">
+            <field name="name">fmes.capacity.matrix.search</field>
+            <field name="model">fmes.capacity.matrix</field>
+            <field name="arch" type="xml">
+                <search string="Capacity Matrix">
+                    <field name="workcenter_id"/>
+                    <field name="product_id"/>
+                    <field name="product_category_id"/>
+                    <field name="department_id"/>
+                    <filter name="filter_product" string="Product Rates"
+                            domain="[('scope', '=', 'product')]"/>
+                    <filter name="filter_category" string="Category Rates"
+                            domain="[('scope', '=', 'category')]"/>
+                    <separator/>
+                    <filter name="filter_current" string="Currently Valid"
+                            domain="['&amp;',
+                                     '|', ('date_from', '=', False), ('date_from', '&lt;=', context_today().strftime('%Y-%m-%d')),
+                                     '|', ('date_to', '=', False), ('date_to', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <separator/>
+                    <filter name="filter_archived" string="Archived"
+                            domain="[('active', '=', False)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_workcenter" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_category" string="Product Category"
+                                context="{'group_by': 'product_category_id'}"/>
+                        <filter name="group_basis" string="Time Basis"
+                                context="{'group_by': 'time_basis'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_capacity_matrix" model="ir.actions.act_window">
+            <field name="name">Capacity Matrix</field>
+            <field name="res_model">fmes.capacity.matrix</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="fmes_capacity_matrix_view_search"/>
+            <field name="context">{'search_default_group_workcenter': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Define what each machine can produce
+                </p>
+                <p>
+                    One row answers: on this machine, for this item, what is the
+                    standard output and how many operators does it need?
+                    Automated production planning is only ever as good as this
+                    table.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

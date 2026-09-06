@@ -285,6 +285,95 @@ import templates.
 
 ---
 
+## Phase 2 — Master Data & Capacity Matrix
+*Completed 2026-09-06 - module version `18.0.2.0.0`*
+
+### Delivered
+
+`fmes.shift`, `fmes.capacity.matrix`, the `mrp.workcenter` machine-master
+extension with the maintenance-equipment bridge, the downtime loss-reason
+taxonomy, five document sequences, ACLs and multi-company record rules, six
+Configuration menus, and a mock plant dataset. Plus CSV import templates in
+`docs/templates/` so the customer can answer Q1-Q7 with a spreadsheet.
+
+### Verified, not assumed
+
+- 68 tests, 0 failed, 0 errors
+- Fresh-database install and in-place upgrade both clean at `--log-level=warn`
+- Demo data read back from the database: 15 machines, and **all 15 bridged to
+  equipment consistently in both directions**
+- All ten downtime categories classified after a fresh install; "Fully
+  Productive Time" correctly left uncategorised
+
+### Decisions
+
+**D2.1 - A missing capacity rate resolves to 0.0, not to `default_capacity`.**
+The data-model doc originally said to fall back to `workcenter.default_capacity`.
+That field means "pieces produced in parallel", not an hourly rate. Substituting
+it would produce plans that look right and are built on an unrelated number.
+Returning zero makes the gap visible to the planner. Doc corrected; the
+behaviour is unit-tested precisely because it is a deliberate choice that looks
+like an omission.
+
+**D2.2 - Odoo's own loss reasons cannot be classified declaratively.**
+`mrp` ships `block_reason0..7` inside `<data noupdate="1">`, which sets
+`ir.model.data.noupdate` on the records themselves. Odoo then skips *any* later
+`<record>` aimed at them, whatever our own data block says — silently, with no
+error. Three tests failed on this before it was understood.
+
+The fix is a `<function>` tag calling
+`_fmes_apply_default_categories()`, which runs on install and on every upgrade.
+It only fills in reasons that are still unclassified, so a plant that
+re-classifies one keeps its change.
+
+*Generalisable:* to modify another module's data records, use a `<function>`,
+never a `<record>` — unless you have confirmed that module declares them with
+`noupdate="0"`.
+
+**D2.3 - Python `@api.constrains` does not fire for fields absent from
+`create()` values.** A capacity row created with neither product nor category
+skipped `_check_target_defined` entirely, because Odoo only validates
+constraints whose fields appear in the write. Two fixes applied: the constraint
+now also lists `workcenter_id` (always present), and a SQL `CHECK` backs it up.
+Odoo inserts before validating, so the SQL constraint is what actually catches
+it — and Odoo still surfaces the friendly message declared beside it.
+
+*Generalisable:* a cross-field "at least one of" rule needs a SQL constraint,
+not just `@api.constrains`.
+
+**D2.4 - `basis_hours` on the capacity matrix.** Plants quote rates per shift or
+per day as often as per hour. Normalising to hours requires knowing what the
+basis represents; hard-coding 8 or 7.5 would silently distort every rate quoted
+that way. The field defaults per basis (1 / 7.5 / 22.5 from A1) and is editable.
+
+**D2.5 - The equipment bridge is two mirrored Many2ones with a context guard.**
+`mrp.workcenter.equipment_id` and `maintenance.equipment.workcenter_id` are kept
+in step by `create`/`write` overrides that pass `fmes_bridge_sync=True` to stop
+the two models writing to each other forever. A SQL `unique(equipment_id)`
+prevents one equipment record serving two machines. This is gap G3 — what Odoo
+Enterprise provides through `mrp_maintenance`.
+
+**D2.6 - Demo data is generated, not hand-written.** A build-time script emits
+the four demo XML files; only the XML is committed. Keeps 40 capacity rows and
+30 order pairs internally consistent, and makes regenerating with the customer's
+real shape a small edit.
+
+### Gotchas found the hard way
+
+- **XML comments may not contain `--`.** Both `--without-demo=all` and a
+  `<!-- ---------- separator ---------- -->` broke the demo files. Validate XML
+  before installing; the parser error points at the comment, not the cause.
+- `_read_group` in Odoo 18 returns recordset keys, so `counts.get(record, 0)`
+  is the correct lookup.
+
+### Next
+
+**Phase 3 - Production Planning Automation.** The planning engine, plan and plan
+lines, the generator wizard, and the OWL scheduling board that replaces the
+Enterprise Gantt.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |
@@ -311,6 +400,13 @@ import templates.
   explicit handling and explicit tests, including in a non-UTC company timezone.
 - **A null target is not a zero target.** "No plan was set" and "we produced
   nothing" must display differently, or the reports mislead.
+- **To modify another module's data records, use a `<function>`, not a
+  `<record>`.** If the owning module declared them under `noupdate="1"`, Odoo
+  skips every later declarative update silently.
+- **XML comments may not contain `--`.** `--without-demo` and `----------`
+  separators both break the parser.
+- **`@api.constrains` only fires for fields present in the write.** An "at least
+  one of these fields" rule needs a SQL `CHECK` as well.
 - **Never use `docker compose exec` to run odoo.** It bypasses the image
   entrypoint (no `--db_*` arguments are built) and collides with the running
   server on port 8069. Use `docker compose run --rm web odoo ...`.

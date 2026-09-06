@@ -178,7 +178,7 @@ class TestMenuStructure(TransactionCase):
             "Configuration must be limited to the Plant Manager")
 
     def test_machines_action_points_at_work_centers(self):
-        action = self.env.ref('furnishing_mes.action_fmes_workcenter')
+        action = self.env.ref('furnishing_mes.action_fmes_machine_master')
         self.assertEqual(action.res_model, 'mrp.workcenter')
 
 

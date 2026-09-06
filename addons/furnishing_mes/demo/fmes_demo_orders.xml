@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Mock plant dataset - customers, sales orders and manufacturing orders
+
+            Stands in for what ERP 10.8 will eventually supply: customer master,
+            item master, BOMs, sales orders and work orders (Requirement 11,
+            deferred). It lives in demo/ and NOT in data/, so a production
+            install without demo data gets none of it, and the customer's
+            real master data is loaded by import instead.
+
+            Shape follows assumptions A1-A7 in
+            docs/15-open-questions-and-assumptions.md: three 8-hour shifts, six
+            departments, fifteen machines, twenty items in four families.
+            Every output rate is a plausible placeholder awaiting customer
+            confirmation (question Q5).
+        -->
+        <!-- ==================== Customer master ==================== -->
+        <record id="partner_archline" model="res.partner">
+            <field name="name">Archline Interiors Pvt Ltd</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Bengaluru</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_urbanest" model="res.partner">
+            <field name="name">UrbaNest Furnishings</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Pune</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_casadeco" model="res.partner">
+            <field name="name">Casa Deco Retail</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Mumbai</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_nestwell" model="res.partner">
+            <field name="name">Nestwell Homes</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Hyderabad</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_woodcraft" model="res.partner">
+            <field name="name">Woodcraft Contract Furniture</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Chennai</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_spacio" model="res.partner">
+            <field name="name">Spacio Office Solutions</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Gurugram</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_livora" model="res.partner">
+            <field name="name">Livora Living</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Kochi</field>
+            <field name="customer_rank">1</field>
+        </record>
+        <record id="partner_habitat9" model="res.partner">
+            <field name="name">Habitat Nine Developers</field>
+            <field name="is_company" eval="True"/>
+            <field name="city">Ahmedabad</field>
+            <field name="customer_rank">1</field>
+        </record>
+
+        <!--
+            Sales orders and manufacturing orders.
+
+            Deadlines are spread from a fortnight in the past to a month
+            ahead, so the backlog, delayed-order and carry-forward
+            features built in Phase 9 have something realistic to
+            classify the moment they exist.
+        -->
+
+        <!-- ==================== Sales orders ==================== -->
+        <record id="so_000" model="sale.order">
+            <field name="partner_id" ref="partner_archline"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=42)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_000_line" model="sale.order.line">
+            <field name="order_id" ref="so_000"/>
+            <field name="product_id" ref="prod_wd_2d"/>
+            <field name="product_uom_qty">40</field>
+        </record>
+        <record id="so_001" model="sale.order">
+            <field name="partner_id" ref="partner_archline"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=36)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_001_line" model="sale.order.line">
+            <field name="order_id" ref="so_001"/>
+            <field name="product_id" ref="prod_kt_base"/>
+            <field name="product_uom_qty">60</field>
+        </record>
+        <record id="so_002" model="sale.order">
+            <field name="partner_id" ref="partner_archline"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_002_line" model="sale.order.line">
+            <field name="order_id" ref="so_002"/>
+            <field name="product_id" ref="prod_of_desk"/>
+            <field name="product_uom_qty">25</field>
+        </record>
+        <record id="so_003" model="sale.order">
+            <field name="partner_id" ref="partner_urbanest"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=39)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_003_line" model="sale.order.line">
+            <field name="order_id" ref="so_003"/>
+            <field name="product_id" ref="prod_wd_3d"/>
+            <field name="product_uom_qty">30</field>
+        </record>
+        <record id="so_004" model="sale.order">
+            <field name="partner_id" ref="partner_urbanest"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=32)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_004_line" model="sale.order.line">
+            <field name="order_id" ref="so_004"/>
+            <field name="product_id" ref="prod_bd_quen"/>
+            <field name="product_uom_qty">20</field>
+        </record>
+        <record id="so_005" model="sale.order">
+            <field name="partner_id" ref="partner_urbanest"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_005_line" model="sale.order.line">
+            <field name="order_id" ref="so_005"/>
+            <field name="product_id" ref="prod_kt_shut"/>
+            <field name="product_uom_qty">240</field>
+        </record>
+        <record id="so_006" model="sale.order">
+            <field name="partner_id" ref="partner_casadeco"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=44)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_006_line" model="sale.order.line">
+            <field name="order_id" ref="so_006"/>
+            <field name="product_id" ref="prod_wd_sld"/>
+            <field name="product_uom_qty">15</field>
+        </record>
+        <record id="so_007" model="sale.order">
+            <field name="partner_id" ref="partner_casadeco"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_007_line" model="sale.order.line">
+            <field name="order_id" ref="so_007"/>
+            <field name="product_id" ref="prod_bd_king"/>
+            <field name="product_uom_qty">18</field>
+        </record>
+        <record id="so_008" model="sale.order">
+            <field name="partner_id" ref="partner_casadeco"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_008_line" model="sale.order.line">
+            <field name="order_id" ref="so_008"/>
+            <field name="product_id" ref="prod_bd_drsr"/>
+            <field name="product_uom_qty">22</field>
+        </record>
+        <record id="so_009" model="sale.order">
+            <field name="partner_id" ref="partner_nestwell"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=34)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_009_line" model="sale.order.line">
+            <field name="order_id" ref="so_009"/>
+            <field name="product_id" ref="prod_kt_wall"/>
+            <field name="product_uom_qty">75</field>
+        </record>
+        <record id="so_010" model="sale.order">
+            <field name="partner_id" ref="partner_nestwell"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_010_line" model="sale.order.line">
+            <field name="order_id" ref="so_010"/>
+            <field name="product_id" ref="prod_kt_tall"/>
+            <field name="product_uom_qty">28</field>
+        </record>
+        <record id="so_011" model="sale.order">
+            <field name="partner_id" ref="partner_nestwell"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_011_line" model="sale.order.line">
+            <field name="order_id" ref="so_011"/>
+            <field name="product_id" ref="prod_wd_pnl"/>
+            <field name="product_uom_qty">320</field>
+        </record>
+        <record id="so_012" model="sale.order">
+            <field name="partner_id" ref="partner_woodcraft"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=37)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_012_line" model="sale.order.line">
+            <field name="order_id" ref="so_012"/>
+            <field name="product_id" ref="prod_of_wkst"/>
+            <field name="product_uom_qty">34</field>
+        </record>
+        <record id="so_013" model="sale.order">
+            <field name="partner_id" ref="partner_woodcraft"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_013_line" model="sale.order.line">
+            <field name="order_id" ref="so_013"/>
+            <field name="product_id" ref="prod_of_tbl"/>
+            <field name="product_uom_qty">6</field>
+        </record>
+        <record id="so_014" model="sale.order">
+            <field name="partner_id" ref="partner_woodcraft"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_014_line" model="sale.order.line">
+            <field name="order_id" ref="so_014"/>
+            <field name="product_id" ref="prod_of_cab"/>
+            <field name="product_uom_qty">40</field>
+        </record>
+        <record id="so_015" model="sale.order">
+            <field name="partner_id" ref="partner_spacio"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=33)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_015_line" model="sale.order.line">
+            <field name="order_id" ref="so_015"/>
+            <field name="product_id" ref="prod_of_ped"/>
+            <field name="product_uom_qty">55</field>
+        </record>
+        <record id="so_016" model="sale.order">
+            <field name="partner_id" ref="partner_spacio"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_016_line" model="sale.order.line">
+            <field name="order_id" ref="so_016"/>
+            <field name="product_id" ref="prod_of_desk"/>
+            <field name="product_uom_qty">48</field>
+        </record>
+        <record id="so_017" model="sale.order">
+            <field name="partner_id" ref="partner_spacio"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_017_line" model="sale.order.line">
+            <field name="order_id" ref="so_017"/>
+            <field name="product_id" ref="prod_of_wkst"/>
+            <field name="product_uom_qty">26</field>
+        </record>
+        <record id="so_018" model="sale.order">
+            <field name="partner_id" ref="partner_livora"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=38)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_018_line" model="sale.order.line">
+            <field name="order_id" ref="so_018"/>
+            <field name="product_id" ref="prod_bd_side"/>
+            <field name="product_uom_qty">90</field>
+        </record>
+        <record id="so_019" model="sale.order">
+            <field name="partner_id" ref="partner_livora"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_019_line" model="sale.order.line">
+            <field name="order_id" ref="so_019"/>
+            <field name="product_id" ref="prod_bd_hdbd"/>
+            <field name="product_uom_qty">35</field>
+        </record>
+        <record id="so_020" model="sale.order">
+            <field name="partner_id" ref="partner_livora"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_020_line" model="sale.order.line">
+            <field name="order_id" ref="so_020"/>
+            <field name="product_id" ref="prod_wd_shf"/>
+            <field name="product_uom_qty">260</field>
+        </record>
+        <record id="so_021" model="sale.order">
+            <field name="partner_id" ref="partner_habitat9"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=35)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_021_line" model="sale.order.line">
+            <field name="order_id" ref="so_021"/>
+            <field name="product_id" ref="prod_kt_drw"/>
+            <field name="product_uom_qty">44</field>
+        </record>
+        <record id="so_022" model="sale.order">
+            <field name="partner_id" ref="partner_habitat9"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_022_line" model="sale.order.line">
+            <field name="order_id" ref="so_022"/>
+            <field name="product_id" ref="prod_kt_base"/>
+            <field name="product_uom_qty">85</field>
+        </record>
+        <record id="so_023" model="sale.order">
+            <field name="partner_id" ref="partner_habitat9"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_023_line" model="sale.order.line">
+            <field name="order_id" ref="so_023"/>
+            <field name="product_id" ref="prod_wd_2d"/>
+            <field name="product_uom_qty">52</field>
+        </record>
+        <record id="so_024" model="sale.order">
+            <field name="partner_id" ref="partner_archline"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_024_line" model="sale.order.line">
+            <field name="order_id" ref="so_024"/>
+            <field name="product_id" ref="prod_bd_quen"/>
+            <field name="product_uom_qty">16</field>
+        </record>
+        <record id="so_025" model="sale.order">
+            <field name="partner_id" ref="partner_urbanest"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_025_line" model="sale.order.line">
+            <field name="order_id" ref="so_025"/>
+            <field name="product_id" ref="prod_of_ped"/>
+            <field name="product_uom_qty">38</field>
+        </record>
+        <record id="so_026" model="sale.order">
+            <field name="partner_id" ref="partner_casadeco"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_026_line" model="sale.order.line">
+            <field name="order_id" ref="so_026"/>
+            <field name="product_id" ref="prod_kt_wall"/>
+            <field name="product_uom_qty">64</field>
+        </record>
+        <record id="so_027" model="sale.order">
+            <field name="partner_id" ref="partner_nestwell"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_027_line" model="sale.order.line">
+            <field name="order_id" ref="so_027"/>
+            <field name="product_id" ref="prod_bd_king"/>
+            <field name="product_uom_qty">12</field>
+        </record>
+        <record id="so_028" model="sale.order">
+            <field name="partner_id" ref="partner_woodcraft"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_028_line" model="sale.order.line">
+            <field name="order_id" ref="so_028"/>
+            <field name="product_id" ref="prod_wd_3d"/>
+            <field name="product_uom_qty">24</field>
+        </record>
+        <record id="so_029" model="sale.order">
+            <field name="partner_id" ref="partner_spacio"/>
+            <field name="date_order" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+        <record id="so_029_line" model="sale.order.line">
+            <field name="order_id" ref="so_029"/>
+            <field name="product_id" ref="prod_of_cab"/>
+            <field name="product_uom_qty">30</field>
+        </record>
+
+        <!-- ==================== Manufacturing orders ==================== -->
+        <record id="mo_000" model="mrp.production">
+            <field name="product_id" ref="prod_wd_2d"/>
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_qty">40</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-15)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-12)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_001" model="mrp.production">
+            <field name="product_id" ref="prod_kt_base"/>
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_qty">60</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-9)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-6)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_002" model="mrp.production">
+            <field name="product_id" ref="prod_of_desk"/>
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="product_qty">25</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=1)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=4)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_003" model="mrp.production">
+            <field name="product_id" ref="prod_wd_3d"/>
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_qty">30</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-12)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-9)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_004" model="mrp.production">
+            <field name="product_id" ref="prod_bd_quen"/>
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="product_qty">20</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-5)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-2)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_005" model="mrp.production">
+            <field name="product_id" ref="prod_kt_shut"/>
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="product_qty">240</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=4)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=7)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_006" model="mrp.production">
+            <field name="product_id" ref="prod_wd_sld"/>
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="product_qty">15</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-17)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-14)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_007" model="mrp.production">
+            <field name="product_id" ref="prod_bd_king"/>
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="product_qty">18</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-1)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=2)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_008" model="mrp.production">
+            <field name="product_id" ref="prod_bd_drsr"/>
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="product_qty">22</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=8)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=11)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_009" model="mrp.production">
+            <field name="product_id" ref="prod_kt_wall"/>
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_qty">75</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-7)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-4)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_010" model="mrp.production">
+            <field name="product_id" ref="prod_kt_tall"/>
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="product_qty">28</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=3)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=6)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_011" model="mrp.production">
+            <field name="product_id" ref="prod_wd_pnl"/>
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="product_qty">320</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-2)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=1)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_012" model="mrp.production">
+            <field name="product_id" ref="prod_of_wkst"/>
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="product_qty">34</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-10)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-7)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_013" model="mrp.production">
+            <field name="product_id" ref="prod_of_tbl"/>
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="product_qty">6</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=6)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=9)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_014" model="mrp.production">
+            <field name="product_id" ref="prod_of_cab"/>
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="product_qty">40</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=12)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=15)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_015" model="mrp.production">
+            <field name="product_id" ref="prod_of_ped"/>
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="product_qty">55</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-6)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-3)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_016" model="mrp.production">
+            <field name="product_id" ref="prod_of_desk"/>
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="product_qty">48</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=2)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=5)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_017" model="mrp.production">
+            <field name="product_id" ref="prod_of_wkst"/>
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="product_qty">26</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=15)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=18)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_018" model="mrp.production">
+            <field name="product_id" ref="prod_bd_side"/>
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="product_qty">90</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-11)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-8)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_019" model="mrp.production">
+            <field name="product_id" ref="prod_bd_hdbd"/>
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="product_qty">35</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=0)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=3)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_020" model="mrp.production">
+            <field name="product_id" ref="prod_wd_shf"/>
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="product_qty">260</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=9)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=12)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_021" model="mrp.production">
+            <field name="product_id" ref="prod_kt_drw"/>
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="product_qty">44</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=-8)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=-5)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_022" model="mrp.production">
+            <field name="product_id" ref="prod_kt_base"/>
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_qty">85</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=5)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=8)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_023" model="mrp.production">
+            <field name="product_id" ref="prod_wd_2d"/>
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_qty">52</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=18)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=21)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_024" model="mrp.production">
+            <field name="product_id" ref="prod_bd_quen"/>
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="product_qty">16</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=11)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=14)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_025" model="mrp.production">
+            <field name="product_id" ref="prod_of_ped"/>
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="product_qty">38</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=17)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=20)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_026" model="mrp.production">
+            <field name="product_id" ref="prod_kt_wall"/>
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_qty">64</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=22)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=25)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_027" model="mrp.production">
+            <field name="product_id" ref="prod_bd_king"/>
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="product_qty">12</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=25)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=28)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_028" model="mrp.production">
+            <field name="product_id" ref="prod_wd_3d"/>
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_qty">24</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=27)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=30)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+        <record id="mo_029" model="mrp.production">
+            <field name="product_id" ref="prod_of_cab"/>
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="product_qty">30</field>
+            <field name="date_start" eval="(DateTime.today() + relativedelta(days=23)).strftime('%Y-%m-%d 06:00:00')"/>
+            <field name="date_deadline" eval="(DateTime.today() + relativedelta(days=26)).strftime('%Y-%m-%d 18:00:00')"/>
+        </record>
+    </data>
+</odoo>

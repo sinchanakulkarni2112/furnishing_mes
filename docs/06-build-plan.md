@@ -41,7 +41,7 @@ Say **"do phase N"**. The following happens, every time, without further prompti
 |---|---|---|---|
 | 0 | Documentation & Project Charter | — | ✅ Complete |
 | 1 | Docker Foundation & Module Skeleton | R3.3 | ✅ |
-| 2 | Master Data & Capacity Matrix | R1.2, R1.6, R3.2, R7.1 | ⬜ |
+| 2 | Master Data & Capacity Matrix | R1.2, R1.6, R3.2, R7.1 | ✅ |
 | 3 | Production Planning Automation | R1 | ⬜ |
 | 4 | Daily Tracking & Shop-Floor Terminal | R2, R3.1, R3.4, R3.5 | ⬜ |
 | 5 | Downtime Management | R6 | ⬜ |
@@ -139,7 +139,9 @@ with an empty but installable `furnishing_mes` module.
 
 ---
 
-## Phase 2 — Master Data & Capacity Matrix
+## Phase 2 — Master Data & Capacity Matrix ✅
+
+*Completed 2026-09-06 · module version `18.0.2.0.0`*
 
 **Goal.** Every master record the planning engine will need, plus the mock ERP
 dataset that stands in for ERP 10.8.
@@ -166,12 +168,33 @@ dataset that stands in for ERP 10.8.
    capacity matrix
 9. ACLs and record rules for every new model
 
-**Exit criteria**
-- A Plant Manager can maintain all masters through the UI
-- Demo data loads cleanly and shows a plausible plant
-- Capacity matrix resolves product → category → default correctly (unit-tested)
+**Exit criteria — all met**
 
-**Commit.** `feat(masters): add shift, machine, capacity matrix and mock ERP demo data`
+| Criterion | Result |
+|---|---|
+| A Plant Manager can maintain all masters through the UI | ✅ Shifts, Machines, Capacity Matrix, Equipment, Departments and Downtime Reasons under Configuration |
+| Demo data loads cleanly and shows a plausible plant | ✅ 6 departments, 3 shifts, 15 machines (all bridged to equipment both ways), 20 items in 4 families, 20 BOMs, 8 customers, 30 sales orders, 30 manufacturing orders, 40 capacity rows |
+| Capacity matrix resolves product → category correctly | ✅ unit-tested, including the category-tree walk |
+| Tests pass | ✅ 68 tests, 0 failed, 0 errors |
+| No warnings on install or upgrade | ✅ clean at `--log-level=warn`, verified on a fresh database too |
+
+**Deviations from the original spec**
+
+1. **A missing capacity rate resolves to 0.0, not to `workcenter.default_capacity`.**
+   The data-model doc originally proposed falling back to the work center's
+   default capacity. That field means "pieces produced in parallel", not an
+   hourly rate, so using it would produce plausible-looking plans built on an
+   unrelated number. A missing rate is now visible to the planner instead.
+   `docs/03-data-model.md` corrected.
+2. **Odoo's own loss reasons are classified from a `<function>` call, not
+   `<record>` tags.** `mrp` ships them inside a `noupdate="1"` block, which sets
+   `ir.model.data.noupdate` on the records — so any later declarative update is
+   skipped silently, whatever our own data block says. Found by a failing test.
+3. **The capacity matrix carries a `basis_hours` field.** Plants quote rates per
+   shift or per day as often as per hour; normalising to an hourly rate needs to
+   know how many hours the basis represents, and guessing it would be wrong.
+
+**Commit.** `feat(masters): add shift, machine, capacity matrix and mock plant dataset`
 
 ---
 

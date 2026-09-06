@@ -1,0 +1,843 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Mock plant dataset - product categories, items and bills of materials
+
+            Stands in for what ERP 10.8 will eventually supply: customer master,
+            item master, BOMs, sales orders and work orders (Requirement 11,
+            deferred). It lives in demo/ and NOT in data/, so a production
+            install without demo data gets none of it, and the customer's
+            real master data is loaded by import instead.
+
+            Shape follows assumptions A1-A7 in
+            docs/15-open-questions-and-assumptions.md: three 8-hour shifts, six
+            departments, fifteen machines, twenty items in four families.
+            Every output rate is a plausible placeholder awaiting customer
+            confirmation (question Q5).
+        -->
+        <!-- ==================== Product categories (A7) ==================== -->
+        <record id="categ_wardrobe" model="product.category">
+            <field name="name">Wardrobes</field>
+        </record>
+        <record id="categ_kitchen" model="product.category">
+            <field name="name">Kitchen Units</field>
+        </record>
+        <record id="categ_office" model="product.category">
+            <field name="name">Office Furniture</field>
+        </record>
+        <record id="categ_bedroom" model="product.category">
+            <field name="name">Bedroom Furniture</field>
+        </record>
+        <record id="categ_raw" model="product.category">
+            <field name="name">Raw Materials</field>
+        </record>
+
+        <!-- ==================== Raw materials ==================== -->
+        <record id="prod_mdf18" model="product.product">
+            <field name="name">MDF Board 18mm</field>
+            <field name="default_code">RM-MDF18</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">620</field>
+            <field name="list_price">620</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_ply12" model="product.product">
+            <field name="name">Plywood 12mm</field>
+            <field name="default_code">RM-PLY12</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">480</field>
+            <field name="list_price">480</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_edge_tape" model="product.product">
+            <field name="name">Edge Banding Tape (m)</field>
+            <field name="default_code">RM-EDGE_TAPE</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">28</field>
+            <field name="list_price">28</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_hinge" model="product.product">
+            <field name="name">Concealed Hinge</field>
+            <field name="default_code">RM-HINGE</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">95</field>
+            <field name="list_price">95</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_handle" model="product.product">
+            <field name="name">Aluminium Handle</field>
+            <field name="default_code">RM-HANDLE</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">210</field>
+            <field name="list_price">210</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_lacquer" model="product.product">
+            <field name="name">PU Lacquer (litre)</field>
+            <field name="default_code">RM-LACQUER</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">540</field>
+            <field name="list_price">540</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_screw" model="product.product">
+            <field name="name">Assembly Screw Pack</field>
+            <field name="default_code">RM-SCREW</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">130</field>
+            <field name="list_price">130</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+        <record id="prod_slide" model="product.product">
+            <field name="name">Drawer Slide Pair</field>
+            <field name="default_code">RM-SLIDE</field>
+            <field name="categ_id" ref="categ_raw"/>
+            <field name="is_storable" eval="True"/>
+            <field name="standard_price">340</field>
+            <field name="list_price">340</field>
+            <field name="purchase_ok" eval="True"/>
+            <field name="sale_ok" eval="False"/>
+        </record>
+
+        <!-- ==================== Finished goods (A7) ==================== -->
+        <record id="prod_wd_2d" model="product.product">
+            <field name="name">2-Door Wardrobe</field>
+            <field name="default_code">WD-2D</field>
+            <field name="categ_id" ref="categ_wardrobe"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">18500</field>
+            <field name="standard_price">11470</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_wd_3d" model="product.product">
+            <field name="name">3-Door Wardrobe</field>
+            <field name="default_code">WD-3D</field>
+            <field name="categ_id" ref="categ_wardrobe"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">26400</field>
+            <field name="standard_price">16368</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_wd_sld" model="product.product">
+            <field name="name">Sliding Wardrobe 6ft</field>
+            <field name="default_code">WD-SLD</field>
+            <field name="categ_id" ref="categ_wardrobe"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">34200</field>
+            <field name="standard_price">21204</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_wd_pnl" model="product.product">
+            <field name="name">Wardrobe Side Panel</field>
+            <field name="default_code">WD-PNL</field>
+            <field name="categ_id" ref="categ_wardrobe"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">2450</field>
+            <field name="standard_price">1519</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_wd_shf" model="product.product">
+            <field name="name">Wardrobe Shelf</field>
+            <field name="default_code">WD-SHF</field>
+            <field name="categ_id" ref="categ_wardrobe"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">890</field>
+            <field name="standard_price">551</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_kt_base" model="product.product">
+            <field name="name">Kitchen Base Unit 600</field>
+            <field name="default_code">KT-BASE</field>
+            <field name="categ_id" ref="categ_kitchen"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">9800</field>
+            <field name="standard_price">6076</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_kt_wall" model="product.product">
+            <field name="name">Kitchen Wall Unit 600</field>
+            <field name="default_code">KT-WALL</field>
+            <field name="categ_id" ref="categ_kitchen"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">7600</field>
+            <field name="standard_price">4712</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_kt_drw" model="product.product">
+            <field name="name">Kitchen Drawer Unit</field>
+            <field name="default_code">KT-DRW</field>
+            <field name="categ_id" ref="categ_kitchen"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">12400</field>
+            <field name="standard_price">7688</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_kt_tall" model="product.product">
+            <field name="name">Kitchen Tall Unit</field>
+            <field name="default_code">KT-TALL</field>
+            <field name="categ_id" ref="categ_kitchen"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">16900</field>
+            <field name="standard_price">10478</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_kt_shut" model="product.product">
+            <field name="name">Kitchen Shutter</field>
+            <field name="default_code">KT-SHUT</field>
+            <field name="categ_id" ref="categ_kitchen"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">1650</field>
+            <field name="standard_price">1023</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_of_desk" model="product.product">
+            <field name="name">Office Desk 1500</field>
+            <field name="default_code">OF-DESK</field>
+            <field name="categ_id" ref="categ_office"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">14200</field>
+            <field name="standard_price">8804</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_of_wkst" model="product.product">
+            <field name="name">Workstation Unit</field>
+            <field name="default_code">OF-WKST</field>
+            <field name="categ_id" ref="categ_office"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">21800</field>
+            <field name="standard_price">13516</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_of_ped" model="product.product">
+            <field name="name">Mobile Pedestal 3-Drawer</field>
+            <field name="default_code">OF-PED</field>
+            <field name="categ_id" ref="categ_office"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">8400</field>
+            <field name="standard_price">5208</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_of_cab" model="product.product">
+            <field name="name">Filing Cabinet</field>
+            <field name="default_code">OF-CAB</field>
+            <field name="categ_id" ref="categ_office"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">11600</field>
+            <field name="standard_price">7192</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_of_tbl" model="product.product">
+            <field name="name">Conference Table 8-Seat</field>
+            <field name="default_code">OF-TBL</field>
+            <field name="categ_id" ref="categ_office"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">38500</field>
+            <field name="standard_price">23870</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_bd_king" model="product.product">
+            <field name="name">King Bed Frame</field>
+            <field name="default_code">BD-KING</field>
+            <field name="categ_id" ref="categ_bedroom"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">28900</field>
+            <field name="standard_price">17918</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_bd_quen" model="product.product">
+            <field name="name">Queen Bed Frame</field>
+            <field name="default_code">BD-QUEN</field>
+            <field name="categ_id" ref="categ_bedroom"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">24600</field>
+            <field name="standard_price">15252</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_bd_side" model="product.product">
+            <field name="name">Bedside Table</field>
+            <field name="default_code">BD-SIDE</field>
+            <field name="categ_id" ref="categ_bedroom"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">5200</field>
+            <field name="standard_price">3224</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_bd_drsr" model="product.product">
+            <field name="name">Dresser with Mirror</field>
+            <field name="default_code">BD-DRSR</field>
+            <field name="categ_id" ref="categ_bedroom"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">19700</field>
+            <field name="standard_price">12214</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+        <record id="prod_bd_hdbd" model="product.product">
+            <field name="name">Upholstered Headboard</field>
+            <field name="default_code">BD-HDBD</field>
+            <field name="categ_id" ref="categ_bedroom"/>
+            <field name="is_storable" eval="True"/>
+            <field name="list_price">9300</field>
+            <field name="standard_price">5766</field>
+            <field name="sale_ok" eval="True"/>
+            <field name="purchase_ok" eval="False"/>
+        </record>
+
+        <!-- ==================== Bills of materials ==================== -->
+        <record id="bom_wd_2d" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_wd_2d_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-WD-2D</field>
+        </record>
+        <record id="bom_wd_2d_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">6</field>
+        </record>
+        <record id="bom_wd_2d_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">12</field>
+        </record>
+        <record id="bom_wd_2d_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_id" ref="prod_hinge"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_wd_2d_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_wd_2d_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_wd_3d" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_wd_3d_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-WD-3D</field>
+        </record>
+        <record id="bom_wd_3d_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">9</field>
+        </record>
+        <record id="bom_wd_3d_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">18</field>
+        </record>
+        <record id="bom_wd_3d_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_id" ref="prod_hinge"/>
+            <field name="product_qty">6</field>
+        </record>
+        <record id="bom_wd_3d_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_wd_3d_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_wd_sld" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_wd_sld_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-WD-SLD</field>
+        </record>
+        <record id="bom_wd_sld_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">11</field>
+        </record>
+        <record id="bom_wd_sld_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">20</field>
+        </record>
+        <record id="bom_wd_sld_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_wd_sld_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_wd_sld_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_wd_pnl" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_wd_pnl_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-WD-PNL</field>
+        </record>
+        <record id="bom_wd_pnl_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_wd_pnl_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_wd_shf" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_wd_shf_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-WD-SHF</field>
+        </record>
+        <record id="bom_wd_shf_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="product_id" ref="prod_ply12"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_wd_shf_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_kt_base" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_kt_base_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-KT-BASE</field>
+        </record>
+        <record id="bom_kt_base_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_kt_base_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">7</field>
+        </record>
+        <record id="bom_kt_base_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_id" ref="prod_hinge"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_kt_base_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_kt_base_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_kt_wall" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_kt_wall_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-KT-WALL</field>
+        </record>
+        <record id="bom_kt_wall_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_kt_wall_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">6</field>
+        </record>
+        <record id="bom_kt_wall_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_id" ref="prod_hinge"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_kt_wall_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_kt_wall_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_kt_drw" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_kt_drw_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-KT-DRW</field>
+        </record>
+        <record id="bom_kt_drw_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_kt_drw_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">8</field>
+        </record>
+        <record id="bom_kt_drw_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_kt_drw_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_kt_drw_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_kt_tall" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_kt_tall_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-KT-TALL</field>
+        </record>
+        <record id="bom_kt_tall_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">5</field>
+        </record>
+        <record id="bom_kt_tall_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">10</field>
+        </record>
+        <record id="bom_kt_tall_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="product_id" ref="prod_hinge"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_kt_tall_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_kt_tall_line_4" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_kt_shut" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_kt_shut_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-KT-SHUT</field>
+        </record>
+        <record id="bom_kt_shut_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_kt_shut_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_kt_shut_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="product_id" ref="prod_lacquer"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_of_desk" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_of_desk_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-OF-DESK</field>
+        </record>
+        <record id="bom_of_desk_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_of_desk_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">8</field>
+        </record>
+        <record id="bom_of_desk_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_of_wkst" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_of_wkst_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-OF-WKST</field>
+        </record>
+        <record id="bom_of_wkst_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">6</field>
+        </record>
+        <record id="bom_of_wkst_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">12</field>
+        </record>
+        <record id="bom_of_wkst_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_of_wkst_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_of_ped" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_of_ped_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-OF-PED</field>
+        </record>
+        <record id="bom_of_ped_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_of_ped_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">6</field>
+        </record>
+        <record id="bom_of_ped_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_of_ped_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_of_cab" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_of_cab_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-OF-CAB</field>
+        </record>
+        <record id="bom_of_cab_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_of_cab_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">7</field>
+        </record>
+        <record id="bom_of_cab_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_of_cab_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_of_tbl" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_of_tbl_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-OF-TBL</field>
+        </record>
+        <record id="bom_of_tbl_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">8</field>
+        </record>
+        <record id="bom_of_tbl_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">14</field>
+        </record>
+        <record id="bom_of_tbl_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="product_id" ref="prod_lacquer"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_of_tbl_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_bd_king" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_bd_king_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-BD-KING</field>
+        </record>
+        <record id="bom_bd_king_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">7</field>
+        </record>
+        <record id="bom_bd_king_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="product_id" ref="prod_ply12"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_bd_king_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">12</field>
+        </record>
+        <record id="bom_bd_king_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_bd_quen" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_bd_quen_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-BD-QUEN</field>
+        </record>
+        <record id="bom_bd_quen_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">6</field>
+        </record>
+        <record id="bom_bd_quen_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="product_id" ref="prod_ply12"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_bd_quen_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">10</field>
+        </record>
+        <record id="bom_bd_quen_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">3</field>
+        </record>
+        <record id="bom_bd_side" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_bd_side_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-BD-SIDE</field>
+        </record>
+        <record id="bom_bd_side_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_bd_side_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_bd_side_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_bd_side_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_bd_drsr" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_bd_drsr_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-BD-DRSR</field>
+        </record>
+        <record id="bom_bd_drsr_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="product_id" ref="prod_mdf18"/>
+            <field name="product_qty">5</field>
+        </record>
+        <record id="bom_bd_drsr_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="product_id" ref="prod_edge_tape"/>
+            <field name="product_qty">9</field>
+        </record>
+        <record id="bom_bd_drsr_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="product_id" ref="prod_slide"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_bd_drsr_line_3" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="product_id" ref="prod_handle"/>
+            <field name="product_qty">4</field>
+        </record>
+        <record id="bom_bd_hdbd" model="mrp.bom">
+            <field name="product_tmpl_id" ref="prod_bd_hdbd_product_template"/>
+            <field name="product_qty">1</field>
+            <field name="type">normal</field>
+            <field name="code">BOM-BD-HDBD</field>
+        </record>
+        <record id="bom_bd_hdbd_line_0" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="product_id" ref="prod_ply12"/>
+            <field name="product_qty">2</field>
+        </record>
+        <record id="bom_bd_hdbd_line_1" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="product_id" ref="prod_lacquer"/>
+            <field name="product_qty">1</field>
+        </record>
+        <record id="bom_bd_hdbd_line_2" model="mrp.bom.line">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="product_id" ref="prod_screw"/>
+            <field name="product_qty">1</field>
+        </record>
+    </data>
+</odoo>

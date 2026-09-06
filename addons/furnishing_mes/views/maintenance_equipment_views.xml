@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- The other half of the machine bridge (gap G3). -->
+        <record id="maintenance_equipment_view_form_fmes" model="ir.ui.view">
+            <field name="name">maintenance.equipment.form.fmes</field>
+            <field name="model">maintenance.equipment</field>
+            <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='category_id']" position="after">
+                    <field name="workcenter_id"
+                           options="{'no_create': True}"
+                           help="The production machine this equipment represents."/>
+                    <field name="fmes_department_id"
+                           invisible="not workcenter_id"/>
+                    <field name="fmes_criticality"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="maintenance_equipment_view_list_fmes" model="ir.ui.view">
+            <field name="name">maintenance.equipment.list.fmes</field>
+            <field name="model">maintenance.equipment</field>
+            <field name="inherit_id" ref="maintenance.hr_equipment_view_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='category_id']" position="after">
+                    <field name="workcenter_id" optional="show"/>
+                    <field name="fmes_department_id" optional="hide"/>
+                    <field name="fmes_criticality" optional="show"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Downtime reason configuration -->
+        <record id="oee_loss_view_list_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.productivity.loss.list.fmes</field>
+            <field name="model">mrp.workcenter.productivity.loss</field>
+            <field name="inherit_id" ref="mrp.oee_loss_tree_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="fmes_category" optional="show"/>
+                    <field name="fmes_is_planned" optional="show"/>
+                    <field name="fmes_requires_maintenance" optional="show"/>
+                    <field name="fmes_alert_threshold_hours" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="oee_loss_view_form_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.productivity.loss.form.fmes</field>
+            <field name="model">mrp.workcenter.productivity.loss</field>
+            <field name="inherit_id" ref="mrp.oee_loss_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='loss_id']" position="after">
+                    <field name="fmes_category"/>
+                    <field name="fmes_is_planned"/>
+                    <field name="fmes_requires_maintenance"/>
+                    <field name="fmes_alert_threshold_hours"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="action_fmes_loss_reason" model="ir.actions.act_window">
+            <field name="name">Downtime Reasons</field>
+            <field name="res_model">mrp.workcenter.productivity.loss</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Configure your downtime reasons
+                </p>
+                <p>
+                    Every stoppage an operator logs carries one of these reasons,
+                    which is what makes loss analysis possible. The
+                    "Effectiveness Category" drives Odoo's OEE calculation and
+                    should not be changed lightly.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

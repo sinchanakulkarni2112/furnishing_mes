@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.1.0.0',
+    'version': '18.0.2.0.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -58,13 +58,28 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         # Security must load before anything that references a group.
         'security/fmes_groups.xml',
         'security/ir.model.access.csv',
+        'security/fmes_record_rules.xml',
 
-        # Views and menus
+        # Configuration data
+        'data/fmes_sequences.xml',
+        'data/fmes_loss_reasons.xml',
+
+        # Views, then menus (menus reference the actions above)
+        'views/fmes_shift_views.xml',
+        'views/fmes_capacity_matrix_views.xml',
+        'views/mrp_workcenter_views.xml',
+        'views/maintenance_equipment_views.xml',
         'views/menus.xml',
     ],
 
     'demo': [
-        # Mock ERP dataset arrives in Phase 2.
+        # Mock plant dataset standing in for ERP 10.8 (Requirement 11,
+        # deferred). Loaded only when demo data is enabled, never in
+        # production.
+        'demo/fmes_demo_masters.xml',
+        'demo/fmes_demo_products.xml',
+        'demo/fmes_demo_capacity.xml',
+        'demo/fmes_demo_orders.xml',
     ],
 
     'assets': {

@@ -31,9 +31,9 @@ answer differs from our assumption.
 |---|---|---|---|
 | Q1 | What are the actual **shift timings and break durations**? Is there a permanent night shift? | 3 × 8 h, 30 min break (`A1`) | Low — shift records are data. Capacity figures shift proportionally |
 | Q2 | What is the **working week and holiday calendar**? Weekly off day? | 6 days, Sunday off (`A2`) | Low — a `resource.calendar` edit |
-| Q3 | Please share the **machine list**: name, code, department, and what each does | 12 machines across 6 departments, typical panel-furniture line (`A4`) | **Medium** — real machine count changes plan volumes and dashboard layout. Import template provided |
+| Q3 | Please share the **machine list**: name, code, department, and what each does | 15 machines across 6 departments, typical panel-furniture line (`A4`) | **Medium** — real machine count changes plan volumes and dashboard layout. Import template provided |
 | Q4 | What is the **department structure** on the shop floor? | Cutting, Edge Banding, CNC/Drilling, Assembly, Finishing, Packing (`A3`) | Medium — affects grouping in every report |
-| Q5 | What are the **standard output rates** per machine per item (or item family)? This is the single most important input to automated planning | Derived plausible rates per machine type (`A5`) | **High** — this *is* the capacity matrix. Plans are only as good as these numbers. An XLSX import template is provided so the customer can fill it in directly |
+| Q5 | What are the **standard output rates** per machine per item (or item family)? This is the single most important input to automated planning | Derived plausible rates per machine type (`A5`) | **High** — this *is* the capacity matrix. Plans are only as good as these numbers. A CSV import template is provided so the customer can fill it in directly |
 | Q6 | What **unit of measure** is production reported in — pieces, sq. ft., running metres? Does it differ by department? | Units (pieces), with UoM per product (`A6`) | Medium — Odoo handles multiple UoMs, but reports must agree on one for totals |
 | Q7 | How many **items / SKUs** are in active production? Are they grouped into families? | ~20 representative items in 4 families (`A7`) | Low — masters are imported |
 
@@ -119,7 +119,7 @@ lives" column names the record or field to change.
 
 | ID | Assumption | Basis | Where it lives |
 |---|---|---|---|
-| `A4` | **12 machines** across the six departments: panel saw ×2, beam saw, edge bander ×2, CNC router ×2, multi-boring, sander, spray booth ×2, press | A representative small-to-mid furnishing plant | `mrp.workcenter` (`demo/`) |
+| `A4` | **15 machines** across the six departments: panel saw ×2, beam saw, edge bander ×2, CNC router ×2, multi-boring, assembly line ×2, hot press, sander, spray booth ×2, packing station | A representative small-to-mid furnishing plant | `mrp.workcenter` (`demo/`) |
 | `A5` | Standard output rates assigned per machine type and product family, with a 0.85 efficiency factor on older machines | Plausible rates for the machine classes above; **explicitly flagged for customer correction** | `fmes.capacity.matrix` |
 | `A6` | Production reported in **units (pieces)**, with each product carrying its own UoM | Simplest consistent basis; Odoo supports per-product UoM natively | `product.uom_id` |
 | `A7` | ~20 items in 4 families (wardrobe, kitchen unit, office desk, bed) | Enough variety to exercise the capacity matrix meaningfully | `product.template` (`demo/`) |
@@ -203,8 +203,10 @@ highest-value asks, in order, are:
 4. **Q36–Q40** — the ERP questions, because their lead time is the longest
 5. **Q32** — SMTP access, needed by Phase 11
 
-Import templates for Q3, Q4, Q5 and Q7 ship in `docs/templates/` from Phase 2, so
-the customer can answer by filling in a spreadsheet rather than writing prose.
+Import templates for Q1, Q3, Q4, Q5, Q6 and Q7 are **available now** in
+[`templates/`](templates/), so the customer can answer by filling in a
+spreadsheet rather than writing prose. Column headers are Odoo field names, so
+the files import directly with no mapping step.
 
 **For the build.** No phase is blocked. Every assumption is a record. When an
 answer arrives:

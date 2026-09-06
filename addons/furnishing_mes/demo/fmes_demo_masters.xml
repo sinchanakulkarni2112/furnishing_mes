@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Mock plant dataset - departments, shifts, equipment and machines
+
+            Stands in for what ERP 10.8 will eventually supply: customer master,
+            item master, BOMs, sales orders and work orders (Requirement 11,
+            deferred). It lives in demo/ and NOT in data/, so a production
+            install without demo data gets none of it, and the customer's
+            real master data is loaded by import instead.
+
+            Shape follows assumptions A1-A7 in
+            docs/15-open-questions-and-assumptions.md: three 8-hour shifts, six
+            departments, fifteen machines, twenty items in four families.
+            Every output rate is a plausible placeholder awaiting customer
+            confirmation (question Q5).
+        -->
+        <!-- ==================== Departments (A3) ==================== -->
+        <record id="dept_cutting" model="hr.department">
+            <field name="name">Cutting</field>
+        </record>
+        <record id="dept_edge_banding" model="hr.department">
+            <field name="name">Edge Banding</field>
+        </record>
+        <record id="dept_cnc" model="hr.department">
+            <field name="name">CNC / Drilling</field>
+        </record>
+        <record id="dept_assembly" model="hr.department">
+            <field name="name">Assembly</field>
+        </record>
+        <record id="dept_finishing" model="hr.department">
+            <field name="name">Finishing</field>
+        </record>
+        <record id="dept_packing" model="hr.department">
+            <field name="name">Packing</field>
+        </record>
+
+        <!-- ==================== Shifts (A1) ==================== -->
+        <record id="shift_a" model="fmes.shift">
+            <field name="name">Shift A</field>
+            <field name="code">A</field>
+            <field name="sequence">10</field>
+            <field name="start_time">6.0</field>
+            <field name="end_time">14.0</field>
+            <field name="break_minutes">30</field>
+            <field name="color">1</field>
+        </record>
+        <record id="shift_b" model="fmes.shift">
+            <field name="name">Shift B</field>
+            <field name="code">B</field>
+            <field name="sequence">20</field>
+            <field name="start_time">14.0</field>
+            <field name="end_time">22.0</field>
+            <field name="break_minutes">30</field>
+            <field name="color">4</field>
+        </record>
+        <record id="shift_c" model="fmes.shift">
+            <field name="name">Shift C</field>
+            <field name="code">C</field>
+            <field name="sequence">30</field>
+            <field name="start_time">22.0</field>
+            <field name="end_time">6.0</field>
+            <field name="break_minutes">30</field>
+            <field name="color">9</field>
+        </record>
+
+        <!-- ============== Maintenance equipment (R7.1) ============== -->
+        <record id="equip_category_machine" model="maintenance.equipment.category">
+            <field name="name">Production Machines</field>
+        </record>
+
+        <record id="equip_saw_01" model="maintenance.equipment">
+            <field name="name">Panel Saw 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-SAW-01-2021</field>
+            <field name="fmes_criticality">high</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_saw_02" model="maintenance.equipment">
+            <field name="name">Panel Saw 02</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-SAW-02-2021</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_beam_01" model="maintenance.equipment">
+            <field name="name">Beam Saw 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-BEAM-01-2021</field>
+            <field name="fmes_criticality">critical</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_edge_01" model="maintenance.equipment">
+            <field name="name">Edge Bander 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-EDGE-01-2021</field>
+            <field name="fmes_criticality">high</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_edge_02" model="maintenance.equipment">
+            <field name="name">Edge Bander 02</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-EDGE-02-2021</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_cnc_01" model="maintenance.equipment">
+            <field name="name">CNC Router 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-CNC-01-2021</field>
+            <field name="fmes_criticality">critical</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_cnc_02" model="maintenance.equipment">
+            <field name="name">CNC Router 02</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-CNC-02-2021</field>
+            <field name="fmes_criticality">high</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_drill_01" model="maintenance.equipment">
+            <field name="name">Multi-Boring 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-DRILL-01-2021</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_assy_01" model="maintenance.equipment">
+            <field name="name">Assembly Line 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-ASSY-01-2021</field>
+            <field name="fmes_criticality">high</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_assy_02" model="maintenance.equipment">
+            <field name="name">Assembly Line 02</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-ASSY-02-2021</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_press_01" model="maintenance.equipment">
+            <field name="name">Hot Press 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-PRESS-01-2021</field>
+            <field name="fmes_criticality">high</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_sand_01" model="maintenance.equipment">
+            <field name="name">Wide Belt Sander 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-SAND-01-2021</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_spray_01" model="maintenance.equipment">
+            <field name="name">Spray Booth 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-SPRAY-01-2021</field>
+            <field name="fmes_criticality">critical</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_spray_02" model="maintenance.equipment">
+            <field name="name">Spray Booth 02</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-SPRAY-02-2021</field>
+            <field name="fmes_criticality">high</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+        <record id="equip_pack_01" model="maintenance.equipment">
+            <field name="name">Packing Station 01</field>
+            <field name="category_id" ref="equip_category_machine"/>
+            <field name="serial_no">SN-PACK-01-2021</field>
+            <field name="fmes_criticality">low</field>
+            <field name="expected_mtbf">120</field>
+        </record>
+
+        <!-- ================== Machines / work centers (A4) ================== -->
+        <!-- equipment_id populates the bridge that Odoo Enterprise -->
+        <!-- provides through mrp_maintenance (gap G3).             -->
+        <record id="wc_saw_01" model="mrp.workcenter">
+            <field name="name">Panel Saw 01</field>
+            <field name="code">SAW-01</field>
+            <field name="fmes_machine_code">SAW-01</field>
+            <field name="department_id" ref="dept_cutting"/>
+            <field name="equipment_id" ref="equip_saw_01"/>
+            <field name="fmes_std_manpower">2</field>
+            <field name="fmes_criticality">high</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">420</field>
+        </record>
+        <record id="wc_saw_02" model="mrp.workcenter">
+            <field name="name">Panel Saw 02</field>
+            <field name="code">SAW-02</field>
+            <field name="fmes_machine_code">SAW-02</field>
+            <field name="department_id" ref="dept_cutting"/>
+            <field name="equipment_id" ref="equip_saw_02"/>
+            <field name="fmes_std_manpower">2</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">420</field>
+        </record>
+        <record id="wc_beam_01" model="mrp.workcenter">
+            <field name="name">Beam Saw 01</field>
+            <field name="code">BEAM-01</field>
+            <field name="fmes_machine_code">BEAM-01</field>
+            <field name="department_id" ref="dept_cutting"/>
+            <field name="equipment_id" ref="equip_beam_01"/>
+            <field name="fmes_std_manpower">2</field>
+            <field name="fmes_criticality">critical</field>
+            <field name="fmes_is_bottleneck" eval="True"/>
+            <field name="costs_hour">650</field>
+        </record>
+        <record id="wc_edge_01" model="mrp.workcenter">
+            <field name="name">Edge Bander 01</field>
+            <field name="code">EDGE-01</field>
+            <field name="fmes_machine_code">EDGE-01</field>
+            <field name="department_id" ref="dept_edge_banding"/>
+            <field name="equipment_id" ref="equip_edge_01"/>
+            <field name="fmes_std_manpower">1</field>
+            <field name="fmes_criticality">high</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">380</field>
+        </record>
+        <record id="wc_edge_02" model="mrp.workcenter">
+            <field name="name">Edge Bander 02</field>
+            <field name="code">EDGE-02</field>
+            <field name="fmes_machine_code">EDGE-02</field>
+            <field name="department_id" ref="dept_edge_banding"/>
+            <field name="equipment_id" ref="equip_edge_02"/>
+            <field name="fmes_std_manpower">1</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">380</field>
+        </record>
+        <record id="wc_cnc_01" model="mrp.workcenter">
+            <field name="name">CNC Router 01</field>
+            <field name="code">CNC-01</field>
+            <field name="fmes_machine_code">CNC-01</field>
+            <field name="department_id" ref="dept_cnc"/>
+            <field name="equipment_id" ref="equip_cnc_01"/>
+            <field name="fmes_std_manpower">1</field>
+            <field name="fmes_criticality">critical</field>
+            <field name="fmes_is_bottleneck" eval="True"/>
+            <field name="costs_hour">720</field>
+        </record>
+        <record id="wc_cnc_02" model="mrp.workcenter">
+            <field name="name">CNC Router 02</field>
+            <field name="code">CNC-02</field>
+            <field name="fmes_machine_code">CNC-02</field>
+            <field name="department_id" ref="dept_cnc"/>
+            <field name="equipment_id" ref="equip_cnc_02"/>
+            <field name="fmes_std_manpower">1</field>
+            <field name="fmes_criticality">high</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">720</field>
+        </record>
+        <record id="wc_drill_01" model="mrp.workcenter">
+            <field name="name">Multi-Boring 01</field>
+            <field name="code">DRILL-01</field>
+            <field name="fmes_machine_code">DRILL-01</field>
+            <field name="department_id" ref="dept_cnc"/>
+            <field name="equipment_id" ref="equip_drill_01"/>
+            <field name="fmes_std_manpower">1</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">310</field>
+        </record>
+        <record id="wc_assy_01" model="mrp.workcenter">
+            <field name="name">Assembly Line 01</field>
+            <field name="code">ASSY-01</field>
+            <field name="fmes_machine_code">ASSY-01</field>
+            <field name="department_id" ref="dept_assembly"/>
+            <field name="equipment_id" ref="equip_assy_01"/>
+            <field name="fmes_std_manpower">4</field>
+            <field name="fmes_criticality">high</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">260</field>
+        </record>
+        <record id="wc_assy_02" model="mrp.workcenter">
+            <field name="name">Assembly Line 02</field>
+            <field name="code">ASSY-02</field>
+            <field name="fmes_machine_code">ASSY-02</field>
+            <field name="department_id" ref="dept_assembly"/>
+            <field name="equipment_id" ref="equip_assy_02"/>
+            <field name="fmes_std_manpower">3</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">260</field>
+        </record>
+        <record id="wc_press_01" model="mrp.workcenter">
+            <field name="name">Hot Press 01</field>
+            <field name="code">PRESS-01</field>
+            <field name="fmes_machine_code">PRESS-01</field>
+            <field name="department_id" ref="dept_assembly"/>
+            <field name="equipment_id" ref="equip_press_01"/>
+            <field name="fmes_std_manpower">2</field>
+            <field name="fmes_criticality">high</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">480</field>
+        </record>
+        <record id="wc_sand_01" model="mrp.workcenter">
+            <field name="name">Wide Belt Sander 01</field>
+            <field name="code">SAND-01</field>
+            <field name="fmes_machine_code">SAND-01</field>
+            <field name="department_id" ref="dept_finishing"/>
+            <field name="equipment_id" ref="equip_sand_01"/>
+            <field name="fmes_std_manpower">1</field>
+            <field name="fmes_criticality">medium</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">290</field>
+        </record>
+        <record id="wc_spray_01" model="mrp.workcenter">
+            <field name="name">Spray Booth 01</field>
+            <field name="code">SPRAY-01</field>
+            <field name="fmes_machine_code">SPRAY-01</field>
+            <field name="department_id" ref="dept_finishing"/>
+            <field name="equipment_id" ref="equip_spray_01"/>
+            <field name="fmes_std_manpower">2</field>
+            <field name="fmes_criticality">critical</field>
+            <field name="fmes_is_bottleneck" eval="True"/>
+            <field name="costs_hour">540</field>
+        </record>
+        <record id="wc_spray_02" model="mrp.workcenter">
+            <field name="name">Spray Booth 02</field>
+            <field name="code">SPRAY-02</field>
+            <field name="fmes_machine_code">SPRAY-02</field>
+            <field name="department_id" ref="dept_finishing"/>
+            <field name="equipment_id" ref="equip_spray_02"/>
+            <field name="fmes_std_manpower">2</field>
+            <field name="fmes_criticality">high</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">540</field>
+        </record>
+        <record id="wc_pack_01" model="mrp.workcenter">
+            <field name="name">Packing Station 01</field>
+            <field name="code">PACK-01</field>
+            <field name="fmes_machine_code">PACK-01</field>
+            <field name="department_id" ref="dept_packing"/>
+            <field name="equipment_id" ref="equip_pack_01"/>
+            <field name="fmes_std_manpower">3</field>
+            <field name="fmes_criticality">low</field>
+            <field name="fmes_is_bottleneck" eval="False"/>
+            <field name="costs_hour">180</field>
+        </record>
+    </data>
+</odoo>

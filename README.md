@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 1 of 15 — Docker foundation and module skeleton ✅ |
-| **Next** | Phase 2 — Master data and capacity matrix |
-| **Module version** | `18.0.1.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community · 19 tests passing · no install warnings |
+| **Phase** | 2 of 15 — Master data and capacity matrix ✅ |
+| **Next** | Phase 3 — Production planning automation |
+| **Module version** | `18.0.2.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community · 68 tests passing · no install warnings |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_shift_view_list" model="ir.ui.view">
+            <field name="name">fmes.shift.list</field>
+            <field name="model">fmes.shift</field>
+            <field name="arch" type="xml">
+                <list string="Shifts" multi_edit="1" sample="1">
+                    <field name="sequence" widget="handle"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="start_time" widget="float_time"/>
+                    <field name="end_time" widget="float_time"/>
+                    <field name="break_minutes"/>
+                    <field name="duration_hours" widget="float_time" optional="show"/>
+                    <field name="net_hours" widget="float_time"
+                           decoration-bf="1"
+                           help="Capacity available for planning"/>
+                    <field name="crosses_midnight" optional="hide"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_shift_view_form" model="ir.ui.view">
+            <field name="name">fmes.shift.form</field>
+            <field name="model">fmes.shift</field>
+            <field name="arch" type="xml">
+                <form string="Shift">
+                    <sheet>
+                        <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                                invisible="active"/>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1><field name="name" placeholder="e.g. Shift A"/></h1>
+                        </div>
+                        <group>
+                            <group string="Identification">
+                                <field name="code" placeholder="A"/>
+                                <field name="sequence"/>
+                                <field name="company_id"
+                                       groups="base.group_multi_company"/>
+                                <field name="active" invisible="1"/>
+                            </group>
+                            <group string="Timing">
+                                <field name="start_time" widget="float_time"/>
+                                <field name="end_time" widget="float_time"/>
+                                <field name="break_minutes"/>
+                                <field name="crosses_midnight"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Capacity">
+                                <field name="duration_hours" widget="float_time"/>
+                                <field name="net_hours" widget="float_time"/>
+                                <div class="text-muted" colspan="2">
+                                    Net hours are what the planning engine treats
+                                    as available capacity for every machine
+                                    working this shift.
+                                </div>
+                            </group>
+                            <group string="Scheduling">
+                                <field name="resource_calendar_id"/>
+                                <field name="color" widget="color_picker"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Notes" name="notes">
+                                <field name="note" placeholder="Anything the planners should know about this shift."/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_shift_view_search" model="ir.ui.view">
+            <field name="name">fmes.shift.search</field>
+            <field name="model">fmes.shift</field>
+            <field name="arch" type="xml">
+                <search string="Shifts">
+                    <field name="name"/>
+                    <field name="code"/>
+                    <filter name="filter_night" string="Night Shifts"
+                            domain="[('crosses_midnight', '=', True)]"/>
+                    <separator/>
+                    <filter name="filter_archived" string="Archived"
+                            domain="[('active', '=', False)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_company" string="Company"
+                                context="{'group_by': 'company_id'}"
+                                groups="base.group_multi_company"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_shift" model="ir.actions.act_window">
+            <field name="name">Shifts</field>
+            <field name="res_model">fmes.shift</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="fmes_shift_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Define your first shift
+                </p>
+                <p>
+                    Shifts are the time dimension of every plan, target and
+                    report. Net hours — duration minus breaks — is the capacity
+                    the planning engine works with.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>
