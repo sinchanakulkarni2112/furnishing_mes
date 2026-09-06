@@ -37,7 +37,7 @@ more than with the database. Budget roughly 20 GB per year at the expected volum
         └────────────┬───────────────┘
                      ▼  127.0.0.1:8069
         ┌────────────────────────────────────────┐
-        │  Docker: fmes-net (internal bridge)    │
+        │  Docker: internal bridge network       │
         │   web (odoo:18.0, workers=4)           │
         │   db  (postgres:15, no published port) │
         └────────────────────────────────────────┘
@@ -133,7 +133,9 @@ mkdir -p "$DEST"
 docker compose exec -T db pg_dump -U odoo -Fc furnishing_mes \
   > "$DEST/db_$STAMP.dump"
 
-docker run --rm -v fmes-web-data:/data -v "$DEST":/backup alpine \
+# Volumes are prefixed with the Compose project name.
+FILESTORE_VOLUME="${COMPOSE_PROJECT_NAME:-furnishing-mes}_fmes-web-data"
+docker run --rm -v "$FILESTORE_VOLUME":/data -v "$DEST":/backup alpine \
   tar czf "/backup/filestore_$STAMP.tar.gz" -C /data .
 
 find "$DEST" -type f -mtime +30 -delete
@@ -152,7 +154,7 @@ docker compose stop web
 docker compose exec -T db dropdb -U odoo furnishing_mes
 docker compose exec -T db createdb -U odoo furnishing_mes
 docker compose exec -T db pg_restore -U odoo -d furnishing_mes < db_YYYYMMDD.dump
-docker run --rm -v fmes-web-data:/data -v /var/backups/fmes:/backup alpine \
+docker run --rm -v furnishing-mes_fmes-web-data:/data -v /var/backups/fmes:/backup alpine \
   sh -c "rm -rf /data/* && tar xzf /backup/filestore_YYYYMMDD.tar.gz -C /data"
 docker compose start web
 ```

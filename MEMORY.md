@@ -252,6 +252,22 @@ it will fail the moment a later phase adds a model without an
 exists and is installed, so accidentally depending on an Enterprise-only module
 fails the suite rather than the customer's deployment.
 
+**D1.8 — Container, volume and network names are not pinned.**
+Found by cloning the repo to a second directory and running the documented
+setup: because `container_name` and the volume `name:` keys were hardcoded, the
+second clone attached to the first one's PostgreSQL data directory with a
+different `POSTGRES_PASSWORD` and died with
+`password authentication failed for user "odoo"`.
+
+Compose now prefixes everything with the project name, so two clones are
+independent, and `COMPOSE_PROJECT_NAME` gives full isolation. Nothing was lost
+by removing the pins — every command in the docs goes through
+`docker compose <service>`, never `docker exec <container-name>`.
+
+Consequence for Phase 15: the backup script must reference
+`${COMPOSE_PROJECT_NAME:-furnishing-mes}_fmes-web-data`, not `fmes-web-data`.
+The deployment doc has been corrected.
+
 ### Environment notes for this machine
 
 - Docker Desktop must be running; it was not, and had to be started.

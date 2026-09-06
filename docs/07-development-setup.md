@@ -250,6 +250,25 @@ are tagged. See [`10-testing-qa.md`](10-testing-qa.md).
 
 ---
 
+## 8b. Running a Second Instance
+
+Containers, volumes and the network are all prefixed with the Compose project
+name (`furnishing-mes`). To run a second clone on the same machine — a review
+copy alongside your working copy, say — give it its own project name and ports:
+
+```bash
+export COMPOSE_PROJECT_NAME=fmes-review     # PowerShell: $env:COMPOSE_PROJECT_NAME="fmes-review"
+# and set ODOO_PORT / ODOO_LONGPOLL_PORT to free values in that clone's .env
+docker compose up -d
+```
+
+Volume names are deliberately **not** pinned in `docker-compose.yml`. If they
+were, a second clone would attach to the first one's PostgreSQL data directory
+with a different `POSTGRES_PASSWORD` and fail with
+`password authentication failed for user "odoo"`.
+
+---
+
 ## 9. Resetting
 
 ```bash

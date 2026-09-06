@@ -6,13 +6,15 @@
 #
 # Usage:  cp .env.example .env  &&  docker compose up -d
 
+# The project name prefixes containers, volumes and the network. Override it
+# with COMPOSE_PROJECT_NAME to run a second, fully isolated instance from
+# another clone on the same machine.
 name: furnishing-mes
 
 services:
 
   db:
     image: postgres:15
-    container_name: fmes-db
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-odoo}
@@ -35,7 +37,6 @@ services:
 
   web:
     image: odoo:18.0
-    container_name: fmes-web
     depends_on:
       db:
         condition: service_healthy
@@ -76,13 +77,14 @@ services:
 # master password is verified through the database manager (it re-hashes the
 # stored value). A read-only mount would make that raise.
 
+# Volume and network names are deliberately NOT pinned. Compose prefixes them
+# with the project name, so two clones never fight over the same database
+# volume — a pinned name would let a second clone attach to the first one's
+# data directory with different credentials and fail authentication.
 volumes:
   fmes-db-data:
-    name: fmes-db-data
   fmes-web-data:
-    name: fmes-web-data
 
 networks:
   fmes-net:
-    name: fmes-net
     driver: bridge
