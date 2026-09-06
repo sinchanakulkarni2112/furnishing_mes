@@ -185,3 +185,11 @@ with its manifest and the four security groups, the dormant ERP sync mixin, the
   nothing" must display differently, or the reports mislead.
 - **Windows bind-mount performance** on `C:\` is poor — clone into the WSL 2
   filesystem.
+- **Push uses the `github-sinchan` SSH alias, not HTTPS.** This machine has two
+  GitHub identities. The default HTTPS credential authenticates as
+  `shreyassridhar44`, which has no write access to the repo and gets a 403. The
+  remote is therefore set to
+  `git@github-sinchan:sinchanakulkarni2112/furnishing_mes.git`, which uses
+  `~/.ssh/github-sinchan` and authenticates as `sinchanakulkarni2112`. If a
+  fresh clone cannot push, this is why — the remote URL is local git config and
+  is not carried in the repository.
