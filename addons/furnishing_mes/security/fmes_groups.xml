@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Furnishing MES role hierarchy.
+
+            Four tiers, per docs/04-security-model.md:
+
+                base.group_portal                     -> Customer  (external)
+
+                base.group_user                       (internal)
+                  +- group_fmes_operator
+                       +- group_fmes_supervisor
+                            +- group_fmes_manager
+
+            Odoo's implied_ids make the internal tiers cumulative: a Supervisor
+            automatically holds every Operator right, a Plant Manager every
+            Supervisor right. Only the increment is declared at each level.
+
+            The Customer tier uses Odoo's native base.group_portal; no custom
+            group is needed, and portal access is enforced by record rules on
+            partner_id (Phase 13).
+
+            Menu visibility is never the access control. Every restriction is
+            enforced by ir.model.access.csv and ir.rule.
+        -->
+
+        <record id="module_category_furnishing_mes" model="ir.module.category">
+            <field name="name">Furnishing MES</field>
+            <field name="description">Roles for the Manufacturing Execution System.</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Tier 1 — Operator / Employee                                -->
+        <!-- ============================================================ -->
+        <record id="group_fmes_operator" model="res.groups">
+            <field name="name">Operator</field>
+            <field name="category_id" ref="module_category_furnishing_mes"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">Shop-floor access only. Sees the Shop-Floor
+Terminal and the work orders for the work centers they are allocated to today.
+Records production output and logs work-center downtime. Cannot see costs,
+planning, backlog, reports, or other departments.</field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Tier 2 — Supervisor                                         -->
+        <!-- ============================================================ -->
+        <record id="group_fmes_supervisor" model="res.groups">
+            <field name="name">Supervisor</field>
+            <field name="category_id" ref="module_category_furnishing_mes"/>
+            <field name="implied_ids" eval="[
+                (4, ref('furnishing_mes.group_fmes_operator')),
+                (4, ref('mrp.group_mrp_user')),
+                (4, ref('maintenance.group_equipment_manager')),
+            ]"/>
+            <field name="comment">Shift scheduling and daily plan release for
+their own departments. Reviews and approves production entries and downtime
+logs, escalates downtime to maintenance, and manages operator allocation. Reads
+dashboards and reports scoped to their departments. Cannot manage users, alert
+rules or the capacity matrix.</field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Tier 3 — Plant Manager                                      -->
+        <!-- ============================================================ -->
+        <record id="group_fmes_manager" model="res.groups">
+            <field name="name">Plant Manager</field>
+            <field name="category_id" ref="module_category_furnishing_mes"/>
+            <field name="implied_ids" eval="[
+                (4, ref('furnishing_mes.group_fmes_supervisor')),
+                (4, ref('mrp.group_mrp_manager')),
+                (4, ref('stock.group_stock_manager')),
+            ]"/>
+            <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+            <field name="comment">Full control: production planning, maintenance,
+inventory, costing, master data, alert rules and executive MIS dashboards. The
+only role that can unlock an approved production entry or change the machine
+capacity matrix.</field>
+        </record>
+
+    </data>
+</odoo>

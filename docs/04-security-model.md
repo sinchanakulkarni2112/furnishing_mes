@@ -188,15 +188,16 @@ the value is stripped server-side from `read()` — not merely hidden in the vie
 
 ### 5.1 Odoo configuration (`config/odoo.conf`)
 
-| Setting | Value | Why |
-|---|---|---|
-| `admin_passwd` | Strong, from `.env`, never committed | Guards the database manager |
-| `list_db` | `False` | Hides the database list from the login page |
-| `dbfilter` | `^%d$` or explicit name | Prevents cross-database probing |
-| `proxy_mode` | `True` (production only) | Correct client IPs behind a reverse proxy |
-| `workers` | `4` in production, `0` in dev | Multiprocess in prod; single process for the debugger |
-| `limit_time_real`, `limit_memory_hard` | Set in production | Contains runaway requests |
-| `log_level` | `info` prod, `debug` dev | |
+| Setting | Development | Production | Why |
+|---|---|---|---|
+| `admin_passwd` | Explicit placeholder in the committed config | Strong value in a git-ignored config | Guards the database manager. Odoo 18 has **no `--admin-passwd` CLI option**, so this can only live in a config file — it cannot be injected from `.env`. The development value is stated openly rather than left at Odoo's silent default of `admin` |
+| Port binding | `127.0.0.1` only | `127.0.0.1`, behind the reverse proxy | This is what makes the development master password harmless: the database manager is not reachable from the network |
+| `list_db` | `True` | `False` | The first-run database wizard needs it. Production disables the database manager entirely |
+| `dbfilter` | unset | `^furnishing_mes$` | Prevents cross-database probing |
+| `proxy_mode` | `False` | `True` | Correct client IPs behind a reverse proxy |
+| `workers` | `0` | `(2 x cores) + 1` | Single process in dev so breakpoints work |
+| `max_cron_threads` | `2` | `2` or more | Four overnight crons would otherwise serialise |
+| `log_level` | `info` | `warn` | |
 
 ### 5.2 Secrets
 
@@ -256,7 +257,7 @@ the value is stripped server-side from `read()` — not merely hidden in the vie
 | T5 | Portal customer reaches any `/web` backoffice URL | Redirected to `/my` |
 | T6 | Operator reads `mrp.workcenter.costs_hour` | Field absent from `read()` |
 | T7 | Any user writes to `fmes.backlog.snapshot` | `AccessError` |
-| T8 | Database manager at `/web/database/manager` | Blocked by `list_db = False` |
+| T8 | Database manager at `/web/database/manager` | Blocked by `list_db = False` in production |
 | T9 | Direct connection to PostgreSQL from the host | Refused, no published port |
 | T10 | Company A user reads Company B records | Empty recordset |
 

@@ -1,0 +1,88 @@
+# Furnishing MES — development stack
+#
+# Two services only: Odoo 18 Community and PostgreSQL 15.
+# No Celery, Redis or Nginx — Odoo's own ir.cron and web server cover those roles.
+# Production overrides arrive in docker-compose.prod.yml (Phase 15).
+#
+# Usage:  cp .env.example .env  &&  docker compose up -d
+
+name: furnishing-mes
+
+services:
+
+  db:
+    image: postgres:15
+    container_name: fmes-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env — copy .env.example and choose a strong value}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # So `make psql` does not prompt for a password.
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - fmes-db-data:/var/lib/postgresql/data
+    networks:
+      - fmes-net
+    restart: unless-stopped
+    # No published port: the database is reachable only on the internal network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    image: odoo:18.0
+    container_name: fmes-web
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Consumed by the official Odoo image entrypoint, which turns these into
+      # --db_host / --db_port / --db_user / --db_password arguments for the
+      # main server process.
+      HOST: db
+      PORT: 5432
+      USER: ${POSTGRES_USER:-odoo}
+      PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      # Standard libpq variables, read directly by psycopg2.
+      #
+      # `docker compose exec` bypasses the image entrypoint, so an exec'd odoo
+      # (make upgrade / test / shell) never receives the --db_* arguments above
+      # and would fall back to a local unix socket that does not exist. These
+      # give it the connection instead, without writing any credential into the
+      # committed config/odoo.conf.
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-odoo}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    ports:
+      # Binds to localhost by default. Set ODOO_BIND=0.0.0.0 in .env to reach the
+      # instance from another device on the LAN (e.g. a shop-floor tablet).
+      - "${ODOO_BIND:-127.0.0.1}:${ODOO_PORT:-8069}:8069"
+      # Websocket / longpolling. Only used when workers > 0 (production).
+      - "${ODOO_BIND:-127.0.0.1}:${ODOO_LONGPOLL_PORT:-8072}:8072"
+    volumes:
+      - fmes-web-data:/var/lib/odoo          # filestore: attachments, report PDFs
+      - ./addons:/mnt/extra-addons:ro        # our module, live-editable from the host
+      - ./config:/etc/odoo                   # odoo.conf (writable: see note below)
+    networks:
+      - fmes-net
+    restart: unless-stopped
+
+# ./config is mounted read-write because Odoo may rewrite odoo.conf when the
+# master password is verified through the database manager (it re-hashes the
+# stored value). A read-only mount would make that raise.
+
+volumes:
+  fmes-db-data:
+    name: fmes-db-data
+  fmes-web-data:
+    name: fmes-web-data
+
+networks:
+  fmes-net:
+    name: fmes-net
+    driver: bridge

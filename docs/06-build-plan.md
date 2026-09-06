@@ -40,7 +40,7 @@ Say **"do phase N"**. The following happens, every time, without further prompti
 | Phase | Title | Covers | Status |
 |---|---|---|---|
 | 0 | Documentation & Project Charter | — | ✅ Complete |
-| 1 | Docker Foundation & Module Skeleton | R3.3 | ⬜ |
+| 1 | Docker Foundation & Module Skeleton | R3.3 | ✅ |
 | 2 | Master Data & Capacity Matrix | R1.2, R1.6, R3.2, R7.1 | ⬜ |
 | 3 | Production Planning Automation | R1 | ⬜ |
 | 4 | Daily Tracking & Shop-Floor Terminal | R2, R3.1, R3.4, R3.5 | ⬜ |
@@ -75,7 +75,9 @@ Phases 5 and 8 both depend only on 4 and may be reordered if needed.
 
 ---
 
-## Phase 1 — Docker Foundation & Module Skeleton
+## Phase 1 — Docker Foundation & Module Skeleton ✅
+
+*Completed 2026-09-06 · module version `18.0.1.0.0`*
 
 **Goal.** A reviewer clones the repo, runs one command, and logs into an Odoo
 with an empty but installable `furnishing_mes` module.
@@ -86,7 +88,7 @@ with an empty but installable `furnishing_mes` module.
    volumes `fmes-db-data` and `fmes-web-data`, bind mounts for `./addons` and
    `./config`, internal bridge network, `restart: unless-stopped`, healthcheck on
    `db` with `depends_on: condition: service_healthy`
-2. `config/odoo.conf` — `addons_path`, `list_db = False`, dev-friendly logging
+2. `config/odoo.conf` — `addons_path`, database-manager policy, dev-friendly logging
 3. `.env.example` and `.env` handling; `.gitignore` (`.env`, `*.pyc`,
    `__pycache__/`, `.idea/`, `.vscode/`, filestore artefacts)
 4. `addons/furnishing_mes/` skeleton:
@@ -103,11 +105,35 @@ with an empty but installable `furnishing_mes` module.
    `test`, `shell`, `psql`
 7. `tests/test_install.py` — asserts the module installs and the groups exist
 
-**Exit criteria**
-- `docker compose up -d` from a clean clone brings up a working Odoo at `:8069`
-- The module appears in Apps and installs without error
-- The four groups exist with correct `implied_ids`
-- `make test` passes
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| `docker compose up -d` from a clean clone brings up a working Odoo at `:8069` | ✅ `/web/login` and `/web/health` return 200 |
+| The module appears in Apps and installs without error | ✅ `furnishing_mes` state `installed`, version `18.0.1.0.0` |
+| The four role tiers exist with correct `implied_ids` | ✅ Operator → Internal User; Supervisor → Operator + MRP User + Equipment Manager; Plant Manager → Supervisor + MRP Manager + Stock Manager; Customer = `base.group_portal` |
+| `make test` passes | ✅ 19 tests, 0 failed, 0 errors |
+| No warnings on install or upgrade | ✅ clean at `--log-level=warn` |
+
+**Deviations from the original spec**
+
+1. **`list_db` is `True` in development, not `False`.** Odoo 18 has no
+   `--admin-passwd` CLI option — the master password is a config-file setting
+   only, so it cannot be injected from `.env`. Rather than ship a weak secret or
+   an extra bootstrap script, the development stack binds to `127.0.0.1`, keeps
+   the database wizard available, and states its placeholder master password
+   openly in `config/odoo.conf`. Production sets `list_db = False` (Phase 15).
+2. **Makefile targets use `docker compose run`, not `exec`.** `exec` bypasses the
+   image entrypoint (so no `--db_*` arguments are built) and collides with the
+   running server on port 8069. `run --rm` avoids both and still allows HTTP
+   inside the container for the `HttpCase` tests later phases will add.
+3. **The `PG*` libpq variables were added to the `web` service** so that an
+   `exec`'d Odoo can still reach the database, without writing any credential
+   into the committed `config/odoo.conf`.
+4. **One working menu leaf was added** (Configuration → Machines, pointing at
+   `mrp.workcenter`) so the application is navigable from Phase 1. Odoo hides
+   parent menus that have no visible children, so an entirely empty skeleton
+   would have been invisible after install.
 
 **Commit.** `feat: add dockerised odoo 18 stack and furnishing_mes module skeleton`
 

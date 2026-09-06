@@ -176,6 +176,99 @@ with its manifest and the four security groups, the dormant ERP sync mixin, the
 
 ---
 
+## Phase 1 — Docker Foundation & Module Skeleton
+*Completed 2026-09-06 · module version `18.0.1.0.0`*
+
+### Delivered
+
+`docker-compose.yml` (web + db, healthcheck-gated), `config/odoo.conf`,
+`.env.example`, `Makefile`, and the `furnishing_mes` module skeleton: manifest
+with the full verified dependency list, the three internal security groups, an
+empty ACL file, the ten-section menu tree with one working leaf, the dormant ERP
+sync mixin, a generated module icon, an Apps description page, and 19 tests.
+
+### Verified, not assumed
+
+- Module state `installed`, version `18.0.1.0.0`
+- `/web/login`, `/web/health` and the module icon all return HTTP 200
+- Group hierarchy read back from the database:
+  Operator -> Internal User · Supervisor -> Operator + MRP User + Equipment
+  Manager · Plant Manager -> Supervisor + MRP Manager + Stock Manager
+- 12 menu records created
+- **19 tests, 0 failed, 0 errors**
+- Clean install and upgrade at `--log-level=warn`
+
+### Decisions
+
+**D1.1 — The master password lives in `config/odoo.conf`, not `.env`.**
+Verified against `odoo/tools/config.py` on the 18.0 branch: **there is no
+`--admin-passwd` command-line option**. `admin_passwd` is a config-file setting
+only, so it cannot be injected from the environment the way the database
+credentials can.
+
+Rather than ship a bootstrap script (which would break "clone and run") or leave
+Odoo's silent default of `admin`, the development config carries an explicit
+placeholder, `fmes_dev_master_change_in_production`, and the stack **binds to
+127.0.0.1 by default**. That binding is what makes the placeholder harmless: the
+database manager is not reachable from the network. `ODOO_BIND=0.0.0.0` in
+`.env` opens it for tablet testing on a trusted network. Production generates a
+strong value into a git-ignored config (Phase 15).
+
+**D1.2 — `list_db = True` in development.** Follows from D1.1: the first-run
+database wizard needs it, and the localhost binding contains the risk. The
+security doc's hardening table now separates development from production
+explicitly rather than stating one value for both.
+
+**D1.3 — Makefile odoo targets use `docker compose run --rm`, never `exec`.**
+Two failures found by actually running them:
+- `exec` **bypasses the image entrypoint**, so the `HOST`/`USER`/`PASSWORD`
+  variables are never turned into `--db_host`/`--db_user`/`--db_password`.
+  Odoo then falls back to a local unix socket that does not exist:
+  `connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed`.
+- `exec` shares the running server's network namespace, so a second Odoo tries
+  to bind port 8069: `Address already in use`.
+
+`run --rm` starts a throwaway container through the entrypoint and publishes no
+ports, so both problems disappear — and HTTP still works inside it, which the
+`HttpCase` tours in later phases will need.
+
+**D1.4 — The `PG*` libpq variables are set on the `web` service.**
+`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD` are read directly by psycopg2, so
+even an `exec`'d Odoo reaches the database. This keeps every credential out of
+the committed `config/odoo.conf` while making both invocation styles work.
+
+**D1.5 — One real menu leaf ships in Phase 1.** Odoo hides a parent menu with no
+visible children, so a pure skeleton would have been invisible after install.
+Configuration -> Machines points at `mrp.workcenter`, which Phase 2 extends
+anyway.
+
+**D1.6 — The security-baseline test is written before it can fail.**
+`test_every_fmes_model_has_an_acl` is trivially true today (no models yet), but
+it will fail the moment a later phase adds a model without an
+`ir.model.access.csv` row. Cheaper to write now than to remember later.
+
+**D1.7 — Dependencies verified in a test, not just in a doc.**
+`test_declared_dependencies_are_installed` asserts every declared dependency
+exists and is installed, so accidentally depending on an Enterprise-only module
+fails the suite rather than the customer's deployment.
+
+### Environment notes for this machine
+
+- Docker Desktop must be running; it was not, and had to be started.
+- `docker` commands fail in Git Bash with
+  `docker-credential-desktop: executable file not found` — Docker Desktop's
+  `resources/bin` is not on Git Bash's PATH. **Run docker from PowerShell**, or
+  add that directory to PATH.
+
+### Next
+
+**Phase 2 — Master Data & Capacity Matrix.** `fmes.shift`, the `mrp.workcenter`
+extension with the maintenance-equipment bridge, `fmes.capacity.matrix`, the
+downtime loss-reason taxonomy, sequences, the mock ERP dataset, and the customer
+import templates.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |
@@ -202,6 +295,15 @@ with its manifest and the four security groups, the dormant ERP sync mixin, the
   explicit handling and explicit tests, including in a non-UTC company timezone.
 - **A null target is not a zero target.** "No plan was set" and "we produced
   nothing" must display differently, or the reports mislead.
+- **Never use `docker compose exec` to run odoo.** It bypasses the image
+  entrypoint (no `--db_*` arguments are built) and collides with the running
+  server on port 8069. Use `docker compose run --rm web odoo ...`.
+- **Docker commands fail in Git Bash on this machine** with
+  `docker-credential-desktop: executable file not found`. Run them from
+  PowerShell instead.
+- **Odoo 18 has no `--admin-passwd` CLI option.** The master password can only
+  live in a config file, which is why the dev placeholder is committed and the
+  stack binds to 127.0.0.1.
 - **Windows bind-mount performance** on `C:\` is poor — clone into the WSL 2
   filesystem.
 - **A fresh clone must set two things before its first commit** — both live in

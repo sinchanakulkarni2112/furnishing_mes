@@ -27,34 +27,49 @@ git clone https://github.com/sinchanakulkarni2112/furnishing_mes.git
 cd furnishing_mes
 
 cp .env.example .env
-# Edit .env and set POSTGRES_PASSWORD and ADMIN_PASSWD to real values.
+# Edit .env and set POSTGRES_PASSWORD to a strong value.
 
-docker compose up -d
-docker compose logs -f web        # wait for "odoo.modules.loading: Modules loaded."
+make init
 ```
 
-Open <http://localhost:8069>.
+Open <http://localhost:8069> and log in with `admin` / `admin`.
 
-On first launch Odoo shows the database creation screen:
+`make init` wraps two commands, if you would rather run them directly:
+
+```bash
+docker compose run --rm web odoo -d furnishing_mes -i furnishing_mes --stop-after-init
+docker compose up -d
+```
+
+The first run takes a few minutes while Docker pulls the images and Odoo
+installs the dependency modules.
+
+### Using the database wizard instead
+
+Run `docker compose up -d` on its own and open <http://localhost:8069>. Odoo
+shows its database creation screen:
 
 | Field | Value |
 |---|---|
-| Master Password | the `ADMIN_PASSWD` from your `.env` |
+| Master Password | `fmes_dev_master_change_in_production` (from `config/odoo.conf`) |
 | Database Name | `furnishing_mes` |
-| Email | your admin login |
-| Password | your admin password |
+| Email / Password | your admin login |
 | Demo data | **check it** — the mock ERP dataset depends on it |
 
-Then **Apps → Update Apps List → search "Furnishing MES" → Install**.
+Then **Apps -> Update Apps List -> search "Furnishing MES" -> Install**.
 
-To skip the wizard entirely, initialise from the command line:
+The master password lives in `config/odoo.conf` because Odoo 18 has **no
+`--admin-passwd` command-line option** - it is a config-file setting only. The
+committed value is an explicit development placeholder, and the stack binds to
+`127.0.0.1` by default, so the database manager is not reachable from the
+network. Production generates a strong value into a git-ignored config
+(Phase 15).
 
-```bash
-docker compose run --rm web odoo \
-  -d furnishing_mes -i furnishing_mes \
-  --without-demo=False --stop-after-init
-docker compose up -d
-```
+### Reaching it from a tablet
+
+Set `ODOO_BIND=0.0.0.0` in `.env`, then `make down && make up`, and browse to
+`http://<your-machine-ip>:8069`. Trusted networks only - the development
+configuration is not hardened for exposure.
 
 ---
 
@@ -95,10 +110,11 @@ the underlying `docker compose` command shown in each row.
 | `make down` | Stop it | `docker compose down` |
 | `make logs` | Tail Odoo logs | `docker compose logs -f web` |
 | `make restart` | Restart Odoo only | `docker compose restart web` |
-| `make upgrade` | Upgrade the module | `docker compose exec web odoo -d $(DB) -u furnishing_mes --stop-after-init` then restart |
-| `make install` | Install the module | `... -i furnishing_mes --stop-after-init` |
-| `make test` | Run the module's tests | `... -u furnishing_mes --test-enable --log-level=test --stop-after-init` |
-| `make shell` | Odoo interactive shell | `docker compose exec web odoo shell -d $(DB)` |
+| `make init` | Create the database and install | `docker compose run --rm web odoo -d $(DB) -i furnishing_mes --stop-after-init` |
+| `make upgrade` | Upgrade the module | `docker compose run --rm web odoo -d $(DB) -u furnishing_mes --stop-after-init` then restart |
+| `make install` | Install into an existing database | `... -i furnishing_mes --stop-after-init` |
+| `make test` | Run the module's tests | `... -u furnishing_mes --test-enable --test-tags /furnishing_mes --log-level=test --stop-after-init` |
+| `make shell` | Odoo interactive shell | `docker compose run --rm web odoo shell -d $(DB)` |
 | `make psql` | PostgreSQL prompt | `docker compose exec db psql -U odoo -d $(DB)` |
 | `make bash` | Shell inside the web container | `docker compose exec web bash` |
 | `make clean` | **Destroy** containers and volumes | `docker compose down -v` |
@@ -263,3 +279,8 @@ docker compose run --rm web odoo -d furnishing_mes -i furnishing_mes --stop-afte
 | `db` container restarting | Stale volume from a different Postgres major | `make clean` and start again |
 | Odoo starts then exits | Config error | `docker compose logs web` — the traceback names the line |
 | Very slow on Windows | Files on the Windows filesystem | Clone into the WSL 2 filesystem (`\\wsl$\...`), not `C:\` |
+| `Address already in use: 8069` when running odoo | Used `docker compose exec`, which shares the running server's port | Use `docker compose run --rm web odoo ...` — this is what the Makefile does |
+| `connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed` | `exec` bypasses the image entrypoint, so the `--db_*` arguments are never built | Use `run --rm`. The `PG*` variables in `docker-compose.yml` also cover the `exec` case |
+| `docker-credential-desktop: executable file not found` | Docker Desktop's bin directory is not on Git Bash's PATH | Run docker commands from PowerShell, or add `C:\Program Files\Docker\Docker\resources\bin` to PATH |
+esources\bin` to PATH |
+| `Cannot connect to the Docker daemon` | Docker Desktop is not running | Start Docker Desktop and wait for the whale icon to settle |

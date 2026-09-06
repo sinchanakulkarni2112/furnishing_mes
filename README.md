@@ -14,9 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 0 of 15 — Documentation complete |
-| **Next** | Phase 1 — Docker foundation and module skeleton |
-| **Runnable stack** | Lands in Phase 1 |
+| **Phase** | 1 of 15 — Docker foundation and module skeleton ✅ |
+| **Next** | Phase 2 — Master data and capacity matrix |
+| **Module version** | `18.0.1.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community · 19 tests passing · no install warnings |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 
@@ -60,8 +61,6 @@ is poor.
 
 ## Clone and Run
 
-> These commands work from **Phase 1** onwards, once the Docker stack is committed.
-
 ### 1. Clone
 
 ```bash
@@ -75,77 +74,83 @@ cd furnishing_mes
 cp .env.example .env
 ```
 
-Edit `.env` and set real values:
-
-```ini
-POSTGRES_DB=postgres
-POSTGRES_USER=odoo
-POSTGRES_PASSWORD=<choose a strong password>
-ADMIN_PASSWD=<choose a strong master password>
-ODOO_PORT=8069
-```
+Open `.env` and set **`POSTGRES_PASSWORD`** to a strong value. The stack
+deliberately refuses to start if it is unset, so it can never boot on a
+well-known default.
 
 `.env` is git-ignored and must never be committed.
 
-### 3. Start
+### 3. Create the database and install the module
 
 ```bash
-docker compose up -d
-docker compose logs -f web
-```
-
-Wait for `odoo.modules.loading: Modules loaded.`, then open
-<http://localhost:8069>.
-
-### 4. Create the database
-
-On first launch Odoo shows its database creation screen:
-
-| Field | Value |
-|---|---|
-| Master Password | the `ADMIN_PASSWD` from your `.env` |
-| Database Name | `furnishing_mes` |
-| Email | your admin login |
-| Password | your admin password |
-| Demo data | **tick it** — the mock ERP dataset depends on it |
-
-To skip the wizard entirely:
-
-```bash
-docker compose run --rm web odoo \
-  -d furnishing_mes -i furnishing_mes \
-  --without-demo=False --stop-after-init
+docker compose run --rm web odoo -d furnishing_mes -i furnishing_mes --stop-after-init
 docker compose up -d
 ```
 
-### 5. Install the module
+The first command creates the `furnishing_mes` database and installs the module
+with all its dependencies and demo data. The second starts the stack.
 
-If you used the wizard: **Apps → Update Apps List → search "Furnishing MES" → Install**.
+Takes a few minutes the first time, while Docker pulls the images and Odoo
+installs the dependency modules.
 
-That's it — the plant demo data (departments, machines, shifts, capacity matrix,
-mock orders) loads with the module, so the system is immediately explorable.
+> On Windows, run docker commands from **PowerShell**. In Git Bash they can fail
+> with `docker-credential-desktop: executable file not found`, because Docker
+> Desktop's `resources\bin` directory is not on Git Bash's PATH.
 
+> If you have `make` (Linux, macOS, or WSL), `make init` does both steps.
+> `make` is optional — every target is just a `docker compose` command, listed
+> in [Common Commands](#common-commands) below.
+
+### 4. Open it
+
+<http://localhost:8069> — log in with `admin` / `admin`.
+
+The **Furnishing MES** app appears in the app menu. The admin user is a Plant
+Manager, so everything is visible.
+
+> **Prefer the graphical setup?** Skip step 3, run `docker compose up -d`, and
+> use Odoo's database wizard at <http://localhost:8069>. The development master
+> password is `fmes_dev_master_change_in_production`, set in `config/odoo.conf`.
+> Tick **Load demonstration data**, then install the module from
+> **Apps → Update Apps List → "Furnishing MES"**.
+
+### Reaching it from a tablet or another device
+
+The stack binds to `127.0.0.1` by default. To reach it from a shop-floor tablet
+on the same network, set `ODOO_BIND=0.0.0.0` in `.env`, restart with
+`docker compose down && docker compose up -d`, and browse to
+`http://<your-machine-ip>:8069`. Only do this on a trusted network — the
+development configuration is not hardened for exposure.
 ---
 
 ## Common Commands
 
-| Command | Does |
-|---|---|
-| `make up` | Start the stack |
-| `make down` | Stop it |
-| `make logs` | Tail Odoo logs |
-| `make restart` | Restart Odoo only |
-| `make upgrade` | Apply module changes |
-| `make test` | Run the test suite |
-| `make shell` | Odoo interactive shell |
-| `make psql` | PostgreSQL prompt |
-| `make clean` | **Destroy** containers and volumes (all data lost) |
+`make` is a convenience wrapper. If you do not have it, use the command in the
+right-hand column directly — that is all the target runs.
 
-Without `make`, each maps to a `docker compose` command — see
-[`docs/07-development-setup.md`](docs/07-development-setup.md) §4.
+| `make` target | Does | Underlying command |
+|---|---|---|
+| `make help` | List every target | — |
+| `make init` | Create the database and install the module | `docker compose run --rm web odoo -d furnishing_mes -i furnishing_mes --stop-after-init` |
+| `make up` | Start the stack | `docker compose up -d` |
+| `make down` | Stop it (data preserved) | `docker compose down` |
+| `make logs` | Tail Odoo logs | `docker compose logs -f web` |
+| `make restart` | Restart Odoo only | `docker compose restart web` |
+| `make upgrade` | Apply module changes | `docker compose run --rm web odoo -d furnishing_mes -u furnishing_mes --stop-after-init` |
+| `make test` | Run the test suite | `docker compose run --rm web odoo -d furnishing_mes -u furnishing_mes --test-enable --test-tags /furnishing_mes --log-level=test --stop-after-init` |
+| `make shell` | Odoo interactive shell | `docker compose run --rm web odoo shell -d furnishing_mes` |
+| `make psql` | PostgreSQL prompt | `docker compose exec db psql -U odoo -d furnishing_mes` |
+| `make ps` | Container status | `docker compose ps` |
+| `make clean` | **Destroy** containers and volumes | `docker compose down -v` |
 
-After changing XML, security CSV or Python: `make upgrade`.
-After changing JS or SCSS: reload the browser.
+**Always use `docker compose run`, never `exec`, to run Odoo commands.** `exec`
+bypasses the image entrypoint (so the database arguments are never built) and
+collides with the running server on port 8069.
+
+More detail: [`docs/07-development-setup.md`](docs/07-development-setup.md) §4.
+
+After changing XML, security CSV or Python, apply it with the `upgrade`
+command above, then `docker compose restart web`.
 
 ---
 
@@ -167,9 +172,9 @@ furnishing_mes/
 │   └── tests/
 ├── config/odoo.conf
 ├── docs/                       # design and delivery documentation
-├── scripts/                    # backup, restore, load seeding
+├── scripts/                    # backup, restore, load seeding (Phase 14-15)
 ├── docker-compose.yml
-├── docker-compose.prod.yml
+├── docker-compose.prod.yml      # Phase 15
 └── Makefile
 ```
 

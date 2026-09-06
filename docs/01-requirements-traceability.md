@@ -40,7 +40,7 @@ completeness at handover.
 |---|---|---|---|---|
 | 3.1 | Monitor machine-wise | REUSE + NEW | `mrp.workcenter` kanban + live status board | 4, 6 |
 | 3.2 | Monitor department-wise | EXTEND | `department_id` (`hr.department`) on `mrp.workcenter` | 2, 6 |
-| 3.3 | Centralised production database | REUSE | PostgreSQL 15, single Odoo database | 1 |
+| 3.3 | Centralised production database | REUSE | PostgreSQL 15, single Odoo database | 1 ✅ |
 | 3.4 | Historical production records | NEW | `fmes.production.entry`, locked after approval | 4 |
 | 3.5 | Real-time production status | NEW | OWL live board over `mrp.workorder` state | 4, 10 |
 | 3.6 | Machine utilisation & productivity | REUSE + NEW | `mrp.workcenter.oee` + `fmes.utilization.report` | 6 |

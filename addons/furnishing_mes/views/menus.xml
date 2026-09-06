@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Furnishing MES menu structure, per docs/05-ui-ux-design.md section 2.
+
+            The section menus are declared here so the information architecture
+            is fixed from the start and later phases only add leaf items. Odoo
+            hides a parent menu that has no visible children, so the sections
+            that are still empty simply do not render yet.
+
+            Operators see only Production > Shop Floor Terminal (Phase 4).
+            The `groups` attribute is a usability filter; actual access control
+            lives in ir.model.access.csv and ir.rule.
+        -->
+
+        <!-- ============================================================ -->
+        <!--  Root                                                        -->
+        <!-- ============================================================ -->
+        <menuitem id="menu_fmes_root"
+                  name="Furnishing MES"
+                  web_icon="furnishing_mes,static/description/icon.png"
+                  sequence="10"/>
+
+        <!-- ============================================================ -->
+        <!--  Sections                                                    -->
+        <!-- ============================================================ -->
+
+        <!-- Dashboard — Phase 10 -->
+        <menuitem id="menu_fmes_dashboard"
+                  name="Dashboard"
+                  parent="menu_fmes_root"
+                  sequence="10"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- Planning — Phase 3 -->
+        <menuitem id="menu_fmes_planning"
+                  name="Planning"
+                  parent="menu_fmes_root"
+                  sequence="20"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- Production — Phase 4 (operators enter here) -->
+        <menuitem id="menu_fmes_production"
+                  name="Production"
+                  parent="menu_fmes_root"
+                  sequence="30"/>
+
+        <!-- Downtime — Phase 5 -->
+        <menuitem id="menu_fmes_downtime"
+                  name="Downtime"
+                  parent="menu_fmes_root"
+                  sequence="40"/>
+
+        <!-- Maintenance — Phase 7 -->
+        <menuitem id="menu_fmes_maintenance"
+                  name="Maintenance"
+                  parent="menu_fmes_root"
+                  sequence="50"/>
+
+        <!-- Manpower — Phase 8 -->
+        <menuitem id="menu_fmes_manpower"
+                  name="Manpower"
+                  parent="menu_fmes_root"
+                  sequence="60"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- Backlog — Phase 9 -->
+        <menuitem id="menu_fmes_backlog"
+                  name="Backlog"
+                  parent="menu_fmes_root"
+                  sequence="70"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- Alerts — Phase 11 -->
+        <menuitem id="menu_fmes_alerts"
+                  name="Alerts"
+                  parent="menu_fmes_root"
+                  sequence="80"/>
+
+        <!-- Reports — Phase 12 -->
+        <menuitem id="menu_fmes_reports"
+                  name="Reports"
+                  parent="menu_fmes_root"
+                  sequence="90"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- Configuration — Plant Manager only -->
+        <menuitem id="menu_fmes_configuration"
+                  name="Configuration"
+                  parent="menu_fmes_root"
+                  sequence="100"
+                  groups="furnishing_mes.group_fmes_manager"/>
+
+        <!-- ============================================================ -->
+        <!--  Configuration > Machines                                    -->
+        <!--                                                              -->
+        <!--  One working leaf so the application is navigable from       -->
+        <!--  Phase 1. It points at Odoo's native work centers, which     -->
+        <!--  Phase 2 extends with machine code, department, the          -->
+        <!--  maintenance-equipment bridge and the capacity matrix.       -->
+        <!-- ============================================================ -->
+        <record id="action_fmes_workcenter" model="ir.actions.act_window">
+            <field name="name">Machines / Work Centers</field>
+            <field name="res_model">mrp.workcenter</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Add your first machine
+                </p>
+                <p>
+                    Machines are modelled as Odoo work centers. Phase 2 adds the
+                    machine code, department, maintenance-equipment link and the
+                    capacity matrix that drives automated production planning.
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_fmes_config_machines"
+                  name="Machines"
+                  parent="menu_fmes_configuration"
+                  action="action_fmes_workcenter"
+                  sequence="20"/>
+
+    </data>
+</odoo>
