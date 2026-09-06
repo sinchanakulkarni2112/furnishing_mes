@@ -94,6 +94,40 @@
                   groups="furnishing_mes.group_fmes_manager"/>
 
         <!-- ============================================================ -->
+        <!--  Planning                                                    -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_plans"
+                  name="Production Plans"
+                  parent="menu_fmes_planning"
+                  action="action_fmes_production_plan"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_generate_plan"
+                  name="Generate Plan"
+                  parent="menu_fmes_planning"
+                  action="action_fmes_plan_generator"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_scheduling_board"
+                  name="Scheduling Board"
+                  parent="menu_fmes_planning"
+                  action="action_fmes_scheduling_board"
+                  sequence="30"/>
+
+        <menuitem id="menu_fmes_plan_lines"
+                  name="Plan Lines"
+                  parent="menu_fmes_planning"
+                  action="action_fmes_plan_line"
+                  sequence="40"/>
+
+        <menuitem id="menu_fmes_carry_forward"
+                  name="Carry Forward"
+                  parent="menu_fmes_planning"
+                  action="action_fmes_carry_forward"
+                  sequence="50"/>
+
+        <!-- ============================================================ -->
         <!--  Configuration                                               -->
         <!-- ============================================================ -->
 

@@ -3,7 +3,7 @@
     <data noupdate="0">
 
         <!--
-            Mock plant dataset - product categories, items and bills of materials
+            Mock plant dataset - product categories, items, bills of materials and routings
 
             Stands in for what ERP 10.8 will eventually supply: customer master,
             item master, BOMs, sales orders and work orders (Requirement 11,
@@ -350,6 +350,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">1</field>
         </record>
+        <record id="op_wd_2d_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_wd_2d_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_wd_2d_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">10</field>
+        </record>
+        <record id="op_wd_2d_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">8</field>
+        </record>
+        <record id="op_wd_2d_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_2d"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_wd_3d" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_wd_3d_product_template"/>
             <field name="product_qty">1</field>
@@ -380,6 +415,41 @@
             <field name="bom_id" ref="bom_wd_3d"/>
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">2</field>
+        </record>
+        <record id="op_wd_3d_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_wd_3d_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_wd_3d_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">10</field>
+        </record>
+        <record id="op_wd_3d_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">8</field>
+        </record>
+        <record id="op_wd_3d_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_3d"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_wd_sld" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_wd_sld_product_template"/>
@@ -412,6 +482,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">2</field>
         </record>
+        <record id="op_wd_sld_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_wd_sld_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_wd_sld_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">10</field>
+        </record>
+        <record id="op_wd_sld_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">8</field>
+        </record>
+        <record id="op_wd_sld_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_sld"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_wd_pnl" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_wd_pnl_product_template"/>
             <field name="product_qty">1</field>
@@ -428,6 +533,41 @@
             <field name="product_id" ref="prod_edge_tape"/>
             <field name="product_qty">3</field>
         </record>
+        <record id="op_wd_pnl_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_wd_pnl_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_wd_pnl_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">10</field>
+        </record>
+        <record id="op_wd_pnl_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">8</field>
+        </record>
+        <record id="op_wd_pnl_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_pnl"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_wd_shf" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_wd_shf_product_template"/>
             <field name="product_qty">1</field>
@@ -443,6 +583,41 @@
             <field name="bom_id" ref="bom_wd_shf"/>
             <field name="product_id" ref="prod_edge_tape"/>
             <field name="product_qty">2</field>
+        </record>
+        <record id="op_wd_shf_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_wd_shf_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_wd_shf_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">10</field>
+        </record>
+        <record id="op_wd_shf_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">8</field>
+        </record>
+        <record id="op_wd_shf_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_wd_shf"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_kt_base" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_kt_base_product_template"/>
@@ -475,6 +650,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">1</field>
         </record>
+        <record id="op_kt_base_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_kt_base_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
+        <record id="op_kt_base_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_kt_base_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_02"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_kt_base_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_base"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_kt_wall" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_kt_wall_product_template"/>
             <field name="product_qty">1</field>
@@ -505,6 +715,41 @@
             <field name="bom_id" ref="bom_kt_wall"/>
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">1</field>
+        </record>
+        <record id="op_kt_wall_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_kt_wall_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
+        <record id="op_kt_wall_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_kt_wall_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_02"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_kt_wall_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_wall"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_kt_drw" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_kt_drw_product_template"/>
@@ -537,6 +782,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">1</field>
         </record>
+        <record id="op_kt_drw_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_kt_drw_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
+        <record id="op_kt_drw_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_kt_drw_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_02"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_kt_drw_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_drw"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_kt_tall" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_kt_tall_product_template"/>
             <field name="product_qty">1</field>
@@ -568,6 +848,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">2</field>
         </record>
+        <record id="op_kt_tall_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_kt_tall_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
+        <record id="op_kt_tall_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_kt_tall_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_02"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_kt_tall_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_tall"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_kt_shut" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_kt_shut_product_template"/>
             <field name="product_qty">1</field>
@@ -589,6 +904,41 @@
             <field name="product_id" ref="prod_lacquer"/>
             <field name="product_qty">1</field>
         </record>
+        <record id="op_kt_shut_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_kt_shut_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
+        <record id="op_kt_shut_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_kt_shut_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="name">Finishing</field>
+            <field name="workcenter_id" ref="wc_spray_02"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_kt_shut_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_kt_shut"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_of_desk" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_of_desk_product_template"/>
             <field name="product_qty">1</field>
@@ -609,6 +959,41 @@
             <field name="bom_id" ref="bom_of_desk"/>
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">1</field>
+        </record>
+        <record id="op_of_desk_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_of_desk_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_of_desk_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="name">Pressing</field>
+            <field name="workcenter_id" ref="wc_press_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">9</field>
+        </record>
+        <record id="op_of_desk_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_of_desk_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_desk"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_of_wkst" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_of_wkst_product_template"/>
@@ -636,6 +1021,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">2</field>
         </record>
+        <record id="op_of_wkst_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_of_wkst_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_of_wkst_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="name">Pressing</field>
+            <field name="workcenter_id" ref="wc_press_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">9</field>
+        </record>
+        <record id="op_of_wkst_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_of_wkst_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_wkst"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_of_ped" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_of_ped_product_template"/>
             <field name="product_qty">1</field>
@@ -661,6 +1081,41 @@
             <field name="bom_id" ref="bom_of_ped"/>
             <field name="product_id" ref="prod_handle"/>
             <field name="product_qty">3</field>
+        </record>
+        <record id="op_of_ped_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_of_ped_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_of_ped_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="name">Pressing</field>
+            <field name="workcenter_id" ref="wc_press_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">9</field>
+        </record>
+        <record id="op_of_ped_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_of_ped_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_ped"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_of_cab" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_of_cab_product_template"/>
@@ -688,6 +1143,41 @@
             <field name="product_id" ref="prod_handle"/>
             <field name="product_qty">4</field>
         </record>
+        <record id="op_of_cab_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_of_cab_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_of_cab_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="name">Pressing</field>
+            <field name="workcenter_id" ref="wc_press_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">9</field>
+        </record>
+        <record id="op_of_cab_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_of_cab_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_cab"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_of_tbl" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_of_tbl_product_template"/>
             <field name="product_qty">1</field>
@@ -713,6 +1203,41 @@
             <field name="bom_id" ref="bom_of_tbl"/>
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">2</field>
+        </record>
+        <record id="op_of_tbl_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_beam_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">6</field>
+        </record>
+        <record id="op_of_tbl_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_01"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_of_tbl_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="name">Pressing</field>
+            <field name="workcenter_id" ref="wc_press_01"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">9</field>
+        </record>
+        <record id="op_of_tbl_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_of_tbl_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_of_tbl"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_bd_king" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_bd_king_product_template"/>
@@ -740,6 +1265,41 @@
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">3</field>
         </record>
+        <record id="op_bd_king_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_bd_king_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_bd_king_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">12</field>
+        </record>
+        <record id="op_bd_king_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_bd_king_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_king"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_bd_quen" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_bd_quen_product_template"/>
             <field name="product_qty">1</field>
@@ -765,6 +1325,41 @@
             <field name="bom_id" ref="bom_bd_quen"/>
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">3</field>
+        </record>
+        <record id="op_bd_quen_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_bd_quen_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_bd_quen_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">12</field>
+        </record>
+        <record id="op_bd_quen_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_bd_quen_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_quen"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
         <record id="bom_bd_side" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_bd_side_product_template"/>
@@ -792,6 +1387,41 @@
             <field name="product_id" ref="prod_handle"/>
             <field name="product_qty">1</field>
         </record>
+        <record id="op_bd_side_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_bd_side_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_bd_side_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">12</field>
+        </record>
+        <record id="op_bd_side_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_bd_side_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_side"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_bd_drsr" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_bd_drsr_product_template"/>
             <field name="product_qty">1</field>
@@ -818,6 +1448,41 @@
             <field name="product_id" ref="prod_handle"/>
             <field name="product_qty">4</field>
         </record>
+        <record id="op_bd_drsr_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_bd_drsr_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_bd_drsr_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">12</field>
+        </record>
+        <record id="op_bd_drsr_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_bd_drsr_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_drsr"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
+        </record>
         <record id="bom_bd_hdbd" model="mrp.bom">
             <field name="product_tmpl_id" ref="prod_bd_hdbd_product_template"/>
             <field name="product_qty">1</field>
@@ -838,6 +1503,41 @@
             <field name="bom_id" ref="bom_bd_hdbd"/>
             <field name="product_id" ref="prod_screw"/>
             <field name="product_qty">1</field>
+        </record>
+        <record id="op_bd_hdbd_0" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="name">Cutting</field>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="sequence">10</field>
+            <field name="time_cycle_manual">7</field>
+        </record>
+        <record id="op_bd_hdbd_1" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="name">Edge Banding</field>
+            <field name="workcenter_id" ref="wc_edge_02"/>
+            <field name="sequence">20</field>
+            <field name="time_cycle_manual">4</field>
+        </record>
+        <record id="op_bd_hdbd_2" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="name">Assembly</field>
+            <field name="workcenter_id" ref="wc_assy_02"/>
+            <field name="sequence">30</field>
+            <field name="time_cycle_manual">12</field>
+        </record>
+        <record id="op_bd_hdbd_3" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="name">Sanding</field>
+            <field name="workcenter_id" ref="wc_sand_01"/>
+            <field name="sequence">40</field>
+            <field name="time_cycle_manual">5</field>
+        </record>
+        <record id="op_bd_hdbd_4" model="mrp.routing.workcenter">
+            <field name="bom_id" ref="bom_bd_hdbd"/>
+            <field name="name">Packing</field>
+            <field name="workcenter_id" ref="wc_pack_01"/>
+            <field name="sequence">50</field>
+            <field name="time_cycle_manual">3</field>
         </record>
     </data>
 </odoo>

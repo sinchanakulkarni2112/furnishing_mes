@@ -8,6 +8,10 @@ see assumption A1 in docs/15-open-questions-and-assumptions.md, which is the
 standard three-shift pattern we build on until the customer confirms theirs.
 """
 
+from datetime import datetime, time as dtime, timedelta
+
+import pytz
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -141,6 +145,41 @@ class FmesShift(models.Model):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+    def _slot_datetimes(self, day):
+        """Return the (start, end) UTC datetimes of this shift on `day`.
+
+        Shift times are wall-clock times in the plant's timezone, while Odoo
+        stores datetimes in UTC. Converting here keeps that conversion in one
+        place — a fixed offset would break twice a year in any timezone with
+        daylight saving, and would be wrong from the start in most others.
+
+        The **company's** timezone is used, not the acting user's. A shift
+        belongs to the plant, so the same shift must resolve to the same
+        instant whoever generates the plan — otherwise a manager working from
+        another timezone would schedule the shop floor into different hours
+        than a supervisor standing in it.
+
+        A shift that crosses midnight ends on the following calendar day.
+        """
+        self.ensure_one()
+        day = fields.Date.to_date(day)
+        tz_name = (self.company_id.partner_id.tz
+                   or self.env.user.tz
+                   or 'UTC')
+        tz = pytz.timezone(tz_name)
+
+        def to_utc(base_day, hour_float):
+            hours = int(hour_float)
+            minutes = int(round((hour_float - hours) * 60))
+            naive = datetime.combine(base_day, dtime(hour=hours % 24,
+                                                    minute=minutes))
+            return tz.localize(naive).astimezone(pytz.UTC).replace(tzinfo=None)
+
+        start = to_utc(day, self.start_time)
+        end_day = day + timedelta(days=1) if self.crosses_midnight else day
+        end = to_utc(end_day, self.end_time)
+        return start, end
+
     def copy_data(self, default=None):
         vals_list = super().copy_data(default=default)
         for shift, vals in zip(self, vals_list):

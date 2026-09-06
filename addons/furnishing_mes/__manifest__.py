@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.2.0.0',
+    'version': '18.0.3.0.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -67,6 +67,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         # Views, then menus (menus reference the actions above)
         'views/fmes_shift_views.xml',
         'views/fmes_capacity_matrix_views.xml',
+        'views/fmes_production_plan_views.xml',
         'views/mrp_workcenter_views.xml',
         'views/maintenance_equipment_views.xml',
         'views/menus.xml',
@@ -83,8 +84,11 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
     ],
 
     'assets': {
-        # OWL components arrive in Phase 3 (scheduling board), Phase 4
-        # (shop-floor terminal) and Phase 10 (executive dashboard).
+        'web.assets_backend': [
+            'furnishing_mes/static/src/scss/fmes_board.scss',
+            'furnishing_mes/static/src/js/scheduling_board.js',
+            'furnishing_mes/static/src/xml/scheduling_board.xml',
+        ],
     },
 
     'images': ['static/description/icon.png'],

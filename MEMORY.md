@@ -374,6 +374,98 @@ Enterprise Gantt.
 
 ---
 
+## Phase 3 — Production Planning Automation
+*Completed 2026-09-06 - module version `18.0.3.0.0`*
+
+### Delivered
+
+`fmes.production.plan` and `.plan.line`, the `fmes.planning.engine` service, the
+generator wizard with a live demand-vs-capacity preview, the OWL scheduling
+board that replaces the Enterprise Gantt, plan release onto manufacturing and
+work orders, and an XLSX export. Routing operations were added to the demo bills
+of materials so real work orders exist.
+
+### Verified, not assumed
+
+- **115 tests, 0 failed, 0 errors**
+- End-to-end on the demo plant: 153 demands to 246 plan lines, 96.7% utilisation
+  of the slots used, and **0 capacity breaches**
+- Board SCSS and OWL component confirmed to compile into `web.assets_backend`
+- XLSX route tested over HTTP, including the ZIP magic bytes
+- Fresh-database install clean at `--log-level=warn`
+
+### Decisions
+
+**D3.1 - The engine is deterministic and explainable, not optimal.**
+Greedy forward scheduling, earliest deadline first, with every tie broken on a
+stated key so the result never depends on database ids. A planner coming off
+spreadsheets needs to understand why a line landed where it did; an optimiser
+that saves an hour at the cost of explainability is a poor trade here. Ordering
+is unit-tested by generating twice and comparing signatures.
+
+**D3.2 - Demand the engine cannot place is reported, never dropped.**
+`plan.unscheduled_demand_note` names the order, the product, the quantity and
+the reason. Silently shrinking demand to fit capacity is the single most
+damaging thing a scheduler can do.
+
+**D3.3 - Quantities are rounded so that hours always equal qty / rate +
+changeover.** Found by a failing test: the engine sized hours from an unrounded
+quantity while Odoo stored the quantity rounded, so the two disagreed in the
+sixth decimal. A first clamp fix held the capacity line but broke the identity.
+The right answer is to round the quantity *first* - down when filling a slot so
+the hours still fit, exactly when the slot can absorb the remainder so no crumb
+is left behind and falsely reported as unscheduled.
+
+**D3.4 - Shift slots resolve in the company's timezone, not the user's.**
+The first run scheduled a 06:00 shift to 04:00 UTC because the demo admin sits
+in Europe/Brussels. A shift belongs to the plant: the same shift must resolve to
+the same instant whoever generates the plan, or a manager working remotely
+schedules the shop floor into different hours than the supervisor standing in
+it. Unit-tested with two users in different timezones.
+
+**D3.5 - The manpower factor is a real hook returning 1.0 until Phase 8.**
+It is applied in `_slot_capacity_hours` like any other factor, but there is no
+roster to read yet. Building a half-real constraint against a model that does
+not exist would be worse than an honest placeholder. Phase 8 replaces one method
+body; nothing else in the engine changes. The test asserts the documented
+behaviour so the placeholder cannot be forgotten.
+
+**D3.6 - Availability derates from real downtime history.** Planning every
+machine at 100% availability is the commonest reason plans cannot be met, so the
+engine reads the last 90 days of unplanned stoppages, excluding planned ones. It
+returns 1.0 while there is no history, which is the case until Phase 5, and
+never derates below 0.5 - a machine that broke down constantly last quarter is a
+maintenance problem, not a reason to plan it at near-zero.
+
+**D3.7 - Moving a line on the board re-sizes it against the target machine.**
+The same quantity takes a different time on a different machine, and the setup
+cost belongs to the machine being moved *to*. The server refuses a move that
+would overload the target and says by how much; a board that lets a planner
+build an impossible plan is worse than no board.
+
+**D3.8 - Routing operations added to the demo BOMs.** Without them an order has
+no work orders, so there is no machine-wise schedule to build and nothing for
+the Phase 4 terminal to show. `mrp.production.workorder_ids` is a stored
+compute, so Odoo creates them automatically on record creation - no confirm step
+needed in demo data.
+
+### Gotchas found the hard way
+
+- **A test fixture can quietly invalidate its own premise.** The "unrated"
+  product sat under a category whose *parent* carried a rate, so it resolved
+  fine and the test asserting it could not be planned failed. It now has its own
+  category tree.
+- **`docker compose exec` cannot pipe a script from PowerShell** without a BOM
+  being prepended, which Python rejects as `U+FEFF`. Pipe from Bash instead.
+
+### Next
+
+**Phase 4 - Daily Tracking & Shop-Floor Terminal.** `fmes.production.entry`, the
+OWL tablet terminal, the supervisor approval queue, planned-versus-actual views,
+and the DAY WISE OUTPUT importer.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |

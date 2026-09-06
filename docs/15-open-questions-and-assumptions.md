@@ -124,6 +124,7 @@ lives" column names the record or field to change.
 | `A6` | Production reported in **units (pieces)**, with each product carrying its own UoM | Simplest consistent basis; Odoo supports per-product UoM natively | `product.uom_id` |
 | `A7` | ~20 items in 4 families (wardrobe, kitchen unit, office desk, bed) | Enough variety to exercise the capacity matrix meaningfully | `product.template` (`demo/`) |
 | `A25` | Standard manpower defined per machine type — 1 for automated, 2–3 for assembly and finishing | Conventional staffing for the machine classes | `fmes.capacity.matrix.std_manpower` |
+| `A49` | Every machine is treated as fully staffed until the roster exists (Phase 8). The planning engine applies a manpower factor of 1.0 | Matches how the plant plans today; a half-real constraint against a model that does not exist yet would be worse than an honest placeholder | `fmes.planning.engine._get_manpower_factor` |
 | `A8` | One machine may run several items; one item may run on several machines, with a preference order | Standard flexible-routing assumption | `fmes.capacity.matrix.priority` |
 | `A9` | Changeover time applies when a machine switches product: **15 min** default, 30 min for finishing | Standard setup-time modelling | `fmes.capacity.matrix.changeover_minutes` |
 | `A10` | Machine availability derated by **planned maintenance windows and 90-day historical unplanned downtime** | Standard finite-capacity practice — planning on 100% availability is the most common cause of unachievable plans | Planning engine |

@@ -1,0 +1,272 @@
+// Scheduling board.
+//
+// Colour bands follow the shared visual language in docs/05-ui-ux-design.md.
+// State is never carried by colour alone: every loaded cell prints its
+// percentage, and the legend names each band.
+
+.fmes-board {
+    --fmes-success: #28a745;
+    --fmes-warning: #f0ad4e;
+    --fmes-danger: #dc3545;
+    --fmes-info: #3498db;
+    --fmes-idle: #dfe4e8;
+
+    padding: 16px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .fmes-board-toolbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+
+        h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #0e2238;
+        }
+    }
+
+    .fmes-plan-badge {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 2px 10px;
+        border-radius: 12px;
+        background: #0e2238;
+        color: #fff;
+        font-size: 12px;
+    }
+
+    .fmes-board-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        label {
+            margin: 0;
+            font-size: 13px;
+            color: #566;
+        }
+
+        input {
+            width: auto;
+        }
+    }
+
+    .fmes-board-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .fmes-kpi {
+        flex: 0 0 auto;
+        min-width: 120px;
+        padding: 10px 14px;
+        border: 1px solid #e3e8ee;
+        border-radius: 6px;
+        background: #fff;
+
+        &.fmes-kpi-alert {
+            border-color: var(--fmes-danger);
+            background: #fdf2f3;
+        }
+    }
+
+    .fmes-kpi-value {
+        display: block;
+        font-size: 18px;
+        font-weight: 600;
+        color: #0e2238;
+    }
+
+    .fmes-kpi-label {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7a8794;
+    }
+
+    .fmes-legend {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: #566;
+    }
+
+    .fmes-legend-hint {
+        margin-left: auto;
+        font-style: italic;
+        color: #8895a5;
+    }
+
+    .fmes-swatch {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        margin-right: 5px;
+        vertical-align: -2px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+    }
+
+    .fmes-board-scroll {
+        flex: 1 1 auto;
+        overflow: auto;
+        border: 1px solid #e3e8ee;
+        border-radius: 6px;
+        background: #fff;
+    }
+
+    .fmes-board-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: max-content;
+        min-width: 100%;
+        font-size: 12px;
+
+        th,
+        td {
+            border-right: 1px solid #eef1f5;
+            border-bottom: 1px solid #eef1f5;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f6f8fa;
+            padding: 6px 8px;
+            font-weight: 600;
+            color: #0e2238;
+            white-space: nowrap;
+        }
+
+        thead tr:nth-child(2) th {
+            top: 30px;
+        }
+    }
+
+    .fmes-date-head {
+        text-align: center;
+        border-left: 2px solid #d7dee6;
+    }
+
+    .fmes-shift-head {
+        text-align: center;
+        font-weight: 500;
+        color: #566;
+        min-width: 62px;
+    }
+
+    .fmes-machine-head,
+    .fmes-machine-cell {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: #fff;
+        text-align: left;
+        min-width: 200px;
+        max-width: 240px;
+        padding: 6px 10px;
+        border-right: 2px solid #d7dee6;
+    }
+
+    .fmes-machine-head {
+        z-index: 4;
+        background: #f6f8fa;
+    }
+
+    .fmes-machine-name {
+        font-weight: 600;
+        color: #0e2238;
+    }
+
+    .fmes-machine-meta {
+        font-size: 11px;
+        color: #8895a5;
+    }
+
+    .fmes-bottleneck {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 0 6px;
+        border-radius: 8px;
+        background: var(--fmes-warning);
+        color: #3d2c00;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    // ---------------------------------------------------------------- cells
+    .fmes-cell {
+        height: 44px;
+        min-width: 62px;
+        text-align: center;
+        vertical-align: middle;
+        cursor: default;
+        transition: outline-color 0.1s ease;
+
+        &[draggable="true"] {
+            cursor: grab;
+
+            &:active {
+                cursor: grabbing;
+            }
+        }
+
+        &:hover {
+            outline: 2px solid #0e2238;
+            outline-offset: -2px;
+        }
+    }
+
+    .fmes-cell-pct {
+        display: block;
+        font-weight: 600;
+        line-height: 1.1;
+    }
+
+    .fmes-cell-detail {
+        display: block;
+        font-size: 10px;
+        opacity: 0.75;
+        line-height: 1.1;
+    }
+
+    .fmes-cell-none {
+        background: repeating-linear-gradient(
+            45deg,
+            #f4f6f8,
+            #f4f6f8 4px,
+            #eceff2 4px,
+            #eceff2 8px
+        );
+        cursor: not-allowed;
+    }
+
+    .fmes-cell-empty { background: var(--fmes-idle); }
+    .fmes-cell-low   { background: #d6ecd8; color: #14532d; }
+    .fmes-cell-mid   { background: #ffe6b8; color: #5c3d00; }
+    .fmes-cell-high  { background: #ffcf8f; color: #5c3d00; }
+    .fmes-cell-over  { background: #f5adb3; color: #6b1119; font-weight: 700; }
+
+    .fmes-board-loading,
+    .fmes-board-empty {
+        padding: 40px;
+        text-align: center;
+        color: #7a8794;
+    }
+}

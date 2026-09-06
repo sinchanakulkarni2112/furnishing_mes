@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="furnishing_mes.SchedulingBoard">
+        <div class="fmes-board o_action">
+
+            <div class="fmes-board-toolbar">
+                <div class="fmes-board-title">
+                    <h2>Scheduling Board</h2>
+                    <span t-if="state.data and state.data.plan"
+                          class="fmes-plan-badge">
+                        <t t-esc="state.data.plan.name"/>
+                        <t t-esc="' · ' + state.data.plan.state"/>
+                    </span>
+                </div>
+
+                <div class="fmes-board-controls">
+                    <label for="fmes_date_from">From</label>
+                    <input id="fmes_date_from" type="date" class="form-control"
+                           t-att-value="state.dateFrom"
+                           t-on-change="(ev) => this.onDateChange('dateFrom', ev)"/>
+                    <label for="fmes_date_to">To</label>
+                    <input id="fmes_date_to" type="date" class="form-control"
+                           t-att-value="state.dateTo"
+                           t-on-change="(ev) => this.onDateChange('dateTo', ev)"/>
+                </div>
+            </div>
+
+            <div t-if="summary" class="fmes-board-summary">
+                <div class="fmes-kpi">
+                    <span class="fmes-kpi-value"><t t-esc="summary.machines"/></span>
+                    <span class="fmes-kpi-label">Machines</span>
+                </div>
+                <div class="fmes-kpi">
+                    <span class="fmes-kpi-value"><t t-esc="summary.planned"/> h</span>
+                    <span class="fmes-kpi-label">Planned</span>
+                </div>
+                <div class="fmes-kpi">
+                    <span class="fmes-kpi-value"><t t-esc="summary.capacity"/> h</span>
+                    <span class="fmes-kpi-label">Capacity</span>
+                </div>
+                <div class="fmes-kpi">
+                    <span class="fmes-kpi-value"><t t-esc="summary.pct"/>%</span>
+                    <span class="fmes-kpi-label">Utilisation</span>
+                </div>
+                <div class="fmes-kpi"
+                     t-att-class="summary.overloaded ? 'fmes-kpi fmes-kpi-alert' : 'fmes-kpi'">
+                    <span class="fmes-kpi-value"><t t-esc="summary.overloaded"/></span>
+                    <span class="fmes-kpi-label">Overloaded slots</span>
+                </div>
+            </div>
+
+            <div class="fmes-legend">
+                <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-empty"/> Idle</span>
+                <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-low"/> Under 60%</span>
+                <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-mid"/> 60–90%</span>
+                <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-high"/> 90–100%</span>
+                <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-over"/> Over capacity</span>
+                <span class="fmes-legend-hint">Drag a cell onto another machine or shift to reassign it.</span>
+            </div>
+
+            <div t-if="state.loading" class="fmes-board-loading">
+                Loading the board…
+            </div>
+
+            <div t-elif="!state.data or !state.data.machines.length"
+                 class="fmes-board-empty">
+                <p>Nothing to show for this period.</p>
+                <p class="text-muted">
+                    Generate a plan from Planning → Generate Plan, or widen the
+                    date range.
+                </p>
+            </div>
+
+            <div t-else="" class="fmes-board-scroll">
+                <table class="fmes-board-table">
+                    <thead>
+                        <tr>
+                            <th class="fmes-machine-head" rowspan="2">Machine</th>
+                            <th t-foreach="state.data.dates" t-as="date"
+                                t-key="date"
+                                t-att-colspan="state.data.shifts.length"
+                                class="fmes-date-head">
+                                <t t-esc="date"/>
+                            </th>
+                        </tr>
+                        <tr>
+                            <t t-foreach="state.data.dates" t-as="date" t-key="date">
+                                <th t-foreach="state.data.shifts" t-as="shift"
+                                    t-key="date + '-' + shift.id"
+                                    class="fmes-shift-head"
+                                    t-att-title="shift.name">
+                                    <t t-esc="shift.code"/>
+                                </th>
+                            </t>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.data.machines" t-as="machine"
+                            t-key="machine.id">
+                            <th class="fmes-machine-cell">
+                                <div class="fmes-machine-name">
+                                    <t t-esc="machine.name"/>
+                                    <span t-if="machine.bottleneck"
+                                          class="fmes-bottleneck"
+                                          title="Constrains overall throughput">
+                                        bottleneck
+                                    </span>
+                                </div>
+                                <div class="fmes-machine-meta">
+                                    <t t-esc="machine.code"/>
+                                    <t t-if="machine.department">
+                                        · <t t-esc="machine.department"/>
+                                    </t>
+                                </div>
+                            </th>
+
+                            <t t-foreach="columns" t-as="column" t-key="column.key">
+                                <t t-set="cell"
+                                   t-value="cell(machine.id, column.date, column.shift.id)"/>
+                                <td t-att-class="cellClass(cell)"
+                                    t-att-title="cellTitle(machine, column, cell)"
+                                    t-att-draggable="cell and cell.lines ? 'true' : 'false'"
+                                    t-on-click="() => this.openCell(machine, column, cell)"
+                                    t-on-dragstart="(ev) => this.onDragStart(machine, column, cell, ev)"
+                                    t-on-dragover="(ev) => this.onDragOver(ev)"
+                                    t-on-drop="(ev) => this.onDrop(machine, column, ev)"
+                                    t-on-dragend="() => this.onDragEnd()">
+                                    <t t-if="cell and cell.lines">
+                                        <span class="fmes-cell-pct">
+                                            <t t-esc="cell.pct.toFixed(0)"/>%
+                                        </span>
+                                        <span class="fmes-cell-detail">
+                                            <t t-esc="cell.hours.toFixed(1)"/>h
+                                        </span>
+                                    </t>
+                                </td>
+                            </t>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </t>
+
+</templates>

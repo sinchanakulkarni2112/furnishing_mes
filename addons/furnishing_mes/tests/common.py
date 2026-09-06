@@ -100,11 +100,14 @@ class FmesTestCase(TransactionCase):
             'default_code': 'T-OF-DESK',
             'categ_id': cls.categ_furniture.id,
         })
-        # Deliberately has no capacity row anywhere.
+        # Genuinely unrated: its own category tree, so no category rate can
+        # resolve for it. Sitting it under categ_wardrobe would have inherited
+        # the parent-category rate and quietly made it plannable.
+        cls.categ_unrated = Category.create({'name': 'Test Unrated Category'})
         cls.product_unrated = Product.create({
             'name': 'Test Unrated Item',
             'default_code': 'T-UNRATED',
-            'categ_id': cls.categ_wardrobe.id,
+            'categ_id': cls.categ_unrated.id,
         })
 
         # ------------------------------------------------- capacity matrix

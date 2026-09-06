@@ -15,13 +15,13 @@ completeness at handover.
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 1.1 | Automatically generate production plans | NEW | `fmes.planning.engine`, `fmes.plan.generator` wizard | 3 |
-| 1.2 | Planning based on machine capacity matrix | NEW | `fmes.capacity.matrix` | 2 ✅, 3 |
-| 1.3 | Consider available manpower | NEW | `fmes.manpower.log`, `std_manpower` on capacity matrix | 3, 8 |
-| 1.4 | Consider machine availability | EXTEND | `resource.calendar` + maintenance windows + downtime history | 3 |
-| 1.5 | Machine-wise production schedules | NEW | `fmes.production.plan.line` grouped by `workcenter_id` | 3 |
-| 1.6 | Shift-wise production plans | NEW | `fmes.shift` + `shift_id` on every plan line | 2 ✅, 3 |
-| 1.7 | Reduce Excel dependency | NEW | Scheduling Board (OWL) + XLSX import/export | 3, 4 |
+| 1.1 | Automatically generate production plans | NEW | `fmes.planning.engine`, `fmes.plan.generator` wizard | 3 ✅ |
+| 1.2 | Planning based on machine capacity matrix | NEW | `fmes.capacity.matrix` | 2 ✅, 3 ✅ |
+| 1.3 | Consider available manpower | NEW | Capacity hook in place (Phase 3); roster in Phase 8 | 3 ◑, 8 |
+| 1.4 | Consider machine availability | EXTEND | Efficiency + downtime-history derating in the engine | 3 ✅ |
+| 1.5 | Machine-wise production schedules | NEW | `fmes.production.plan.line` grouped by `workcenter_id` | 3 ✅ |
+| 1.6 | Shift-wise production plans | NEW | `fmes.shift` + `shift_id` on every plan line | 2 ✅, 3 ✅ |
+| 1.7 | Reduce Excel dependency | NEW | Scheduling Board (OWL) + XLSX export | 3 ✅, 4 |
 
 ## R2 — Daily Production Plan & Output Tracking
 

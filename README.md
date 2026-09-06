@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 2 of 15 — Master data and capacity matrix ✅ |
-| **Next** | Phase 3 — Production planning automation |
-| **Module version** | `18.0.2.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community · 68 tests passing · no install warnings |
+| **Phase** | 3 of 15 — Production planning automation ✅ |
+| **Next** | Phase 4 — Daily tracking and shop-floor terminal |
+| **Module version** | `18.0.3.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community · 115 tests passing · no install warnings |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

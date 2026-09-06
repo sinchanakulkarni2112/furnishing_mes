@@ -42,7 +42,7 @@ Say **"do phase N"**. The following happens, every time, without further prompti
 | 0 | Documentation & Project Charter | — | ✅ Complete |
 | 1 | Docker Foundation & Module Skeleton | R3.3 | ✅ |
 | 2 | Master Data & Capacity Matrix | R1.2, R1.6, R3.2, R7.1 | ✅ |
-| 3 | Production Planning Automation | R1 | ⬜ |
+| 3 | Production Planning Automation | R1 | ✅ |
 | 4 | Daily Tracking & Shop-Floor Terminal | R2, R3.1, R3.4, R3.5 | ⬜ |
 | 5 | Downtime Management | R6 | ⬜ |
 | 6 | Machine Utilisation & OEE | R5, R3.6 | ⬜ |
@@ -198,7 +198,9 @@ dataset that stands in for ERP 10.8.
 
 ---
 
-## Phase 3 — Production Planning Automation
+## Phase 3 — Production Planning Automation ✅
+
+*Completed 2026-09-06 · module version `18.0.3.0.0`*
 
 **Goal.** Requirement 1 in full — the system generates capacity-aware,
 machine-wise, shift-wise plans without Excel.
@@ -234,10 +236,30 @@ machine-wise, shift-wise plans without Excel.
 8. Tests: capacity maths, overload rejection, changeover accounting,
    carry-forward inclusion, deterministic output for a fixed dataset
 
-**Exit criteria**
-- A planner generates a week's plan for 12 machines in one wizard run
-- No plan line exceeds its machine's available capacity for that shift
-- The board renders the plan and reflects edits
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| A planner generates a week's plan in one wizard run | ✅ 153 demands → 246 plan lines across 15 machines and 3 shifts |
+| No plan line exceeds its machine's capacity for that shift | ✅ **0 capacity breaches**, verified on the demo plant and unit-tested as the engine's core invariant |
+| The board renders the plan and reflects edits | ✅ board data API tested; SCSS and OWL component verified to compile into the backend bundle |
+| Tests pass | ✅ 115 tests, 0 failed, 0 errors |
+| No warnings on install or upgrade | ✅ clean at `--log-level=warn` on a fresh database |
+
+**Deviations from the original spec**
+
+1. **The manpower factor is a working hook returning 1.0, not a live
+   constraint.** The mechanism is in place and applied to every capacity
+   calculation, but the roster it would read arrives with operator allocation in
+   Phase 8. Building a half-real constraint against a model that does not exist
+   yet would have been worse than an honest, tested placeholder — Phase 8
+   replaces one method body and nothing else in the engine changes.
+2. **Routing operations were added to the demo bills of materials.** Without
+   them a manufacturing order has no work orders, so there is no machine-wise
+   schedule to build and nothing for the Phase 4 terminal to show. Odoo creates
+   the work orders automatically because `workorder_ids` is a stored compute.
+3. **Plan release also sets manufacturing order dates**, not only work order
+   dates, so orders whose bill of materials has no routing are still scheduled.
 
 **Commit.** `feat(planning): add capacity-aware production planning engine and scheduling board`
 
