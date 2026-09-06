@@ -72,7 +72,42 @@ test: add security record-rule suite for operator scoping
 
 ## 3. Authorship Policy
 
-**Commits are authored solely by the human developer.**
+### 3.1 Commit identity
+
+All commits are authored by **`sinchanakulkarni2112`**, the repository owner. The
+identity is configured **repo-locally**, so other projects on the same machine
+keep their own:
+
+```bash
+git config user.name  "sinchanakulkarni2112"
+git config user.email "323928844+sinchanakulkarni2112@users.noreply.github.com"
+```
+
+The `…@users.noreply.github.com` form is GitHub's privacy address for that
+account — it attributes the commit correctly on GitHub without publishing a
+personal email address in the repository history.
+
+No commit may be authored or committed by any other identity.
+
+### 3.2 Remote
+
+This machine has two GitHub identities in `~/.ssh/config`. Pushes must use the
+SSH alias for the account that owns the repository:
+
+```bash
+git remote set-url origin git@github-sinchan:sinchanakulkarni2112/furnishing_mes.git
+```
+
+The default HTTPS credential and the plain `github.com` SSH host both
+authenticate as a different account with no write access, and return
+`403 Permission denied`.
+
+Because the remote URL lives in local `.git/config`, a **fresh clone must set
+both the identity and the remote before its first commit.**
+
+### 3.3 No AI attribution
+
+**Commits carry no AI authorship of any kind.**
 
 - No AI tool is named as author or co-author
 - No `Co-Authored-By:` trailer naming an assistant
@@ -83,10 +118,14 @@ This is a hard project rule, recorded in `CLAUDE.md` and `AGENTS.md`. Verify
 before pushing:
 
 ```bash
-git log -3 --format='%an <%ae>%n%b'
+git log -3 --format='%an <%ae>%n%cn <%ce>%n%b'
 ```
 
-Nothing in the author, committer or body fields should reference an assistant.
+Every author and committer line must read
+`sinchanakulkarni2112 <323928844+sinchanakulkarni2112@users.noreply.github.com>`,
+and nothing in the body may reference an assistant.
+
+To correct an unpushed commit: `git commit --amend --reset-author`.
 
 ---
 
@@ -153,7 +192,10 @@ true, the file moves to `.gitignore` and a `.example` takes its place.
 - [ ] Every new model has ACL rows and record rules
 - [ ] Docs and `MEMORY.md` updated for this phase
 - [ ] Commit message follows the convention
+- [ ] Author and committer are `sinchanakulkarni2112`
+- [ ] Remote is the `github-sinchan` SSH alias
 - [ ] No AI author or co-author attribution anywhere
+- [ ] New assumptions and questions recorded in `docs/15-open-questions-and-assumptions.md`
 
 ---
 

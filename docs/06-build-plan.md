@@ -8,12 +8,16 @@ push to `origin/main`.
 
 Say **"do phase N"**. The following happens, every time, without further prompting:
 
-1. Re-read this phase's spec and the relevant design docs.
+1. Re-read this phase's spec, the relevant design docs, and
+   [`15-open-questions-and-assumptions.md`](15-open-questions-and-assumptions.md)
+   — any assumption that has since been answered is corrected before the phase
+   that depends on it.
 2. Implement the deliverables.
 3. Verify the exit criteria — the module must install/upgrade cleanly and all
    tests must pass.
-4. Update `MEMORY.md` (decisions made), `AGENTS.md` and `CLAUDE.md` if conventions changed,
-   and tick this document's phase checklist.
+4. Update `MEMORY.md` (decisions made), `15-open-questions-and-assumptions.md`
+   (new assumptions adopted, questions raised or answered), `AGENTS.md` and
+   `CLAUDE.md` if conventions changed, and tick this document's phase checklist.
 5. Commit with a Conventional Commit message and push to `origin/main`.
 6. Report what was built, what was verified, and what Phase N+1 will cover.
 
@@ -25,7 +29,9 @@ Say **"do phase N"**. The following happens, every time, without further prompti
 - [ ] Odoo unit tests for the phase pass (`--test-enable`)
 - [ ] Demo data loads, so the feature can be shown immediately
 - [ ] Docs updated; traceability matrix rows for the phase marked complete
-- [ ] Committed and pushed with a meaningful message
+- [ ] Every value that stands in for an unanswered customer question is a
+      **configuration record**, not hard-coded, and carries an assumption ID
+- [ ] Committed and pushed with a meaningful message, authored by `sinchanakulkarni2112`
 
 ---
 

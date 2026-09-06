@@ -115,3 +115,4 @@ Full permission matrix: [`04-security-model.md`](04-security-model.md).
 | [`12-git-workflow.md`](12-git-workflow.md) | Branching, commits, per-phase push protocol |
 | [`13-odoo-edition-constraints.md`](13-odoo-edition-constraints.md) | Community vs Enterprise gaps and mitigations |
 | [`14-glossary.md`](14-glossary.md) | Domain and Odoo terminology |
+| [`15-open-questions-and-assumptions.md`](15-open-questions-and-assumptions.md) | **Questions for the manager/customer, and the defaults we build on meanwhile** |

@@ -16,6 +16,7 @@ Start with [`00-project-overview.md`](00-project-overview.md), then
 | [00 — Project Overview](00-project-overview.md) | What are we building, for whom, and why |
 | [01 — Requirements Traceability](01-requirements-traceability.md) | How does every customer requirement get delivered |
 | [14 — Glossary](14-glossary.md) | What does that term mean |
+| [15 — Open Questions & Assumptions](15-open-questions-and-assumptions.md) | What we still need from the customer, and what we assumed meanwhile |
 
 ### Understand the design
 | Doc | What it answers |
@@ -55,6 +56,8 @@ Start with [`00-project-overview.md`](00-project-overview.md), then
 | Why no React or FastAPI? | Odoo is both backend and frontend — [02 — Architecture](02-architecture.md) §1 |
 | Why no Gantt view? | Enterprise-only — [13 — Edition Constraints](13-odoo-edition-constraints.md) §2 |
 | When is ERP integration? | Deferred — [09 — ERP Roadmap](09-erp-integration-roadmap.md) |
+| What should I ask the manager/customer? | [15 — Open Questions](15-open-questions-and-assumptions.md) Part A |
+| Where did that default number come from? | [15 — Assumptions Register](15-open-questions-and-assumptions.md) Part B |
 
 ---
 
@@ -67,3 +70,4 @@ Start with [`00-project-overview.md`](00-project-overview.md), then
 | 01 — Traceability | Living — rows marked as requirements are covered | Every phase |
 | 08 — Deployment | Specified now, realised in Phase 15 | Phase 15 |
 | 10 — Testing | Living — actual results recorded in Phase 14 | Phase 14 |
+| 15 — Questions & Assumptions | Living — reviewed at the start of every phase | Every phase |

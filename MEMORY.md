@@ -123,23 +123,42 @@ arrives by import instead.
 Gives a clean traceability story and a demonstrable increment per phase.
 Dependency chain: 1 → 2 → 3 → 4 → {5, 8} → 6 → 7 → 9 → 10 → 11 → 12 → 13 → 14 → 15.
 
-**D0.12 — Commit authorship is human-only.**
-No AI author, co-author, trailer or footer anywhere. Recorded in `CLAUDE.md` §1
-and `AGENTS.md`, and verified before every push.
+**D0.12 — Commit identity is `sinchanakulkarni2112`, and authorship is human-only.**
+Set **repo-locally** so this machine's other projects keep their own identity:
+
+```
+user.name  = sinchanakulkarni2112
+user.email = 323928844+sinchanakulkarni2112@users.noreply.github.com
+```
+
+The `…@users.noreply.github.com` form is GitHub's privacy address for that
+account (id `323928844`) — it attributes correctly on GitHub without publishing a
+personal email in the history. No commit may be authored by `shreyassridhar44` /
+`shreyassridhar146@gmail.com`; the two Phase 0 commits were rewritten with
+`git rebase --root --exec 'git commit --amend --no-edit --reset-author'` and
+force-pushed. No AI author, co-author, trailer or footer anywhere. Recorded in
+`CLAUDE.md` §1 and `AGENTS.md`, verified before every push.
 
 ### Open questions for later phases
 
-| # | Question | Needed by |
-|---|---|---|
-| Q1 | Exact column layout of the customer's *DAY WISE OUTPUT* workbook | Phase 4 (importer) |
-| Q2 | Real shift timings and break durations | Phase 2 |
-| Q3 | Actual machine list, departments, and standard output rates | Phase 2 |
-| Q4 | Alert thresholds the plant manager considers meaningful | Phase 11 |
-| Q5 | ERP 10.8 API type and schema | Deferred integration |
-| Q6 | Whether operators log in individually or share a machine PIN | Phase 4 |
+**Moved to `docs/15-open-questions-and-assumptions.md`** — 40 questions in Part A
+(ordered by the phase that needs them) and 48 assumptions in Part B.
 
-Where these are unanswered, phases proceed on documented assumptions with
-realistic mock data, and the assumption is recorded here.
+**D0.13 — No phase ever blocks on an unanswered customer question.** Where an
+answer is unknown we adopt the industry-standard default, give it an assumption
+ID, and implement it as a **configuration record** rather than hard-coded logic.
+When the real answer arrives it is a data edit by the Plant Manager — not a code
+change, not a migration, not a redeploy.
+
+*Why:* the customer's process discovery runs in parallel with the build. This is
+how manufacturing software is normally delivered under that constraint, and it
+means the build proceeds at full speed while remaining honest about what is a
+guess. Every guess is traceable to the record that carries it.
+
+The highest-value answers to chase, in order: **Q5** standard output rates (the
+capacity matrix — nothing about automated planning is better than this input),
+**Q8** a real DAY WISE OUTPUT sample, **Q3/Q4** the real machine and department
+list, **Q36–Q40** the ERP questions (longest lead time), **Q32** SMTP access.
 
 ### Delivered in Phase 0
 
@@ -185,11 +204,17 @@ with its manifest and the four security groups, the dormant ERP sync mixin, the
   nothing" must display differently, or the reports mislead.
 - **Windows bind-mount performance** on `C:\` is poor — clone into the WSL 2
   filesystem.
-- **Push uses the `github-sinchan` SSH alias, not HTTPS.** This machine has two
-  GitHub identities. The default HTTPS credential authenticates as
-  `shreyassridhar44`, which has no write access to the repo and gets a 403. The
-  remote is therefore set to
-  `git@github-sinchan:sinchanakulkarni2112/furnishing_mes.git`, which uses
-  `~/.ssh/github-sinchan` and authenticates as `sinchanakulkarni2112`. If a
-  fresh clone cannot push, this is why — the remote URL is local git config and
-  is not carried in the repository.
+- **A fresh clone must set two things before its first commit** — both live in
+  local `.git/config` and are therefore not carried by the clone:
+
+  ```bash
+  git config user.name  "sinchanakulkarni2112"
+  git config user.email "323928844+sinchanakulkarni2112@users.noreply.github.com"
+  git remote set-url origin git@github-sinchan:sinchanakulkarni2112/furnishing_mes.git
+  ```
+
+  This machine has two GitHub identities in `~/.ssh/config`. The default HTTPS
+  credential and the plain `github.com` SSH host both authenticate as
+  `shreyassridhar44`, which has no write access and returns 403. The
+  `github-sinchan` alias uses `~/.ssh/github-sinchan` and authenticates as the
+  repository owner.

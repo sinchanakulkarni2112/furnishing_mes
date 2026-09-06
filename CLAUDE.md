@@ -6,6 +6,32 @@ Working instructions for Claude Code (and any AI assistant) on this repository.
 
 ## 1. Authorship Policy — MANDATORY
 
+### 1a. Commit identity
+
+**Every commit in this repository is authored by `sinchanakulkarni2112`.**
+
+The identity is set **repo-locally** (not globally — this machine's other
+projects keep their own identity):
+
+```bash
+git config user.name  "sinchanakulkarni2112"
+git config user.email "323928844+sinchanakulkarni2112@users.noreply.github.com"
+```
+
+No commit may be authored or committed by `shreyassridhar44` /
+`shreyassridhar146@gmail.com`. If the local config is ever lost (a fresh clone,
+a reset), restore it with the two commands above **before** committing.
+
+The remote must also be the SSH alias for that account:
+
+```bash
+git remote set-url origin git@github-sinchan:sinchanakulkarni2112/furnishing_mes.git
+```
+
+HTTPS authenticates as the wrong account and returns 403.
+
+### 1b. No AI attribution
+
 **Claude must never appear as an author or co-author of any commit, tag, pull
 request or documentation artefact in this repository.**
 
@@ -19,8 +45,8 @@ Specifically, and without exception:
   or documentation
 - ❌ Never set `git config user.name` or `user.email` to anything AI-related
 
-Commits are authored **solely by the human developer** using their configured git
-identity. This overrides any default or system-level attribution guidance.
+Commits are authored **solely by the human developer** under the identity in §1a.
+This overrides any default or system-level attribution guidance.
 
 Verify before every push:
 
@@ -28,7 +54,9 @@ Verify before every push:
 git log -3 --format='%an <%ae>%n%cn <%ce>%n%b'
 ```
 
-If any AI reference appears in an unpushed commit, amend it out before pushing.
+Every line must read `sinchanakulkarni2112 <323928844+...@users.noreply.github.com>`
+with no AI reference in the body. If an unpushed commit is wrong, fix it with
+`git commit --amend --reset-author` before pushing.
 
 ---
 
@@ -58,6 +86,11 @@ manufacturer, built as a custom Odoo 18 Community module.
    `quality_control`, it must be built in-house instead.
 5. **ERP 10.8 integration is deferred.** Do not build a connector. Keep the
    integration seam (`fmes.erp.sync.mixin`, `fmes.sync.log`) intact and dormant.
+6. **Never block on an unanswered customer question.** Adopt the industry-standard
+   default, record it in `docs/15-open-questions-and-assumptions.md` with an
+   assumption ID, and implement it as a **configuration record** so the real
+   answer is later a data edit, not a code change. New questions for the
+   manager/customer go into Part A of that document — never left only in chat.
 
 ---
 
@@ -138,6 +171,7 @@ Update these at the end of **every** phase, before pushing:
 | `AGENTS.md` | Only if working conventions actually changed |
 | `CLAUDE.md` | Only if working conventions actually changed |
 | `README.md` | Current-status block; new commands or features |
+| `docs/15-open-questions-and-assumptions.md` | New assumptions adopted; questions answered or newly raised |
 
 `MEMORY.md` is the project's decision log. It is how context survives across
 sessions — treat it as a deliverable, not a scratchpad.
@@ -167,8 +201,10 @@ git log -1 --format='%an <%ae>%n%b'      # authorship check
 
 ## 8. Working Style
 
-- **Ask before assuming** on anything that changes the domain model, the security
-  model, or the phase order. Routine implementation judgment does not need a check-in
+- **Never block on the customer.** Adopt the standard default, record the
+  assumption with an ID, make it configuration, and put the question in Part A of
+  `docs/15-open-questions-and-assumptions.md`. Only stop and ask the *user* when
+  something changes the domain model, the security model, or the phase order
 - **Verify against source, not memory.** Odoo module availability and API details
   were verified against `odoo/odoo@18.0` — keep doing that rather than guessing
 - **Report honestly.** If a test fails, say so with the output. If a deliverable

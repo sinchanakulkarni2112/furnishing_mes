@@ -230,6 +230,7 @@ Enforced by ACLs and record rules, not merely hidden menus. See
 | [12 — Git Workflow](docs/12-git-workflow.md) | Commits and per-phase pushes |
 | [13 — Edition Constraints](docs/13-odoo-edition-constraints.md) | Community vs Enterprise |
 | [14 — Glossary](docs/14-glossary.md) | Terminology |
+| [15 — Open Questions & Assumptions](docs/15-open-questions-and-assumptions.md) | Questions for the customer, and the defaults we build on |
 
 ---
 

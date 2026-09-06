@@ -7,23 +7,32 @@ Operating guide for any AI coding agent working in this repository.
 
 ## Hard Rules
 
-1. **No AI authorship.** No agent may appear as author or co-author of any
+1. **Commit identity is `sinchanakulkarni2112`.** Set repo-locally:
+   `git config user.name "sinchanakulkarni2112"` and
+   `git config user.email "323928844+sinchanakulkarni2112@users.noreply.github.com"`.
+   No commit may be authored by `shreyassridhar44` / `shreyassridhar146@gmail.com`.
+   The remote must be `git@github-sinchan:sinchanakulkarni2112/furnishing_mes.git`
+   — HTTPS authenticates as the wrong account and 403s. See `CLAUDE.md` §1a.
+2. **No AI authorship.** No agent may appear as author or co-author of any
    commit, tag, PR or document. No `Co-Authored-By` trailer naming an assistant,
    no "generated with" footer, no session URL, no AI attribution anywhere in
-   commit metadata, code comments or docs. Commits carry the human developer's
-   git identity only. See `CLAUDE.md` §1.
-2. **No React, no FastAPI.** Odoo 18 is both backend and frontend. This is the
+   commit metadata, code comments or docs. See `CLAUDE.md` §1b.
+3. **No React, no FastAPI.** Odoo 18 is both backend and frontend. This is the
    mentor's stated requirement and the basis of the whole design.
-3. **Community edition only.** Never depend on an Odoo Enterprise module.
+4. **Community edition only.** Never depend on an Odoo Enterprise module.
    Verified availability list: `docs/13-odoo-edition-constraints.md`.
-4. **Two containers only** — `web` (`odoo:18.0`) and `db` (`postgres:15`).
+5. **Two containers only** — `web` (`odoo:18.0`) and `db` (`postgres:15`).
    No Celery, Redis or Nginx in the standard stack.
-5. **ERP 10.8 integration stays deferred.** Keep the seam dormant; do not build a
+6. **ERP 10.8 integration stays deferred.** Keep the seam dormant; do not build a
    connector.
-6. **One phase at a time.** Build exactly the phase asked for, per
+7. **One phase at a time.** Build exactly the phase asked for, per
    `docs/06-build-plan.md`. Never work ahead.
-7. **No model without ACLs.** A new model and its `ir.model.access.csv` rows and
+8. **No model without ACLs.** A new model and its `ir.model.access.csv` rows and
    record rules ship in the same commit.
+9. **Never block on the customer.** Adopt the industry-standard default, record
+   it with an assumption ID in `docs/15-open-questions-and-assumptions.md`, and
+   implement it as configuration so the real answer is a data edit later. Put new
+   questions for the manager/customer in Part A of that document.
 
 ---
 
@@ -128,9 +137,13 @@ Or `make up` / `make upgrade` / `make test` / `make shell` / `make psql`.
 
 ## When Blocked
 
+**A missing customer answer is never a blocker.** Adopt the standard default,
+give it an assumption ID in `docs/15-open-questions-and-assumptions.md`, make it a
+configuration record, and add the question to Part A. Carry on.
+
 If a phase spec is ambiguous in a way that changes the domain model, the security
-model, or the phase order — **ask**, do not guess. For ordinary implementation
-judgment, decide, proceed, and record the decision in `MEMORY.md`.
+model, or the phase order — **ask the user**, do not guess. For ordinary
+implementation judgment, decide, proceed, and record the decision in `MEMORY.md`.
 
 If something in the design docs turns out to be wrong (an Odoo API differs, a
 model does not exist), fix the doc in the same commit as the code. The docs are
