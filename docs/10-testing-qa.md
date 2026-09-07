@@ -99,28 +99,106 @@ Every test uses `with self.assertRaises(AccessError):` against a user actually
 created in that group — never `sudo()`, which would bypass the very thing under
 test.
 
+**Results (2026-09-07).** T1-T7 and T10 are real `TransactionCase`/`HttpCase`
+tests (17 total, all passing). T8 (database manager blocked by `list_db =
+False`) and T9 (no published PostgreSQL port) are **verified by configuration
+review, not a runtime test**: this dev container deliberately runs with
+`list_db = True` (docs/04 section 5.1's own table — the first-run wizard
+needs it), so a test asserting `list_db = False` behaviour would either be
+vacuous or would have to fight the project's own intentional dev settings.
+T8 is confirmed by reading `config/odoo.conf`'s production template
+(`list_db = False`); T9 by reading `docker-compose.yml`'s `db` service, which
+publishes no host port at all — both facts, not runtime assertions, and both
+re-verified any time either file changes.
+
+The audit (deliverable 1) found five real gaps beyond what `test_security.py`
+itself tests — see `docs/06-build-plan.md`'s own Phase 14 "Deviations and
+findings" for the full account. The most serious: the write rules for
+`fmes.production.entry` and `mrp.workcenter.productivity` had no workcenter
+scope at all, so any Operator could edit any OTHER operator's draft entry on
+any machine — closed with the same OR-with-`create_uid` pattern the read
+rules already used correctly.
+
 ---
 
 ## 6. Performance Benchmarks
 
-Established in Phase 14 with `scripts/seed_load.py`:
+Established in Phase 14 with `scripts/seed_load.py` — a bulk-SQL generator,
+not the ORM (six-figure `create()` calls would take on the order of hours;
+see the script's own docstring). Idempotent and marker-tagged so it can be
+re-run any time without accumulating duplicate rows, and is never loaded
+outside an explicit, deliberate run of the script itself.
 
-| Dataset | Volume |
-|---|---|
-| Production entries | 100,000 (≈3 years, 12 machines, 3 shifts) |
-| Downtime events | 50,000 |
-| Backlog snapshots | 40,000 |
-| Maintenance requests | 5,000 |
+| Dataset | Target volume | Actually generated (2026-09-07) |
+|---|---|---|
+| Production entries | 100,000 | 99,954 |
+| Downtime events | 50,000 | 50,006 (includes the loss-reason join row) |
+| Backlog snapshots | 40,000 | 40,000 |
+| Maintenance requests | 5,000 | 5,005 |
 
-| Operation | Target |
-|---|---|
-| Executive dashboard first paint | < 2 s |
-| Pivot on `fmes.production.report`, 1 year | < 3 s |
-| Daily Production Report PDF | < 5 s |
-| Monthly MIS pack PDF | < 10 s |
-| Plan generation, 1 week × 12 machines | < 15 s |
-| Terminal action round-trip | < 500 ms |
-| Nightly cron suite | < 5 min |
+| Operation | Target | Measured (2026-09-07) | Result |
+|---|---|---|---|
+| Executive dashboard first paint | < 2 s | **5.0 s** | ❌ over target — root-caused, not fixed this phase; see below |
+| Pivot on `fmes.production.report`, 1 year | < 3 s | 0.85 s (19,764 rows) | ✅ |
+| Daily Production Report (data) | < 5 s | 0.65 s | ✅ |
+| Monthly MIS pack (data only, not PDF) | < 10 s | 3.3 s | ✅ |
+| Plan generation, 1 week × 12 machines | < 15 s | not re-measured this phase (Phase 3's own benchmark stands) | — |
+| Terminal action round-trip | < 500 ms | not re-measured this phase | — |
+| Nightly cron suite | < 5 min | not re-measured this phase | — |
+
+**The dashboard finding, in full.** `EXPLAIN ANALYZE` on the query
+`dashboard_service.py`'s own `_fetch_production_rows` issues shows the
+`fmes.production.report` VIEW performs a `HashAggregate` at its own full
+`date × shift × workcenter × department × product × category × company`
+grain across the entire 99,954-row underlying table — 263-449 ms — BEFORE
+the outer date-range filter or the dashboard's own coarser regroup can apply
+at all; Postgres does not push the predicate through the view boundary here.
+This happens TWICE per dashboard load (current period, then the previous
+period for the trend comparison), and the same shape recurs for `fmes.
+utilization.report`. Base-table indexes were confirmed comprehensive first
+(`\d fmes_production_entry` — every foreign key, `date`, and `state` all
+already indexed) — this is not a missing-index problem; the query performs
+a full aggregation regardless of what is indexed.
+
+The pre-planned escalation path (`docs/11-reporting-analytics.md` section 2:
+*"if latency becomes a problem, `fmes.production.report` is promoted to a
+materialised view refreshed by cron — Phase 14 escalation path"*) is the
+architecturally correct fix, and is **deliberately not implemented this
+phase**: a materialised view trades this problem for staleness, and a large
+number of tests across Phases 4-13 depend on the view being live within the
+same transaction (`env.flush_all()` then an immediate read — D6.1's own
+established pattern, used pervasively). Converting now would need every one
+of those tests audited for whether it needs an explicit `REFRESH`, which is
+a correctness-risk-bearing exercise far outside a performance-tuning pass
+this late in the project. A lower-risk alternative is recorded as the
+recommended next step instead: have `dashboard_service.py`'s own fetch
+methods read `fmes.production.entry` / `mrp.workcenter.productivity`
+directly, since the dashboard already re-aggregates at its own coarser grain
+and the view's finer one is wasted work for this specific caller — not
+attempted this phase given the risk of quietly duplicating aggregation logic
+in an already-shipped, KPI-correctness-critical component under time
+pressure.
+
+**Coverage (deliverable 3), measured for real with `coverage.py`** (not in
+the base Odoo image — installed per-run with `pip install --break-system-
+packages coverage`, `COVERAGE_FILE` pointed at a writable path, and
+`MSYS_NO_PATHCONV=1` needed for that env var to survive Git Bash on
+Windows): **87%** combined across `models/` and `services/` (2,751
+statements, 894 branches), comfortably over the 80% target. `services/`
+alone: **≈88.6%**. The one service noticeably under the bar is `alert_
+engine.py` at 66% — its untested lines are mostly the individual `_eval_
+<type>` methods' less-common branches and the notification-dispatch paths
+that depend on real email delivery timing, not exercised by the automated
+suite (Phase 11's own D11.6 already documents why real send timing is
+checked by hand, not by an automated test).
+
+**Backup and restore drill (deliverable 9), timed for real** against the
+195,000-row seeded database: `pg_dump -Fc` — **8 s**, 15.2 MB. `pg_restore`
+into a fresh, empty database — **44 s**. Row counts matched exactly
+(`fmes_production_entry`: 99,954 in both). A fresh Odoo process (`--stop-
+after-init`) booted against the restored database with no errors, confirming
+the restore reproduces a database Odoo itself considers valid, not merely
+one `pg_restore` reports success on.
 
 Measured with `EXPLAIN ANALYZE` on the underlying queries, not just wall-clock,
 so a regression can be attributed to a specific query plan.

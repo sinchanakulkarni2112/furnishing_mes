@@ -26,6 +26,12 @@ CRITICALITY = [
 class MrpWorkcenter(models.Model):
     _inherit = 'mrp.workcenter'
 
+    # Native field, restricted to the Plant Manager (docs/04-security-
+    # model.md section 4) — an Operator or Supervisor has no business case
+    # to see per-hour machine cost, and the base field ships with none of
+    # Odoo's own groups= restriction since core mrp has no such concept.
+    costs_hour = fields.Float(groups='furnishing_mes.group_fmes_manager')
+
     # Odoo's resource.mixin gives every new work center the company's
     # default working calendar (typically Mon-Fri business hours). This
     # module deliberately does NOT use that calendar for capacity or

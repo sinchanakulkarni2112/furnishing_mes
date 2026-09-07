@@ -62,6 +62,8 @@ class FmesOperatorAllocation(models.Model):
          'This employee is already allocated for this shift on this date. '
          'Change their machine on the existing row instead of creating a '
          'second one — a reassignment, not a duplicate.'),
+        ('fmes_allocation_hours_non_negative',
+         'CHECK(hours >= 0)', 'Hours cannot be negative.'),
     ]
 
     @api.onchange('shift_id')

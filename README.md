@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 13 of 15 — Customer portal ✅ |
-| **Next** | Phase 14 — Security hardening, testing & QA |
-| **Module version** | `18.0.13.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 416 tests passing · no install warnings · customer portal (orders, tickets) verified end-to-end via real HTTP requests, including cross-customer access denial |
+| **Phase** | 14 of 15 — Security hardening, testing & QA ✅ |
+| **Next** | Phase 15 — Deployment, documentation & handover |
+| **Module version** | `18.0.14.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 433 tests passing (17 new, dedicated security suite) · no install warnings from this module · 87% test coverage on `models/`+`services/` · a real 195k-row backup/restore drill (8s dump, 44s restore, row counts matched) · a genuine security gap found and closed: operator write access was not machine-scoped |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

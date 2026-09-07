@@ -55,6 +55,23 @@ class FmesManpowerLog(models.Model):
     company_id = fields.Many2one(
         'res.company', default=lambda self: self.env.company)
 
+    # Phase 14 input-validation sweep: this model had no constraints at
+    # all on its own quantity fields before this phase.
+    _sql_constraints = [
+        ('fmes_manpower_log_std_manpower_non_negative',
+         'CHECK(std_manpower >= 0)',
+         'Standard manpower cannot be negative.'),
+        ('fmes_manpower_log_actual_manpower_non_negative',
+         'CHECK(actual_manpower >= 0)',
+         'Actual manpower cannot be negative.'),
+        ('fmes_manpower_log_absent_count_non_negative',
+         'CHECK(absent_count >= 0)',
+         'Absent count cannot be negative.'),
+        ('fmes_manpower_log_overtime_hours_non_negative',
+         'CHECK(overtime_hours >= 0)',
+         'Overtime hours cannot be negative.'),
+    ]
+
     @api.depends('std_manpower', 'actual_manpower')
     def _compute_shortage(self):
         for log in self:

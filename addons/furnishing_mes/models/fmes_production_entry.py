@@ -150,8 +150,12 @@ class FmesProductionEntry(models.Model):
     state = fields.Selection(
         ENTRY_STATES, default='draft', required=True, index=True,
         tracking=True)
-    submitted_by = fields.Many2one('res.users', readonly=True, copy=False)
-    submitted_on = fields.Datetime(readonly=True, copy=False)
+    submitted_by = fields.Many2one(
+        'res.users', readonly=True, copy=False,
+        groups='furnishing_mes.group_fmes_supervisor')
+    submitted_on = fields.Datetime(
+        readonly=True, copy=False,
+        groups='furnishing_mes.group_fmes_supervisor')
     approved_by = fields.Many2one(
         'res.users', readonly=True, copy=False,
         groups='furnishing_mes.group_fmes_supervisor')
@@ -383,9 +387,21 @@ class FmesProductionEntry(models.Model):
                     "happened during the shift before submitting.", entry.name))
             entry.write({
                 'state': 'submitted',
+                'rejection_reason': False,
+            })
+            # Phase 14 field-level restriction (docs/04-security-model.md
+            # section 4) made submitted_by/submitted_on Supervisor-and-
+            # above ONLY — an Operator submitting their own shift has no
+            # write access to those two fields directly, even though
+            # stamping their own name here is exactly what submitting is
+            # supposed to do. sudo(), narrowly, for the same reason Phase
+            # 13's ticket sequence lookup needed it (D13.3): this is
+            # bookkeeping the ACTION performs as a side effect, not
+            # something that should depend on the caller's own field-level
+            # rights to the audit columns themselves.
+            entry.sudo().write({
                 'submitted_by': self.env.user.id,
                 'submitted_on': fields.Datetime.now(),
-                'rejection_reason': False,
             })
 
     def action_approve(self):

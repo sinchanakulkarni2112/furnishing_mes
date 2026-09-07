@@ -47,6 +47,7 @@ class MaintenanceRequest(models.Model):
         'res.currency', related='company_id.currency_id', readonly=True)
     fmes_cost = fields.Monetary(
         string='Cost', currency_field='currency_id',
+        groups='furnishing_mes.group_fmes_manager',
         help="Parts and labour. Optional — tracked when the plant has the "
              "figure, never forced (assumption A22).")
     fmes_checklist_result_ids = fields.One2many(

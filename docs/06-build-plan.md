@@ -1214,30 +1214,182 @@ resolvable, and the Alert Center menu correctly resolving to its action.
 
 ---
 
-## Phase 14 — Security Hardening, Testing & QA
+## Phase 14 — Security Hardening, Testing & QA ✅
+
+*Completed 2026-09-07 · module version `18.0.14.0.0`*
 
 **Goal.** Make it production-grade rather than merely feature-complete.
 
 **Deliverables**
 
 1. Full ACL and record-rule audit — every model, every group, no gaps; the
-   Phase 4 permission matrix verified line by line
-2. `tests/test_security.py` — all ten checks from the security document
-3. Test-coverage sweep across all services; target ≥ 80 % on `services/` and
-   model compute methods
+   Phase 4 permission matrix verified line by line — ✅, five real gaps
+   found and closed (see Deviations), two more found and deliberately
+   accepted as documented deviations from the simplified matrix table
+2. `tests/test_security.py` — all ten checks from the security document —
+   ✅ T1-T7 and T10 as real ORM/`HttpCase` tests (17 tests); T8/T9 are
+   deployment-configuration facts this dev container's own settings
+   deliberately contradict (see Decisions) and are verified by config
+   review instead, recorded in docs/10-testing-qa.md
+3. Test-coverage sweep across all services; target ≥ 80 % on `services/`
+   and model compute methods — ✅ measured for real with `coverage.py`:
+   87% combined (`models/` + `services/`), `services/` alone ≈88.6%
 4. Performance dataset generator (`scripts/seed_load.py`) producing ~100k
-   production entries, ~50k downtime events; dashboard and report timings recorded
-5. Index review against `EXPLAIN ANALYZE` on the heaviest report queries
-6. Input validation sweep — constraints on every quantity, date and percentage field
-7. Odoo log review at `--log-level=warn` — zero warnings on install and upgrade
-8. Dependency and image review; pin the Odoo image digest for reproducibility
-9. Backup and restore rehearsal — full drill documented with timings
-10. `docs/10-testing-qa.md` updated with actual results
+   production entries, ~50k downtime events; dashboard and report timings
+   recorded — ✅ 99,954 / 50,006 / 40,000 backlog snapshots / 5,005
+   maintenance requests, via bulk SQL (not ORM `create()` — see Decisions)
+5. Index review against `EXPLAIN ANALYZE` on the heaviest report queries —
+   ✅ base-table indexes confirmed comprehensive (every FK, `date`,
+   `state`); the actual bottleneck found is structural, not a missing
+   index (see Deviations finding 1)
+6. Input validation sweep — constraints on every quantity, date and
+   percentage field — ✅ two models (`fmes.manpower.log`,
+   `fmes.maintenance.schedule`) had NO constraints at all before this
+   phase; `fmes.operator.allocation.hours` also gained one
+7. Odoo log review at `--log-level=warn` — zero warnings on install and
+   upgrade — ✅ the two RST warnings visible in every install log traced
+   to Odoo's own `mail` module description (confirmed by rendering it
+   directly through `docutils`), not `furnishing_mes` — this module's own
+   description renders with zero warnings
+8. Dependency and image review; pin the Odoo image digest for
+   reproducibility — ✅ `docker-compose.yml`'s `web` service pinned to
+   `odoo@sha256:259fa93...`
+9. Backup and restore rehearsal — full drill documented with timings — ✅
+   real `pg_dump`/`pg_restore` against the 195k-row seeded database: dump
+   8 s (15.2 MB), restore 44 s, row counts matched exactly, and a fresh
+   Odoo process booted cleanly against the restored database
+10. `docs/10-testing-qa.md` updated with actual results — ✅
 
 **Exit criteria**
-- Every security test passes
-- Dashboard under 2 s and reports under 10 s on the 100k-row dataset
-- A restore from backup reproduces the system exactly
+
+| Criterion | Result |
+|---|---|
+| Every security test passes | ✅ 17/17, plus 433/433 across the full regression suite after the fixes below |
+| Dashboard under 2 s and reports under 10 s on the 100k-row dataset | ⚠️ **not met for the dashboard** — measured 5.0 s against the seeded dataset (see Deviations finding 1); every report figure IS under its own target (daily production 0.65 s, a 1-year pivot 0.85 s, Monthly MIS data 3.3 s) |
+| A restore from backup reproduces the system exactly | ✅ row counts matched exactly; a fresh Odoo process booted against the restored database with no errors |
+
+**Deviations and findings**
+
+1. **The Executive Dashboard misses its own 2-second target at
+   realistic volume — 5.0 s measured, root-caused to a structural
+   limitation of the SQL-view architecture itself, not a missing index.**
+   `EXPLAIN ANALYZE` on `fmes.production.report` shows the view's own
+   `HashAggregate` runs at its full `date × shift × workcenter ×
+   department × product × category × company` grain across the ENTIRE
+   underlying table BEFORE any outer date filter can be applied — Postgres
+   cannot push a predicate through this view's boundary, so
+   `dashboard_service.py`'s own coarser re-aggregation (already the
+   Phase 10 fix — fetch each view once, not once per tile) still pays for
+   the view's own unnecessary product/category-level grouping every time,
+   TWICE per dashboard load (current period + previous period). Base-table
+   indexes are already comprehensive (confirmed via `\d` — every FK
+   column, `date`, `state` all indexed), so index tuning cannot fix this;
+   the query itself does a full aggregation regardless of what is
+   indexed. The documented, pre-planned escalation path
+   (`docs/11-reporting-analytics.md` section 2: *"if latency becomes a
+   problem, `fmes.production.report` is promoted to a materialised view
+   refreshed by cron (Phase 14 escalation path)"*) is the correct fix —
+   **deliberately not implemented this phase**: a materialised view
+   trades this for staleness, and dozens of existing tests across Phases
+   4-13 rely on the view being LIVE within the same transaction
+   (`env.flush_all()` then an immediate read, D6.1's own established
+   pattern) — converting now would need every one of those tests audited
+   and likely rewritten to call an explicit `REFRESH`, a scope far beyond
+   a performance-tuning pass this late in the project. A lower-risk
+   alternative — have `dashboard_service.py`'s own `_fetch_production_rows`
+   / `_fetch_utilization_rows` read `fmes.production.entry` /
+   `mrp.workcenter.productivity` directly instead of through the view,
+   since the dashboard already re-aggregates at its own coarser grain
+   and the view's finer one is wasted work for this specific caller — is
+   recorded here as the recommended next step, not attempted this phase
+   given the correctness risk of quietly duplicating aggregation logic
+   in an already-shipped, KPI-correctness-critical component under time
+   pressure. Every other benchmark in docs/10 section 6 is comfortably
+   inside its target at this same data volume.
+2. **The permission matrix's simplified CRUD notation does not always
+   match what the underlying Odoo group hierarchy actually grants, and
+   two such over-permissions are deliberately accepted rather than
+   "fixed."** A Supervisor can delete a `maintenance.equipment` record
+   (matrix says RW, not RWCD) because `group_equipment_manager` — which
+   Supervisor implies, by design, since Phase 1 — carries native RWCD;
+   removing that implication to match the table exactly would take away
+   capabilities Supervisor genuinely needs for other reasons, this late,
+   for a low-severity capability (deleting a plant asset record, not
+   customer data or a financial record). Similarly, an Operator can
+   write to and delete their OWN `maintenance.request` rows (matrix says
+   RC) because the native `maintenance` module's own "own requests" rule
+   is attached to `base.group_user` generically, with no
+   `furnishing_mes`-specific narrowing possible without editing a native
+   Odoo record — accepted since correcting a typo in a breakdown report
+   you just filed is reasonable real-world behaviour, not a security
+   hole. Both are documented here as reviewed-and-accepted, not
+   overlooked.
+3. **Two real, closed gaps were genuine under-permission, not just
+   table-vs-reality mismatches.** An Operator had NO read access at all
+   to `mrp.workcenter` (no ACL row granted it — `mrp.group_mrp_user`,
+   which carries the native row, only starts at Supervisor) and was
+   blocked from `maintenance.equipment` by a native follower-only rule
+   (the same class of gap as Phase 7's own D7.1, for a different access
+   path). Both would have silently broken real shop-floor usage — an
+   operator who cannot see the machine list — without ever showing up in
+   a test, since every earlier test in this module runs as an
+   admin/superuser unless it explicitly calls `.with_user()`. Fixed with
+   an additive ACL row and an unrestricted-read `ir.rule` respectively.
+4. **A genuinely serious gap: the write rules for `fmes.production.entry`
+   and `mrp.workcenter.productivity` had NO workcenter scope at all**,
+   only a state check — any Operator could write to any OTHER operator's
+   draft entry on any machine, not just their own allocated ones,
+   despite the READ rule on the same two models getting this exactly
+   right. Reproduced live via `odoo shell` before writing a single test:
+   an operator scoped to one machine successfully edited a draft entry
+   on a completely different one. Fixed by adding the same
+   `create_uid = self OR workcenter_id in allowed` OR-clause the read
+   rule already used — `create_uid = self` alone keeps an operator's own
+   CREATE always working even with no machine scope configured at all
+   (the model's own documented "not locked out" default), since a
+   record's `create_uid` is definitionally the creating user regardless
+   of workcenter; only a WRITE to someone ELSE's entry is now actually
+   gated by machine allocation. *This is the most significant finding of
+   this phase's entire audit.*
+5. **Restricting a field with `groups=` restricts WRITE as well as READ —
+   and one of this phase's own three new field-level restrictions broke a
+   real, existing workflow the moment the full regression suite ran.**
+   `fmes.production_entry.submitted_by`/`submitted_on` becoming
+   Supervisor-and-above-only meant an Operator's own `action_submit()` —
+   which stamps those two fields with the CALLING user's own identity —
+   could no longer write to them, failing `TestShopFloorTerminal.test_
+   submitting_locks_the_shift` immediately. Fixed the same way Phase 13's
+   D13.3 fixed an analogous gap (a portal customer's own ticket creation
+   needing `ir.sequence` access it does not have): a narrowly-scoped
+   `sudo()` on just that one write, with a comment explaining that
+   stamping the audit trail is bookkeeping the ACTION performs, not
+   something that should depend on the caller's own field-level rights
+   to the audit columns themselves. *Generalisable, and worth remembering
+   for any future field-level restriction*: check every code path that
+   WRITES to a field before restricting who may READ it — the two
+   permissions are the same `groups=` attribute, and grep for every
+   `.write()`/`.create()` call touching that field before shipping the
+   restriction, not after the regression suite catches it.
+6. **`coverage.py` measurement needed three separate fixes before it
+   would run to completion in this Windows/Git-Bash/Docker environment**:
+   PEP 668's `externally-managed-environment` block (`pip install
+   --break-system-packages`), the default `.coverage` data file landing
+   in a directory the container's own user cannot write to (`COVERAGE_
+   FILE=/tmp/.coverage`), and Git Bash's MSYS layer mangling that same
+   `/tmp/...` path into an invalid Windows one when passed as a Docker
+   `-e` value (`MSYS_NO_PATHCONV=1` — the same fix Phase 12 already found
+   for `--test-tags /furnishing_mes`, now confirmed to apply to `-e`
+   values too, not just positional arguments).
+7. **The `scripts/seed_load.py` bulk-SQL generator needed two real fixes
+   before a full run succeeded**: a numeric-to-text concatenation that is
+   invalid in PostgreSQL (`%s || ' minutes'` against a float — fixed with
+   `make_interval(secs => %s)`), and a `NOT NULL` column
+   (`maintenance_request.kanban_state`) that Odoo's own ORM satisfies via
+   a Python-level field default, invisible to a raw SQL insert that
+   bypasses the ORM entirely. Both were caught by an actual run against
+   the real schema, not by inspection — exactly why this script exists
+   as a real, run-verified tool rather than a set of assumptions about
+   what the schema requires.
 
 **Commit.** `test: add security, performance and integration test suites`
 

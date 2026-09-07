@@ -1,5 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_fmes_shift_operator,fmes.shift.operator,model_fmes_shift,furnishing_mes.group_fmes_operator,1,0,0,0
+access_mrp_workcenter_operator,mrp.workcenter.operator,mrp.model_mrp_workcenter,furnishing_mes.group_fmes_operator,1,0,0,0
 access_fmes_shift_supervisor,fmes.shift.supervisor,model_fmes_shift,furnishing_mes.group_fmes_supervisor,1,0,0,0
 access_fmes_shift_manager,fmes.shift.manager,model_fmes_shift,furnishing_mes.group_fmes_manager,1,1,1,1
 access_fmes_capacity_matrix_supervisor,fmes.capacity.matrix.supervisor,model_fmes_capacity_matrix,furnishing_mes.group_fmes_supervisor,1,0,0,0

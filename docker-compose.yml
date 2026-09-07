@@ -36,7 +36,13 @@ services:
       start_period: 20s
 
   web:
-    image: odoo:18.0
+    # Pinned by digest (Phase 14, docs/06 deliverable 8) so "odoo:18.0"
+    # cannot silently drift to a different build between two people's (or
+    # two days') `docker compose up` — the tag stays in the comment purely
+    # for a human to recognise which minor release this is; re-pin with
+    # `docker inspect odoo:18.0 --format '{{index .RepoDigests 0}}'` after
+    # a deliberate, tested upgrade, never as a side effect of a routine pull.
+    image: odoo@sha256:259fa933bf3ee7f3e375bd74d1e0bc28bd75955159723be477359e0fdb8acf67  # odoo:18.0
     depends_on:
       db:
         condition: service_healthy

@@ -107,8 +107,24 @@
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
+            <!--
+                Phase 14 audit finding: the workcenter scope was missing
+                here entirely, so any operator could write to any OTHER
+                operator's draft/submitted/rejected entry on any machine,
+                not just their own allocated ones — the read rule already
+                got this right (below); this one did not. create_uid=self
+                in the OR is what keeps an operator's own CREATE working
+                even with no machine scope configured at all (the model's
+                own "not locked out" default, res_users.py's docstring):
+                a record's create_uid is always the creating user, so that
+                branch is always true for something they just made,
+                regardless of workcenter — only a WRITE to someone ELSE's
+                entry is actually workcenter-gated by this change.
+            -->
             <field name="domain_force">
-                [('state', 'in', ('draft', 'submitted', 'rejected'))]
+                [('state', 'in', ('draft', 'submitted', 'rejected')),
+                 '|', ('create_uid', '=', user.id),
+                      ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
             </field>
         </record>
 
@@ -179,8 +195,12 @@
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
+            <!-- Phase 14 audit finding: same gap and same fix as
+                 fmes_entry_operator_write_rule above — see its comment. -->
             <field name="domain_force">
-                [('fmes_state', 'in', ('draft', 'rejected'))]
+                [('fmes_state', 'in', ('draft', 'rejected')),
+                 '|', ('create_uid', '=', user.id),
+                      ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
             </field>
         </record>
 
@@ -404,6 +424,31 @@
             <field name="domain_force">
                 [('sale_line_id.order_id.partner_id', 'child_of', [user.commercial_partner_id.id])]
             </field>
+        </record>
+
+        <!--
+            Phase 14 audit finding. maintenance.equipment ships two native,
+            non-global rules: a follower-based one for base.group_user (any
+            internal user, unrestricted otherwise) and an unrestricted one
+            for group_equipment_manager. An Operator is neither a follower
+            of a machine's equipment record by default nor a member of
+            group_equipment_manager (only Supervisor+ is), so real machine
+            records were silently unreadable — the exact same class of gap
+            already documented once for this same model as D7.1 (a
+            targeted .sudo() fixed the health-score COMPUTE path back then;
+            this closes the same gap for direct read access generally,
+            matching docs/04-security-model.md's own permission matrix,
+            which promises Operator plain R on maintenance.equipment).
+        -->
+        <record id="fmes_maintenance_equipment_operator_rule" model="ir.rule">
+            <field name="name">Equipment: operator can read every machine's equipment record</field>
+            <field name="model_id" ref="maintenance.model_maintenance_equipment"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
         </record>
 
     </data>

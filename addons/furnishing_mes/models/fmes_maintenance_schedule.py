@@ -102,6 +102,23 @@ class FmesMaintenanceSchedule(models.Model):
     company_id = fields.Many2one(
         'res.company', default=lambda self: self.env.company)
 
+    # Phase 14 input-validation sweep: interval_number in particular had no
+    # floor at all — a negative value would not be caught by the compute's
+    # own `schedule.interval_number or 1` guard (that only substitutes for
+    # exactly 0, per D12.3's own finding; a negative interval silently
+    # walks next_due_date BACKWARDS through relativedelta).
+    _sql_constraints = [
+        ('fmes_maintenance_schedule_interval_number_positive',
+         'CHECK(interval_number > 0)',
+         'Repeat interval must be a positive number.'),
+        ('fmes_maintenance_schedule_lead_time_non_negative',
+         'CHECK(lead_time_days >= 0)',
+         'Lead time cannot be negative.'),
+        ('fmes_maintenance_schedule_usage_threshold_non_negative',
+         'CHECK(usage_threshold_hours >= 0)',
+         'Usage threshold hours cannot be negative.'),
+    ]
+
     # ------------------------------------------------------------------
     # Computes
     # ------------------------------------------------------------------
