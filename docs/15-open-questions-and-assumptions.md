@@ -161,6 +161,7 @@ most likely to need tuning, and the easiest to tune.
 | `A28` | **OEE target 75 %** | The Nakajima world-class benchmark is 85 % (90 × 95 × 99.9); typical discrete manufacturing runs near 60 %. 75 % is a realistic first-year target for a plant introducing an MES — a target nobody can hit is a target everyone ignores | `mrp.workcenter.oee_target` |
 | `A29` | **Achievement target 95 %** of daily plan | Standard plan-adherence expectation | Alert rule |
 | `A30` | Machine flagged **under-utilised below 60 %** | Consistent with typical baseline OEE | Alert rule / dashboard |
+| `A49` | Machine **suggested as a bottleneck at ≥ 90 %** rolling utilisation | The pragmatic, defensible reading of "constrains overall throughput" without a full theory-of-constraints/routing model this project has no data to support yet — a starting point a Plant Manager applies deliberately and can always override by hand | `fmes.utilization.service.BOTTLENECK_THRESHOLD_PCT` |
 | `A31` | **Excess downtime** alert at > 60 min unplanned in one shift, or > 10 % of shift time | Roughly one-eighth of a shift — material enough to warrant a look | Alert rule |
 | `A32` | **Critical backlog** at > 15 days aged, or an order > 7 days past deadline | Conventional ageing buckets | Alert rule |
 | `A33` | **Maintenance due** alert 7 days ahead; overdue alert on the due date | Gives a week to schedule around production | Alert rule |

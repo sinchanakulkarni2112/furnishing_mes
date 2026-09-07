@@ -13,6 +13,8 @@ gap G3. It is kept consistent in both directions here.
 
 from odoo import _, api, fields, models
 
+from ..services.utilization_service import UNDER_UTILIZED_THRESHOLD_PCT
+
 CRITICALITY = [
     ('low', 'Low'),
     ('medium', 'Medium'),
@@ -93,6 +95,17 @@ class MrpWorkcenter(models.Model):
         compute='_compute_fmes_today', string="Today's Achievement %",
         aggregator=None)
 
+    fmes_utilization_pct = fields.Float(
+        compute='_compute_fmes_utilization_pct', string='Utilisation %',
+        aggregator=None,
+        help="Run hours over available hours, rolling over the last 30 "
+             "days — the same window Odoo's own OEE uses, so the two "
+             "figures are directly comparable (Requirement 5.1/3.6).")
+    fmes_is_under_utilized = fields.Boolean(
+        compute='_compute_fmes_utilization_pct',
+        help="Rolling utilisation below the plant's under-utilised "
+             "threshold (assumption A30).")
+
     _sql_constraints = [
         ('fmes_equipment_uniq',
          'unique(equipment_id)',
@@ -163,6 +176,42 @@ class MrpWorkcenter(models.Model):
             workcenter.fmes_today_produced = produced
             workcenter.fmes_today_achievement = (
                 produced / target * 100.0) if target else 0.0
+
+    def _compute_fmes_utilization_pct(self):
+        """Not stored, deliberately: same reasoning as fmes_current_state —
+        this is a rolling view over the last 30 days, and a stored figure
+        would need its own recompute trigger on every approved entry and
+        every approved downtime event to stay honest. Reading it live from
+        the SQL view costs one query for the whole recordset either way.
+        """
+        service = self.env['fmes.utilization.service']
+        pct_by_wc = service._rolling_utilization_pct(self)
+        for workcenter in self:
+            pct = pct_by_wc.get(workcenter, 0.0)
+            workcenter.fmes_utilization_pct = pct
+            workcenter.fmes_is_under_utilized = pct < UNDER_UTILIZED_THRESHOLD_PCT
+
+    def action_fmes_suggest_bottlenecks(self):
+        """Button/action: recompute fmes_is_bottleneck for these machines
+        (or every active machine, called with no selection) from current
+        rolling utilisation. See fmes.utilization.service for the rule."""
+        service = self.env['fmes.utilization.service']
+        flagged, cleared = service._suggest_bottlenecks(
+            self if self else None)
+        message = _(
+            "%(flagged)s machine(s) flagged as a bottleneck, "
+            "%(cleared)s cleared.",
+            flagged=len(flagged), cleared=len(cleared))
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Bottleneck Suggestion Applied'),
+                'message': message,
+                'type': 'success',
+                'sticky': False,
+            },
+        }
 
     # ------------------------------------------------------------------
     # The work center <-> equipment bridge

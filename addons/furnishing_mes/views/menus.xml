@@ -156,6 +156,12 @@
                   action="action_fmes_live_status"
                   sequence="20"/>
 
+        <menuitem id="menu_fmes_utilization_report"
+                  name="Machine Utilisation"
+                  parent="menu_fmes_dashboard"
+                  action="action_fmes_utilization_report"
+                  sequence="30"/>
+
         <!-- ============================================================ -->
         <!--  Production                                                  -->
         <!--                                                              -->

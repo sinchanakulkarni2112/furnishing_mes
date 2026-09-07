@@ -783,11 +783,94 @@ build plan so it is not rediscovered as a surprise.
 
 ### Next
 
-**Phase 6 - Machine Utilisation & OEE.** `fmes.utilization.report`, the
-availability/performance/quality factors, bottleneck ranking, and — per D5.6
-above — mirroring `run_hours` into a productive-type productivity log on
-approval, which is what will make native OEE read a real number for the first
-time.
+Phase 7 - Maintenance Management.
+
+---
+
+## Phase 6 — Machine Utilisation & OEE
+*Completed 2026-09-07 - module version `18.0.6.0.0`*
+
+### Delivered
+
+`fmes.utilization.report`, the SQL view backing utilisation and OEE analysis
+(date x shift x machine grain, FULL OUTER JOIN of approved production and
+approved downtime); `fmes.utilization.service` — rolling 30-day utilisation
+per machine, under-utilised detection (worst-first), bottleneck ranking
+(highest-utilisation-first) and a deterministic `_suggest_bottlenecks()`
+recompute; `mrp.workcenter.fmes_utilization_pct` / `fmes_is_under_utilized`
+computed fields feeding the machine kanban card and list column; the
+"Suggest Bottlenecks" bulk server action; and, per D5.6,
+`_fmes_sync_productive_time()` — mirroring an approved entry's `run_hours`
+into a `loss_type='productive'` `mrp.workcenter.productivity` record, which is
+what finally lets native `mrp.workcenter.oee` read a non-zero value.
+
+### Verified, not assumed
+
+- **235 tests, 0 failed, 0 errors**
+- Clean install on the dev database and a fresh `--without-demo=all`
+  database, both zero warnings; module version confirmed `18.0.6.0.0` in
+  `ir_module_module` on both
+- End-to-end on the demo plant: a demo machine's native `oee` read `0.0`
+  before this phase (D5.6's gap) - approving a production entry with
+  `run_hours=3.0` against it mirrored the productive-time log and `oee`
+  immediately read `100.0`; `fmes_utilization_pct` read `40.0` (3 of 7.5 net
+  shift hours). `_suggest_bottlenecks()` run against the demo plant correctly
+  CLEARED three machines that demo data had pre-flagged `fmes_is_bottleneck`
+  by hand but whose current rolling utilisation no longer clears the 90%
+  threshold - proof the recompute is a live function of current data, not a
+  label that just gets carried forward.
+
+### Decisions
+
+**D6.1 - A raw SQL view (`_auto = False`) does not get the ORM's usual
+auto-flush before `search()`, and a test can hit this even without a
+hand-written debugging script.** MEMORY.md already carried this exact gotcha
+from Phase 5's `fmes.downtime.report` — and it still cost a real, reproduced
+test failure here: `TestUtilizationReportAccess.test_supervisor_can_read_the
+_utilization_report` intermittently found zero rows, searching the view as a
+different user immediately after approving the entry that should populate it.
+A regular model's `search()` flushes the stored fields it depends on
+automatically; `fmes.utilization.report`'s hand-written SQL has no such
+dependency graph for the ORM to flush against, so `_fmes_sync_productive_time
+()`'s own write (and the entry's own computed fields) could still be sitting
+in the ORM cache, never having reached `fmes_production_entry` /
+`mrp_workcenter_productivity` in Postgres, when the view's query ran.
+Reproduced deterministically: running the single test method alone passed
+(its own preceding code happened to flush incidentally); running it as part
+of its class, after a sibling test, failed the same way every time — not
+flaky, just genuinely missing a flush. Fixed by calling `self.env.flush_all()`
+explicitly before every test in this phase that reads the view, including a
+class-wide `setUp()` for the tests that read it indirectly through
+`fmes.utilization.service`.
+
+*Generalisable, restated because it was already written down once and still
+got missed:* **any test that writes through the ORM and then reads a
+`_auto=False` SQL view in the same transaction must call `self.env.flush_all
+()` between the two, unconditionally** - a helper that already does this
+(like this phase's own `_report_row()`) is not a substitute for auditing
+every OTHER place in the same test file that touches the view a different
+way (raw `search()`, or indirectly through a service method's `_read_group`).
+
+**D6.2 - The view's own docstring claimed something the SQL didn't actually
+do.** It said a downtime event logged with no linked production entry would
+still surface as its own row, via the `FULL OUTER JOIN`. In fact
+`mrp.workcenter.productivity.fmes_shift_id` is a *related* field off
+`fmes_entry_id` (Phase 5) - an entry-less event has no shift to place it in,
+and the view's SQL filters `p.fmes_shift_id IS NOT NULL` precisely because the
+report's grain is date x SHIFT x machine. Caught on re-reading the docstring
+against the SQL rather than by a failing test (nothing exercised the claim).
+Corrected the comment to say what actually happens - that event still counts
+toward the machine's own MTBF/MTTR once Phase 7 adds it - rather than leave a
+documented behaviour the code does not provide.
+
+*Generalisable:* a comment describing what a JOIN is "for" is a claim about
+behaviour, not just intent - check it against the actual WHERE clause before
+trusting it, especially on a view with a fixed grain that a general-purpose
+join strategy does not automatically respect.
+
+### Next
+
+Phase 7 - Maintenance Management.
 
 ---
 

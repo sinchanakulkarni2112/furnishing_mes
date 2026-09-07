@@ -43,7 +43,7 @@ completeness at handover.
 | 3.3 | Centralised production database | REUSE | PostgreSQL 15, single Odoo database | 1 ✅ |
 | 3.4 | Historical production records | NEW | `fmes.production.entry`, locked after approval | 4 ✅ |
 | 3.5 | Real-time production status | NEW | Live machine kanban with today's achievement | 4 ✅, 10 |
-| 3.6 | Machine utilisation & productivity | REUSE + NEW | `mrp.workcenter.oee` + `fmes.utilization.report` | 6 |
+| 3.6 | Machine utilisation & productivity | REUSE + NEW | `mrp.workcenter.oee` + `fmes.utilization.report` | 6 ✅ |
 
 ## R4 — Backlog and Carry-Forward Order Management
 
@@ -60,11 +60,11 @@ completeness at handover.
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 5.1 | Machine-wise utilisation % | NEW | `fmes.utilization.report` (run hours over available hours) | 6 |
-| 5.2 | Standard vs actual output | NEW | Capacity-matrix standard rate vs `actual_qty` | 6 |
-| 5.3 | Monitor machine efficiency | REUSE | `mrp.workcenter.oee`, `time_efficiency` | 6 |
-| 5.4 | Identify under-utilised machines | NEW | Threshold filter + dashboard tile | 6, 10 |
-| 5.5 | Analyse production bottlenecks | NEW | `is_bottleneck` flag + load-vs-capacity analysis | 6 |
+| 5.1 | Machine-wise utilisation % | NEW | `fmes.utilization.report` (run hours over available hours) | 6 ✅ |
+| 5.2 | Standard vs actual output | NEW | Capacity-matrix standard rate vs `actual_qty` | 6 ✅ |
+| 5.3 | Monitor machine efficiency | REUSE | `mrp.workcenter.oee`, `time_efficiency` | 6 ✅ |
+| 5.4 | Identify under-utilised machines | NEW | Threshold filter + dashboard tile | 6 ✅, 10 |
+| 5.5 | Analyse production bottlenecks | NEW | `is_bottleneck` flag + load-vs-capacity analysis | 6 ✅ |
 
 ## R6 — Downtime Management
 

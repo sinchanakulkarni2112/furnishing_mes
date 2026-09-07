@@ -432,7 +432,9 @@ code rather than only asserting against it in isolation**
 
 ---
 
-## Phase 6 — Machine Utilisation & OEE
+## Phase 6 — Machine Utilisation & OEE ✅
+
+*Completed 2026-09-07 · module version `18.0.6.0.0`*
 
 **Goal.** Requirement 5 and Requirement 3.6.
 
@@ -461,9 +463,45 @@ code rather than only asserting against it in isolation**
 9. Tests: utilisation maths against a fixture shift, bottleneck ranking order,
    and native OEE reading a real, non-zero value once run_hours is mirrored
 
-**Exit criteria**
-- Utilisation % is available per machine per day and per month
-- The three least-utilised and top-three bottleneck machines are identifiable in one view
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| Utilisation % is available per machine per day and per month | ✅ `fmes.utilization.report` (date × shift × machine grain, pivoted to week/month) and `mrp.workcenter.fmes_utilization_pct` (rolling 30 days) |
+| The three least-utilised and top-three bottleneck machines are identifiable in one view | ✅ `fmes.utilization.service._under_utilized_machines()` / `_rank_by_utilization()`, backing the machine kanban badge, the under/over-loaded search filters, and the "Suggest Bottlenecks" bulk action |
+| Tests pass | ✅ 235 tests, 0 failed, 0 errors |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+End-to-end on the demo plant: before this phase, a demo machine's native `oee`
+read `0.0` (Phase 5's known gap, D5.6). Approving a production entry with
+`run_hours=3.0` against it mirrored a productive-time log and native `oee`
+immediately read `100.0` (a clean run, no downtime in the window) —
+`fmes_utilization_pct` read `40.0` (3 of 7.5 net shift hours). Running
+`_suggest_bottlenecks()` against the demo plant correctly cleared three
+machines that demo data had pre-flagged `fmes_is_bottleneck` by hand but whose
+current rolling utilisation no longer clears the 90% threshold — the
+recompute is a deterministic function of current data, not a one-time label.
+
+**Deviations and findings**
+
+1. **A raw SQL view (`_auto = False`) does not benefit from the ORM's usual
+   auto-flush before `search()`.** A test approving a production entry and
+   immediately reading `fmes.utilization.report` as a different user
+   intermittently found no rows, because the entry's own pending writes (and
+   the productive-time mirror `_fmes_sync_productive_time()` creates) were
+   still only in the ORM's cache, not yet in the tables the view's SQL reads
+   directly. A regular model's `search()` flushes the fields it depends on
+   automatically; a hand-written view query has no such dependency graph to
+   flush against. Fixed by calling `self.env.flush_all()` explicitly before
+   every test that reads the view — the same discipline `fmes.downtime.report`
+   already required in Phase 5, now applied consistently here too.
+2. The SQL view's own docstring initially claimed a downtime event logged with
+   no linked production entry would still surface as its own row (via the
+   `FULL OUTER JOIN`). In fact `fmes_shift_id` is a *related* field off
+   `fmes_entry_id` (Phase 5), so an entry-less event has no shift to place it
+   in, and the shift-grained view necessarily excludes it — corrected the
+   comment to say so rather than leave a claim the SQL doesn't keep; that
+   event still counts toward the machine's own MTBF/MTTR once Phase 7 adds it.
 
 **Commit.** `feat(utilization): add machine utilisation, efficiency and bottleneck analysis`
 

@@ -12,6 +12,8 @@ and dashboards: a figure the supervisor has not signed off is not something
 management should be steering by, and it is why the approval step exists at all.
 """
 
+from datetime import timedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
@@ -399,6 +401,7 @@ class FmesProductionEntry(models.Model):
                 'approved_on': fields.Datetime.now(),
             })
             entry._sync_plan_line()
+            entry._fmes_sync_productive_time()
 
     def action_reject(self):
         self._check_supervisor()
@@ -423,6 +426,7 @@ class FmesProductionEntry(models.Model):
             })
             if previous == 'approved':
                 entry._sync_plan_line()
+                entry._fmes_sync_productive_time()
                 entry.message_post(body=_(
                     "Approved entry reopened for correction by %s.",
                     self.env.user.display_name))
@@ -466,6 +470,51 @@ class FmesProductionEntry(models.Model):
         else:
             state = 'partial'
         line.write({'qty_done': produced, 'state': state})
+
+    def _fmes_sync_productive_time(self):
+        """Mirror approved run_hours into a productive-type productivity log.
+
+        Confirmed necessary in Phase 5 (D5.6): Odoo's native OEE is
+        productive_time / (productive_time + blocked_time), both sides read
+        from mrp.workcenter.productivity. Phase 5 only ever writes the loss
+        (downtime) side; without this, every machine's OEE reads 0% however
+        accurately its downtime is coded, because the denominator's
+        productive component is always zero.
+
+        Governed by the ENTRY's own approval, not a separate review — there
+        is nothing here for a supervisor to approve that approving the
+        entry itself has not already vouched for. Exactly one such record
+        per entry, found by (entry, the native "Fully Productive Time"
+        reason) rather than a stored link, since nothing else could create
+        one with that pairing. Reopening an approved entry (manager only)
+        removes it again, so a shift no longer considered approved cannot
+        leave phantom productive hours behind in native OEE.
+        """
+        Productivity = self.env['mrp.workcenter.productivity']
+        productive_loss = self.env.ref('mrp.block_reason7')
+        for entry in self:
+            existing = Productivity.search([
+                ('fmes_entry_id', '=', entry.id),
+                ('loss_id', '=', productive_loss.id),
+            ], limit=1)
+            if entry.state != 'approved' or entry.run_hours <= 0:
+                if existing:
+                    existing.unlink()
+                continue
+            start, _end = entry.shift_id._slot_datetimes(entry.date)
+            stop = start + timedelta(hours=entry.run_hours)
+            vals = {
+                'workcenter_id': entry.workcenter_id.id,
+                'loss_id': productive_loss.id,
+                'fmes_entry_id': entry.id,
+                'date_start': start,
+                'date_end': stop,
+                'fmes_state': 'approved',
+            }
+            if existing:
+                existing.with_context(fmes_bypass_lock=True).write(vals)
+            else:
+                Productivity.create(vals)
 
     # ==================================================================
     # Generation from the plan
