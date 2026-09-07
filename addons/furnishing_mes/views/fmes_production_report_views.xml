@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Production output analysis (Requirement 9)                  -->
+        <!-- ============================================================ -->
+        <record id="fmes_production_report_view_list" model="ir.ui.view">
+            <field name="name">fmes.production.report.list</field>
+            <field name="model">fmes.production.report</field>
+            <field name="arch" type="xml">
+                <list string="Production Output" create="0" edit="0"
+                      delete="0" sample="1"
+                      decoration-danger="has_planned_qty and achievement_pct &lt; 80"
+                      decoration-success="has_planned_qty and achievement_pct &gt;= 95">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="product_id"/>
+                    <field name="product_category_id" optional="hide"/>
+                    <field name="planned_qty"/>
+                    <field name="actual_qty"/>
+                    <field name="rejected_qty" optional="hide"/>
+                    <field name="ok_qty" optional="show"/>
+                    <field name="variance_qty" optional="hide"/>
+                    <field name="has_planned_qty" column_invisible="True"/>
+                    <field name="achievement_pct" widget="percentage"
+                           invisible="not has_planned_qty"/>
+                    <field name="efficiency_pct" widget="percentage"
+                           optional="show"/>
+                    <field name="run_hours" widget="float_time"
+                           optional="hide"/>
+                    <field name="downtime_hours" widget="float_time"
+                           optional="hide"/>
+                    <field name="std_manpower" optional="hide"/>
+                    <field name="actual_manpower" optional="hide"/>
+                    <field name="entry_count" optional="hide"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_production_report_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.production.report.pivot</field>
+            <field name="model">fmes.production.report</field>
+            <field name="arch" type="xml">
+                <pivot string="Production Output" sample="1">
+                    <field name="department_id" type="row"/>
+                    <field name="date" type="col" interval="week"/>
+                    <field name="planned_qty" type="measure"/>
+                    <field name="actual_qty" type="measure"/>
+                    <field name="achievement_pct" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_production_report_view_graph" model="ir.ui.view">
+            <field name="name">fmes.production.report.graph</field>
+            <field name="model">fmes.production.report</field>
+            <field name="arch" type="xml">
+                <graph string="Production Trend" type="line" sample="1">
+                    <field name="date" interval="day"/>
+                    <field name="planned_qty" type="measure"/>
+                    <field name="actual_qty" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_production_report_view_search" model="ir.ui.view">
+            <field name="name">fmes.production.report.search</field>
+            <field name="model">fmes.production.report</field>
+            <field name="arch" type="xml">
+                <search string="Production Output">
+                    <field name="workcenter_id"/>
+                    <field name="department_id"/>
+                    <field name="product_id"/>
+                    <field name="shift_id"/>
+                    <filter name="filter_this_month" string="This Month"
+                            domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    <separator/>
+                    <filter name="filter_below_target" string="Below Target (&lt; 80%)"
+                            domain="[('has_planned_qty', '=', True),
+                                     ('achievement_pct', '&lt;', 80)]"/>
+                    <filter name="filter_on_target" string="On Target (&gt;= 95%)"
+                            domain="[('has_planned_qty', '=', True),
+                                     ('achievement_pct', '&gt;=', 95)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_product" string="Product"
+                                context="{'group_by': 'product_id'}"/>
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_production_report" model="ir.actions.act_window">
+            <field name="name">Production Output</field>
+            <field name="res_model">fmes.production.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_production_report_view_search"/>
+            <field name="context">{'search_default_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No approved production yet
+                </p>
+                <p>
+                    Planned vs actual, achievement % and efficiency %, per
+                    machine per shift per product. Only approved production
+                    entries ever appear here.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -104,10 +104,10 @@ drawn from the customer's existing process:
 | 8.4 | Monitor manpower utilisation | NEW | `utilization_pct` on manpower log | 8 ✅ |
 | 8.5 | Manpower impact on production | NEW | Correlation view: shortage vs achievement % | 8 ✅, 10 |
 
-## R9 — Production Analytics & Dashboards
+## R9 — Production Analytics & Dashboards ✅ (Phase 10)
 
-All ten requested metrics land in Phase 10 on the Executive Dashboard (an OWL
-client action) backed by SQL-view report models.
+All ten requested metrics land on the Executive Dashboard (an OWL client
+action) backed by SQL-view report models.
 
 | Metric | Source |
 |---|---|

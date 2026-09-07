@@ -151,11 +151,23 @@
         <!--  Dashboard                                                   -->
         <!-- ============================================================ -->
 
+        <menuitem id="menu_fmes_executive_dashboard"
+                  name="Executive Dashboard"
+                  parent="menu_fmes_dashboard"
+                  action="action_fmes_executive_dashboard"
+                  sequence="10"/>
+
         <menuitem id="menu_fmes_live_status"
                   name="Live Production Status"
                   parent="menu_fmes_dashboard"
                   action="action_fmes_live_status"
                   sequence="20"/>
+
+        <menuitem id="menu_fmes_production_report"
+                  name="Production Output"
+                  parent="menu_fmes_dashboard"
+                  action="action_fmes_production_report"
+                  sequence="25"/>
 
         <menuitem id="menu_fmes_utilization_report"
                   name="Machine Utilisation"

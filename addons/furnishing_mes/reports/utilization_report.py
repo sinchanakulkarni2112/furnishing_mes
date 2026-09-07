@@ -64,6 +64,12 @@ class FmesUtilizationReport(models.Model):
     actual_qty = fields.Float(
         string='Actual Output', readonly=True,
         digits='Product Unit of Measure')
+    ok_qty = fields.Float(
+        string='Good Output', readonly=True,
+        digits='Product Unit of Measure',
+        help="Exposed so a multi-row OEE aggregation (Phase 10's Executive "
+             "Dashboard) can re-derive quality as SUM(ok_qty)/SUM(actual_qty) "
+             "— D0.7 — rather than averaging this view's own per-row oee_pct.")
 
     utilization_pct = fields.Float(
         string='Utilisation %', readonly=True,
@@ -161,6 +167,7 @@ class FmesUtilizationReport(models.Model):
                         0) AS idle_hours,
                     c.std_output_qty,
                     c.actual_qty,
+                    c.ok_qty,
                     CASE WHEN sh.net_hours > 0
                          THEN c.run_hours / sh.net_hours * 100.0
                          ELSE 0 END AS utilization_pct,

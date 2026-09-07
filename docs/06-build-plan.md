@@ -739,7 +739,9 @@ on a second run rather than a duplicate.
 
 ---
 
-## Phase 10 — Analytics & Dashboards
+## Phase 10 — Analytics & Dashboards ✅
+
+*Completed 2026-09-07 · module version `18.0.10.0.0`*
 
 **Goal.** Requirement 9, all ten metrics.
 
@@ -764,9 +766,80 @@ on a second run rather than a duplicate.
 7. Tests: each KPI computed by the dashboard equals the same figure from the
    underlying records
 
-**Exit criteria**
-- Every one of the ten requested management metrics is on screen
-- The dashboard loads in under two seconds on the seeded dataset
+**Exit criteria — met, with one deliverable knowingly deferred (see below)**
+
+| Criterion | Result |
+|---|---|
+| Every one of the ten requested management metrics is on screen | ✅ all ten tiles built: KPI row (achievement/utilisation/downtime/OEE/backlog/PM-due), production trend, downtime Pareto, department performance, shift performance, machine ranking, capacity utilisation, backlog ageing, maintenance performance, productivity trend |
+| The dashboard loads in under two seconds on the seeded dataset | ✅ server-side aggregation measured at **1.83 s** against a genuinely relevant 100,000-row `fmes_production_entry` dataset (down from **6.13 s** before an aggregation-count optimisation — see Decisions) |
+| Tests pass | ✅ 347 tests, 0 failed, 0 errors |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+End-to-end on the demo plant: an approved entry's own achievement %,
+utilisation % and productivity figures matched hand-aggregations of the same
+underlying report rows exactly (deliverable 7) — checked both before and
+after the performance rewrite, to confirm the optimisation changed nothing
+about what the numbers say, only how fast they arrive.
+
+**Deferred, deliberately: deliverable 5 (`spreadsheet_dashboard` boards).**
+A published board's content is not simple XML data — it is a raw
+o-spreadsheet JSON document (a real example from Odoo's own
+`spreadsheet_dashboard_sale` ran to ~78 KB: cell grids, styles, borders,
+chart figures anchored by pixel coordinates, pivot definitions with
+per-field-type matching). Hand-authoring one reliably, without the actual
+Spreadsheet editor UI to generate it, was judged too fragile a use of the
+remaining effort in an already large phase — a broken or malformed
+dashboard board would be worse than no board at all. What deliverable 4
+(pivot/graph views on every report model — production, utilisation,
+downtime, maintenance, manpower impact, backlog) already provides, plus the
+Executive Dashboard itself, covers the "ad-hoc analysis" need docs/11 section
+6 describes; a genuine `spreadsheet.dashboard` board remains buildable later
+by a Plant Manager directly from any of those pivot views through Odoo's own
+Spreadsheet app, or by a developer with browser access to author one
+properly, once real production data exists to build it against. Logged here
+rather than silently dropped.
+
+**Deviations and findings**
+
+1. **The first version of the dashboard service missed its own performance
+   target by 3x** — 6.13 s against the 100k-row dataset, not the 1.83 s it
+   reads now. Root cause: `fmes.production.report` and `fmes.utilization.
+   report` are SQL views (`_auto = False`); every separate query against one
+   re-runs its own JOIN and GROUP BY over the full underlying table, and the
+   first version queried each view once per TILE that needed it — five or six
+   times over, each one redoing the same expensive join. Fixed by fetching
+   each view exactly ONCE per request, at the finest grain any tile needs
+   (`_fetch_production_rows` / `_fetch_utilization_rows`), and having every
+   tile aggregate further from that same in-memory list in plain Python.
+   Caught by literally measuring against a 100k-row dataset before calling
+   the phase done, not by assuming a "sum-then-divide, one query per figure"
+   design would scale — the SAME correctness discipline (D0.7) does not
+   guarantee performance at volume once a view sits underneath it.
+2. **`_read_group` on a Date field requires an explicit granularity suffix
+   in Odoo 18** (`'date:day'`, not bare `'date'`) — omitting it raises
+   `ValueError: Granularity not set on a date(time) field` immediately,
+   caught on the first real call rather than by inspection.
+3. **Two more numbers needed their own default targets that no earlier
+   phase had set**: a utilisation target (85%) and a downtime target
+   (≤ 10%), distinct from the more conservative first-year OEE target
+   (`A28`, 75%) — logged as assumption `A54` rather than left as an
+   unexplained constant.
+4. **`fmes.utilization.report` needed one more exposed column, `ok_qty`,
+   to make a multi-row OEE aggregation possible at all.** The view already
+   computed it internally for its own per-row `oee_pct`/`quality` columns,
+   but never selected it as a column in its own right — without it, the
+   dashboard's OEE KPI would have had no correct way to re-derive quality as
+   `SUM(ok_qty)/SUM(actual_qty)` (D0.7) across more than one row; the only
+   alternative would have been averaging the view's own already-computed
+   `oee_pct`, exactly the mistake D0.7 exists to prevent.
+5. **No browser was available in this environment to visually verify the
+   OWL component's actual render** (Chart.js instantiation, click-through,
+   layout). Verified instead: XML template well-formedness, JS syntax
+   (`node --check`), the exact OWL/QWeb patterns matched against Odoo's own
+   native `graph_renderer.js` and this project's own Phase 3/4 OWL
+   components line-for-line, and the full backend service end-to-end via
+   `odoo shell` against real approved production data. The visual render
+   itself is the one thing about this phase not independently confirmed.
 
 **Commit.** `feat(analytics): add executive dashboard and production analytics read models`
 

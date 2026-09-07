@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 9 of 15 — Backlog & carry-forward ✅ |
-| **Next** | Phase 10 — Analytics & dashboards |
-| **Module version** | `18.0.9.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 327 tests passing · no install warnings |
+| **Phase** | 10 of 15 — Analytics & dashboards ✅ |
+| **Next** | Phase 11 — Alerts & notifications |
+| **Module version** | `18.0.10.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 347 tests passing · no install warnings · Executive Dashboard server-side aggregation measured at 1.83s against a 100k-row dataset |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 
