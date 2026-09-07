@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_operator_allocation_view_list" model="ir.ui.view">
+            <field name="name">fmes.operator.allocation.list</field>
+            <field name="model">fmes.operator.allocation</field>
+            <field name="arch" type="xml">
+                <list string="Operator Roster" editable="bottom" sample="1"
+                      decoration-muted="state == 'absent'"
+                      decoration-info="state == 'reassigned'">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="employee_id"/>
+                    <field name="workcenter_id" options="{'no_create': True}"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="role"/>
+                    <field name="state" widget="badge"
+                           decoration-success="state == 'present'"
+                           decoration-danger="state == 'absent'"/>
+                    <field name="hours" widget="float_time" optional="show"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_view_form" model="ir.ui.view">
+            <field name="name">fmes.operator.allocation.form</field>
+            <field name="model">fmes.operator.allocation</field>
+            <field name="arch" type="xml">
+                <form string="Operator Allocation">
+                    <header>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="planned,present,absent,reassigned"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Slot">
+                                <field name="date"/>
+                                <field name="shift_id"/>
+                                <field name="employee_id"/>
+                            </group>
+                            <group string="Placement">
+                                <field name="workcenter_id"
+                                       options="{'no_create': True}"/>
+                                <field name="department_id" readonly="1"/>
+                                <field name="role"/>
+                                <field name="hours" widget="float_time"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_view_calendar" model="ir.ui.view">
+            <field name="name">fmes.operator.allocation.calendar</field>
+            <field name="model">fmes.operator.allocation</field>
+            <field name="arch" type="xml">
+                <calendar string="Roster" date_start="date" mode="week"
+                          color="workcenter_id" event_limit="8">
+                    <field name="employee_id"/>
+                    <field name="shift_id" filters="1"/>
+                    <field name="workcenter_id" filters="1"/>
+                    <field name="role"/>
+                    <field name="state"/>
+                </calendar>
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_view_search" model="ir.ui.view">
+            <field name="name">fmes.operator.allocation.search</field>
+            <field name="model">fmes.operator.allocation</field>
+            <field name="arch" type="xml">
+                <search string="Operator Roster">
+                    <field name="employee_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id"/>
+                    <field name="shift_id"/>
+                    <filter name="filter_today" string="Today"
+                            domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter name="filter_absent" string="Absent"
+                            domain="[('state', '=', 'absent')]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_workcenter" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_operator_allocation" model="ir.actions.act_window">
+            <field name="name">Operator Roster</field>
+            <field name="res_model">fmes.operator.allocation</field>
+            <field name="view_mode">calendar,list,form</field>
+            <field name="context">{'search_default_filter_today': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Plan tomorrow's roster
+                </p>
+                <p>
+                    Who works which machine, which shift, which day. This is
+                    also what scopes an operator's own machine access on the
+                    Shop-Floor Terminal.
+                </p>
+            </field>
+        </record>
+
+        <!--
+            Bulk "copy to next week" — select last week's rows, apply. Safe
+            to run more than once: a target slot that already has an
+            allocation is skipped, not duplicated.
+        -->
+        <record id="action_fmes_operator_allocation_copy_next_week" model="ir.actions.server">
+            <field name="name">Copy to Next Week</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="binding_model_id" ref="model_fmes_operator_allocation"/>
+            <field name="binding_view_types">list,calendar</field>
+            <field name="state">code</field>
+            <field name="code">action = records.action_copy_to_next_week()</field>
+        </record>
+
+    </data>
+</odoo>

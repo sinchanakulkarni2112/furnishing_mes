@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 """Operator machine scoping.
 
-An operator should only see and touch the machines they actually work on. The
-security model derives that from the daily roster, which arrives with operator
-allocation in Phase 8.
+An operator should only see and touch the machines they actually work on.
+Three sources, checked in order of how current they are:
 
-Until then the assignment is explicit: an administrator lists the machines an
-operator may work on. That is real scoping rather than a placeholder, it stays
-useful once the roster exists (a permanent assignment and a day's allocation
-are different things), and it means the terminal is safe from the day it ships.
+1. Today's roster (`fmes.operator.allocation`, Phase 8) — the actual plan for
+   today, for the employee linked to this user. Excludes only 'absent';
+   'planned' and 'reassigned' both still mean "here today."
+2. The permanent assignment (`fmes_workcenter_ids`, Phase 4) — a standing
+   default for a plant that has not started rostering a given day yet, or
+   for a user with no linked employee at all.
+3. The department-wide fallback (`fmes_department_ids`) when neither of the
+   above narrows it down.
 
-When no machines are assigned, an operator is not locked out — they may record
+When none of the three apply, an operator is not locked out — they may record
 on any machine but can only ever see **their own** entries. Locking every
 operator out of an unconfigured system would make the terminal unusable on day
 one; letting them see everyone's work would be worse.
@@ -37,18 +40,34 @@ class ResUsers(models.Model):
     fmes_allowed_workcenter_ids = fields.Many2many(
         'mrp.workcenter', compute='_compute_fmes_allowed_workcenter_ids',
         string='Allowed Machines',
-        help="The machines this user may work on right now. Phase 8 adds the "
-             "day's roster as a second source; nothing that reads this field "
-             "has to change when it does.")
+        help="The machines this user may work on right now: today's roster "
+             "if one exists, else the permanent assignment, else the "
+             "department fallback.")
     fmes_has_machine_scope = fields.Boolean(
         compute='_compute_fmes_allowed_workcenter_ids',
         help="True when the user's machines have been restricted at all.")
 
     @api.depends('fmes_workcenter_ids', 'fmes_department_ids')
     def _compute_fmes_allowed_workcenter_ids(self):
+        # Not fully expressible as an @api.depends path: today's roster
+        # lives on a different model, joined only by employee_id and the
+        # current date, not a real relational field from res.users. Same
+        # reasoning as mrp.workcenter's own "not stored, a view of the
+        # present" computes (Phase 4/6) — read fresh, not cached long.
         Workcenter = self.env['mrp.workcenter']
+        Allocation = self.env['fmes.operator.allocation']
+        today = fields.Date.context_today(self)
         for user in self:
-            machines = user.fmes_workcenter_ids
+            machines = Workcenter.browse()
+            if user.employee_id:
+                todays_rows = Allocation.search([
+                    ('employee_id', '=', user.employee_id.id),
+                    ('date', '=', today),
+                    ('state', '!=', 'absent'),
+                ])
+                machines = todays_rows.workcenter_id
+            if not machines:
+                machines = user.fmes_workcenter_ids
             if not machines and user.fmes_department_ids:
                 machines = Workcenter.search(
                     [('department_id', 'in', user.fmes_department_ids.ids)])

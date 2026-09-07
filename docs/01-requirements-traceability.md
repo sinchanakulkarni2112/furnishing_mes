@@ -98,11 +98,11 @@ drawn from the customer's existing process:
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 8.1 | Track manpower deployment | NEW | `fmes.operator.allocation` | 8 |
-| 8.2 | Standard vs actual manpower | NEW | `fmes.manpower.log` std/actual fields | 8 |
-| 8.3 | Track operator shortage | NEW | `shortage` computed + `absent_count` | 8 |
-| 8.4 | Monitor manpower utilisation | NEW | `utilization_pct` on manpower log | 8 |
-| 8.5 | Manpower impact on production | NEW | Correlation view: shortage vs achievement % | 8, 10 |
+| 8.1 | Track manpower deployment | NEW | `fmes.operator.allocation` | 8 ✅ |
+| 8.2 | Standard vs actual manpower | NEW | `fmes.manpower.log` std/actual fields | 8 ✅ |
+| 8.3 | Track operator shortage | NEW | `shortage` computed + `absent_count` | 8 ✅ |
+| 8.4 | Monitor manpower utilisation | NEW | `utilization_pct` on manpower log | 8 ✅ |
+| 8.5 | Manpower impact on production | NEW | Correlation view: shortage vs achievement % | 8 ✅, 10 |
 
 ## R9 — Production Analytics & Dashboards
 

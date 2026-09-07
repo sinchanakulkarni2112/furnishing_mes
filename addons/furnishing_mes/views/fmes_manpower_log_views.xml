@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_manpower_log_view_list" model="ir.ui.view">
+            <field name="name">fmes.manpower.log.list</field>
+            <field name="model">fmes.manpower.log</field>
+            <field name="arch" type="xml">
+                <list string="Manpower Logs" editable="bottom" sample="1"
+                      decoration-danger="shortage_pct &gt;= 20"
+                      decoration-warning="shortage_pct &gt; 0 and shortage_pct &lt; 20">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="department_id"/>
+                    <field name="workcenter_id" optional="show"/>
+                    <field name="std_manpower"/>
+                    <field name="actual_manpower"/>
+                    <field name="absent_count" optional="show"/>
+                    <field name="shortage" optional="show"/>
+                    <field name="shortage_pct" widget="percentage"/>
+                    <field name="utilization_pct" widget="percentage"
+                           optional="show"/>
+                    <field name="overtime_hours" optional="hide"/>
+                    <field name="reason" optional="hide"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_manpower_log_view_form" model="ir.ui.view">
+            <field name="name">fmes.manpower.log.form</field>
+            <field name="model">fmes.manpower.log</field>
+            <field name="arch" type="xml">
+                <form string="Manpower Log">
+                    <sheet>
+                        <group>
+                            <group string="Shift">
+                                <field name="date"/>
+                                <field name="shift_id"/>
+                                <field name="department_id"/>
+                                <field name="workcenter_id"
+                                       options="{'no_create': True}"/>
+                            </group>
+                            <group string="Headcount">
+                                <field name="std_manpower"/>
+                                <field name="actual_manpower"/>
+                                <field name="absent_count"/>
+                                <field name="overtime_hours"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Computed">
+                                <field name="shortage"/>
+                                <field name="shortage_pct" widget="percentage"/>
+                                <field name="utilization_pct" widget="percentage"/>
+                            </group>
+                        </group>
+                        <group>
+                            <field name="reason" placeholder="Why actual differs from standard, if it does..."/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_manpower_log_view_search" model="ir.ui.view">
+            <field name="name">fmes.manpower.log.search</field>
+            <field name="model">fmes.manpower.log</field>
+            <field name="arch" type="xml">
+                <search string="Manpower Logs">
+                    <field name="department_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="shift_id"/>
+                    <filter name="filter_shortage" string="Short-Staffed"
+                            domain="[('shortage', '&gt;', 0)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_manpower_log" model="ir.actions.act_window">
+            <field name="name">Manpower Logs</field>
+            <field name="res_model">fmes.manpower.log</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{'search_default_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Log today's headcount
+                </p>
+                <p>
+                    Standard vs actual manpower, per shift, per department or
+                    machine. Feeds the manpower impact analysis and the
+                    planning engine's own capacity derating.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

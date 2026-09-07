@@ -5,6 +5,8 @@ from . import fmes_capacity_matrix
 from . import fmes_production_plan
 from . import fmes_import_batch
 from . import fmes_production_entry
+from . import fmes_manpower_log
+from . import fmes_operator_allocation
 from . import mrp_workcenter
 from . import fmes_maintenance_checklist_line
 from . import fmes_maintenance_checklist_result

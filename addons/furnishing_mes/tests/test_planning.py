@@ -88,11 +88,70 @@ class TestCapacityComputation(PlanningCase):
             self.wc_saw, self.plan_from)
         self.assertEqual(factor, 1.0)
 
-    def test_manpower_factor_is_neutral_until_phase_8(self):
-        """Documented behaviour: the roster arrives with operator allocation."""
+    def test_manpower_factor_is_neutral_with_no_roster_for_the_slot(self):
+        """Assumption A49: no roster entered yet for this exact slot is
+        treated as fully staffed, matching how the plant plans today."""
         factor = self.env['fmes.planning.engine']._get_manpower_factor(
             self.wc_saw, self.shift_a, self.plan_from)
         self.assertEqual(factor, 1.0)
+
+    def test_manpower_factor_derates_a_short_staffed_slot(self):
+        # A clearly-above-the-floor case: standard 4, three rostered -> 0.75.
+        self.wc_saw.fmes_std_manpower = 4.0
+        Allocation = self.env['fmes.operator.allocation']
+        for i in range(3):
+            employee = self.env['hr.employee'].create(
+                {'name': 'Test Operator %s' % i})
+            Allocation.create({
+                'date': self.plan_from, 'shift_id': self.shift_a.id,
+                'employee_id': employee.id, 'workcenter_id': self.wc_saw.id,
+                'state': 'planned',
+            })
+        factor = self.env['fmes.planning.engine']._get_manpower_factor(
+            self.wc_saw, self.shift_a, self.plan_from)
+        self.assertAlmostEqual(factor, 0.75, places=4)
+
+    def test_manpower_factor_is_full_when_fully_rostered(self):
+        emp1 = self.env['hr.employee'].create({'name': 'Test Operator 1'})
+        emp2 = self.env['hr.employee'].create({'name': 'Test Operator 2'})
+        Allocation = self.env['fmes.operator.allocation']
+        for emp in (emp1, emp2):
+            Allocation.create({
+                'date': self.plan_from, 'shift_id': self.shift_a.id,
+                'employee_id': emp.id, 'workcenter_id': self.wc_saw.id,
+                'state': 'present',
+            })
+        factor = self.env['fmes.planning.engine']._get_manpower_factor(
+            self.wc_saw, self.shift_a, self.plan_from)
+        self.assertEqual(factor, 1.0)
+
+    def test_manpower_factor_ignores_absent_rostered_operators(self):
+        employee = self.env['hr.employee'].create({'name': 'Test Operator'})
+        self.env['fmes.operator.allocation'].create({
+            'date': self.plan_from, 'shift_id': self.shift_a.id,
+            'employee_id': employee.id, 'workcenter_id': self.wc_saw.id,
+            'state': 'absent',
+        })
+        factor = self.env['fmes.planning.engine']._get_manpower_factor(
+            self.wc_saw, self.shift_a, self.plan_from)
+        self.assertEqual(
+            factor, 1.0,
+            "An absent-only roster is the same as no roster at all for "
+            "this slot, not a fully-staffed-with-zero-people reading")
+
+    def test_manpower_factor_never_derates_below_the_floor(self):
+        # wc_spray's fixture standard is 2.0; roster nobody but log one
+        # 'reassigned' row elsewhere so the slot genuinely has a roster.
+        self.wc_saw.fmes_std_manpower = 10.0
+        employee = self.env['hr.employee'].create({'name': 'Test Operator'})
+        self.env['fmes.operator.allocation'].create({
+            'date': self.plan_from, 'shift_id': self.shift_a.id,
+            'employee_id': employee.id, 'workcenter_id': self.wc_saw.id,
+            'state': 'present',
+        })
+        factor = self.env['fmes.planning.engine']._get_manpower_factor(
+            self.wc_saw, self.shift_a, self.plan_from)
+        self.assertEqual(factor, 0.5)
 
     def test_slots_cover_every_machine_shift_day(self):
         slots = self.env['fmes.planning.engine']._build_capacity_slots(

@@ -33,6 +33,10 @@ AVAILABILITY_LOOKBACK_DAYS = 90
 # broke down constantly last quarter is a maintenance problem, and planning it
 # at near-zero capacity would just push the plan somewhere equally unrealistic.
 MIN_AVAILABILITY_FACTOR = 0.5
+# Same reasoning, applied to a machine rostered well under its standard
+# manpower: a real shortage should derate the plan, not zero a machine out
+# entirely just because it is one pair of hands short.
+MIN_MANPOWER_FACTOR = 0.5
 
 
 class FmesPlanningEngine(models.AbstractModel):
@@ -337,15 +341,31 @@ class FmesPlanningEngine(models.AbstractModel):
     def _get_manpower_factor(self, machine, shift, day):
         """Scale capacity by the operators actually rostered.
 
-        A machine needing two operators but staffed by one cannot run at full
-        rate. The roster itself arrives with operator allocation in Phase 8;
-        until then every machine is treated as fully staffed, which is the
-        behaviour the plant has today.
+        A machine needing two operators but staffed by one cannot run at
+        full rate. Reads `fmes.operator.allocation` for this exact
+        machine/shift/day; 'absent' is the only state excluded (matching
+        the operator-scoping compute on res.users — 'planned' and
+        'reassigned' both still mean someone is there).
 
-        Phase 8 replaces the body of this method and nothing else in the
-        engine has to change.
+        No roster entered yet for this slot (the common case for a day
+        still being planned ahead of when rostering happens) returns 1.0 —
+        assumption A49: every machine is treated as fully staffed until the
+        roster exists for that specific slot, matching how the plant plans
+        today. Once a roster exists, the machine's own standard manpower
+        (`fmes_std_manpower`) is what "fully staffed" is measured against.
         """
-        return 1.0
+        if not machine.fmes_std_manpower:
+            return 1.0
+        rostered = self.env['fmes.operator.allocation'].search_count([
+            ('workcenter_id', '=', machine.id),
+            ('shift_id', '=', shift.id),
+            ('date', '=', day),
+            ('state', '!=', 'absent'),
+        ])
+        if not rostered:
+            return 1.0
+        factor = rostered / machine.fmes_std_manpower
+        return max(min(factor, 1.0), MIN_MANPOWER_FACTOR)
 
     # ==================================================================
     # Step 3 — allocation

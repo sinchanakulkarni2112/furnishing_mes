@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Manpower impact analysis (Requirement 8.5)                  -->
+        <!-- ============================================================ -->
+        <record id="fmes_manpower_impact_report_view_list" model="ir.ui.view">
+            <field name="name">fmes.manpower.impact.report.list</field>
+            <field name="model">fmes.manpower.impact.report</field>
+            <field name="arch" type="xml">
+                <list string="Manpower Impact" create="0" edit="0" delete="0"
+                      sample="1"
+                      decoration-danger="shortage_pct &gt;= 20 and has_planned_qty and achievement_pct &lt; 80">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="department_id"/>
+                    <field name="std_manpower" optional="hide"/>
+                    <field name="actual_manpower" optional="hide"/>
+                    <field name="shortage" optional="show"/>
+                    <field name="shortage_pct" widget="percentage"/>
+                    <field name="absent_count" optional="hide"/>
+                    <field name="planned_qty" optional="hide"/>
+                    <field name="actual_qty" optional="hide"/>
+                    <field name="has_planned_qty" column_invisible="True"/>
+                    <field name="achievement_pct" widget="percentage"
+                           invisible="not has_planned_qty"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_manpower_impact_report_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.manpower.impact.report.pivot</field>
+            <field name="model">fmes.manpower.impact.report</field>
+            <field name="arch" type="xml">
+                <pivot string="Manpower Impact" sample="1">
+                    <field name="department_id" type="row"/>
+                    <field name="date" type="col" interval="week"/>
+                    <field name="shortage_pct" type="measure"/>
+                    <field name="achievement_pct" type="measure"/>
+                    <field name="absent_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_manpower_impact_report_view_graph" model="ir.ui.view">
+            <field name="name">fmes.manpower.impact.report.graph</field>
+            <field name="model">fmes.manpower.impact.report</field>
+            <field name="arch" type="xml">
+                <graph string="Shortage vs Achievement" type="line" sample="1">
+                    <field name="date" interval="day"/>
+                    <field name="shortage_pct" type="measure"/>
+                    <field name="achievement_pct" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_manpower_impact_report_view_search" model="ir.ui.view">
+            <field name="name">fmes.manpower.impact.report.search</field>
+            <field name="model">fmes.manpower.impact.report</field>
+            <field name="arch" type="xml">
+                <search string="Manpower Impact">
+                    <field name="department_id"/>
+                    <field name="shift_id"/>
+                    <filter name="filter_shortage" string="Short-Staffed"
+                            domain="[('shortage', '&gt;', 0)]"/>
+                    <filter name="filter_poor_achievement"
+                            string="Achievement Below 80%"
+                            domain="[('has_planned_qty', '=', True),
+                                     ('achievement_pct', '&lt;', 80)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_manpower_impact_report" model="ir.actions.act_window">
+            <field name="name">Manpower Impact</field>
+            <field name="res_model">fmes.manpower.impact.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_manpower_impact_report_view_search"/>
+            <field name="context">{'search_default_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No manpower or production data yet
+                </p>
+                <p>
+                    Manpower shortage % next to production achievement %, per
+                    department per shift — put side by side rather than
+                    claimed to correlate.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

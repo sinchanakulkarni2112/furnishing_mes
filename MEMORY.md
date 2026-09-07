@@ -870,7 +870,90 @@ join strategy does not automatically respect.
 
 ### Next
 
-Phase 8 - Manpower & Resource Management.
+Phase 9 - Backlog & Carry-Forward.
+
+---
+
+## Phase 8 — Manpower & Resource Management
+*Completed 2026-09-07 - module version `18.0.8.0.0`*
+
+### Delivered
+
+`fmes.manpower.log` (standard vs actual headcount, absence, overtime,
+shortage/shortage_pct/utilization_pct — the same sum-then-divide standard-
+vs-actual maths as everywhere else, D0.7) and `fmes.operator.allocation`
+(the daily roster, unique per employee/shift/day, with a "Copy to Next Week"
+bulk action); `res.users.fmes_allowed_workcenter_ids` now reads today's
+roster FIRST, falling back to the permanent assignment and then the
+department-wide default in that order; `fmes.planning.engine.
+_get_manpower_factor` replaced its Phase-3 placeholder with a real
+roster-vs-standard derating, floored the same way `_get_availability_factor`
+already is; and `fmes.manpower.impact.report`, the date x shift x department
+view putting shortage % and achievement % side by side.
+
+### Verified, not assumed
+
+- **297 tests, 0 failed, 0 errors**
+- Clean install on the dev database and a fresh `--without-demo=all`
+  database, both zero warnings; module version confirmed `18.0.8.0.0` in
+  `ir_module_module` on both
+- End-to-end on the demo plant: Panel Saw 01 fully staffed today (2 of its
+  standard 2) read a manpower factor of `1.0`; rostering only one of the two
+  for tomorrow dropped it to `0.5` — and generating tomorrow's plan actually
+  used it, landing the saw's line at `3.75` planned hours, exactly half its
+  normal 7.5-hour capacity, not just an isolated factor calculation. An
+  operator linked to that roster read zero allowed machines before being
+  rostered and exactly the rostered machine once added.
+
+### Decisions
+
+**D8.1 - Assumption `A49` had already been used once, and Phase 6 silently
+duplicated it.** `A49` originally named the exact placeholder this phase
+resolves (`_get_manpower_factor` returning a flat `1.0` "until Phase 8").
+Phase 6 assigned `A49` a SECOND time, to the unrelated bottleneck-suggestion
+threshold, without the collision being noticed — the check at the time was a
+`grep` for the ID pattern piped through `sort -u`, which DOES dedupe
+identical strings but does not flag two DIFFERENT rows that happen to share
+an ID; the two entries sat far enough apart in an eighty-plus-row document
+that a visual scan of the sorted list missed it too. Found only because this
+phase needed to read the ORIGINAL `A49` and discovered a second row under
+the same heading. Fixed by renumbering the Phase 6 entry to `A52` (the next
+free id) and leaving the original in place, since resolving it is literally
+what this phase does.
+
+*Generalisable:* **grep the exact assumption ID string before assigning a
+new one** (`grep -n 'A49' docs/15-...md`), not just a sorted listing of all
+IDs — a sorted list surfaces gaps, not collisions, and a collision is the
+more dangerous of the two (two DIFFERENT things silently sharing one
+citation, rather than a missing one).
+
+**D8.2 - Department-scoped supervisor rules, promised since Phase 1, needed
+a genuine Python conditional in `domain_force`, not a domain clause.**
+`res.users.fmes_department_ids`'s own help text has always said "leave empty
+for all" — so the rule cannot be a static domain; it has to read as "if this
+user's own department list is empty, see everything, else restrict to it."
+Written as `[(...)] if user.fmes_department_ids else [(1,'=',1)]` — a full
+Python conditional EXPRESSION evaluating to one of two domain lists, which
+`ir.rule.domain_force`'s own `safe_eval` supports and is a more readable
+answer than trying to fold the same logic into a single OR'd domain. The
+same D5.3 cumulative-hierarchy pattern applies one level up here too: without
+an explicit unrestricted rule for `group_fmes_manager` on both new models, a
+Plant Manager with no personal `fmes_department_ids` set would be caught by
+the supervisor's own department-scoped rule, exactly the way an unscoped
+Supervisor rule once caught Operators. Scoped to this phase's own two new
+models only — retrofitting the same pattern onto `fmes.production.entry`,
+`mrp.workcenter.productivity` and the plan/plan-line pair is real, useful
+work, but a separate exercise, not something to fold into this commit
+unannounced.
+
+**D8.3 - Two Odoo-18-specific view/field validation errors, both caught by
+the install itself.** `tracking=True` is not a valid parameter on a
+`Selection` field on a model that does not inherit `mail.thread` — Odoo
+warns rather than fails, but it is dead configuration, so it was removed
+rather than left as noise (`fmes.operator.allocation` has no chatter).
+`quick_add` is not a valid attribute on `<calendar>` in Odoo 18's view
+schema — this one DOES fail the install (a RelaxNG validation error), caught
+immediately on the first `-u` run.
 
 ---
 
@@ -1081,6 +1164,18 @@ a month with no PM due for a machine reads as "—", not a misleading 0%.
   explicit value given alongside it. A follow-up, separate write is the only
   reliable way to set such a field to something other than what native code
   would derive.
+- **`tracking=True` on a field requires the model to inherit `mail.thread`**
+  — Odoo only warns (not fails) when it does not, but it is dead
+  configuration either way; remove it rather than leave the warning as noise.
+- **`quick_add` is not a valid `<calendar>` view attribute in Odoo 18** —
+  unlike the tracking warning above, this one DOES fail the install (a
+  RelaxNG validation error against the view schema).
+- **Grep the exact ID string before assigning a new sequential one**
+  (assumption IDs, anything numbered by convention rather than by a real
+  sequence). A sorted listing of all IDs surfaces GAPS, not COLLISIONS —
+  Phase 6 silently reused an ID Phase 3 had already assigned, and a `sort -u`
+  over sixty-plus rows did not catch it because both rows were syntactically
+  valid, just semantically different things sharing one citation.
 - **A fresh clone must set two things before its first commit** — both live in
   local `.git/config` and are therefore not carried by the clone:
 

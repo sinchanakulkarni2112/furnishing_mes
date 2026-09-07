@@ -163,6 +163,12 @@
                   action="action_fmes_utilization_report"
                   sequence="30"/>
 
+        <menuitem id="menu_fmes_manpower_impact_report"
+                  name="Manpower Impact"
+                  parent="menu_fmes_dashboard"
+                  action="action_fmes_manpower_impact_report"
+                  sequence="40"/>
+
         <!-- ============================================================ -->
         <!--  Production                                                  -->
         <!--                                                              -->
@@ -231,6 +237,28 @@
                   name="Maintenance KPIs"
                   parent="menu_fmes_maintenance"
                   action="action_fmes_maintenance_report"
+                  sequence="30"/>
+
+        <!-- ============================================================ -->
+        <!--  Manpower                                                    -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_operator_roster"
+                  name="Operator Roster"
+                  parent="menu_fmes_manpower"
+                  action="action_fmes_operator_allocation"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_manpower_logs"
+                  name="Manpower Logs"
+                  parent="menu_fmes_manpower"
+                  action="action_fmes_manpower_log"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_manpower_impact"
+                  name="Manpower Impact"
+                  parent="menu_fmes_manpower"
+                  action="action_fmes_manpower_impact_report"
                   sequence="30"/>
 
         <!-- ============================================================ -->

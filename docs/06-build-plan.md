@@ -583,7 +583,9 @@ month rows, reading `mtbf`/`mttr` straight off the native equipment fields.
 
 ---
 
-## Phase 8 — Manpower & Resource Management
+## Phase 8 — Manpower & Resource Management ✅
+
+*Completed 2026-09-07 · module version `18.0.8.0.0`*
 
 **Goal.** Requirement 8.
 
@@ -600,9 +602,59 @@ month rows, reading `mtbf`/`mttr` straight off the native equipment fields.
 7. Manpower views and dashboard tiles
 8. Tests: shortage maths, allocation uniqueness, capacity derating
 
-**Exit criteria**
-- Tomorrow's roster is planned in the system, not on paper
-- Manpower shortage is visible next to the production shortfall it caused
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| Tomorrow's roster is planned in the system, not on paper | ✅ `fmes.operator.allocation` calendar/list, with a "Copy to Next Week" bulk action so a stable roster is a few clicks, not a re-entry |
+| Manpower shortage is visible next to the production shortfall it caused | ✅ `fmes.manpower.impact.report` (date × shift × department), shortage % and achievement % side by side |
+| Tests pass | ✅ 297 tests, 0 failed, 0 errors |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+End-to-end on the demo plant: the demo roster has Panel Saw 01 fully staffed
+today (2 of its standard 2) → the planning engine's manpower factor read
+`1.0`. Rostering only one of the two for tomorrow dropped the factor to `0.5`
+— and generating tomorrow's plan actually used it: the saw's line landed at
+`3.75` planned hours, exactly half its normal 7.5-hour shift capacity, not
+just an isolated factor calculation. An operator linked to that roster
+correctly saw no machines before being rostered, and exactly the rostered
+machine once added — the day's actual roster taking priority over the
+permanent assignment Phase 4 shipped with, which stays as the fallback for a
+plant that has not started rostering a given day yet.
+
+**Deviations and findings**
+
+1. **Assumption `A49` had already been used once**, for the exact placeholder
+   this phase resolves (`fmes.planning.engine._get_manpower_factor` returning
+   a flat `1.0` "until Phase 8"). Phase 6 added a *second*, unrelated `A49`
+   (the bottleneck-suggestion threshold) without noticing the collision — a
+   `grep` that should have caught it did, technically, but the two entries
+   sat far enough apart in the document that the sorted listing used at the
+   time still missed the duplicate visually. Renumbered the Phase 6 entry to
+   `A52` (the next free id) and left the original alone, since Phase 8 is
+   what actually resolves it. *Generalisable: when adding a new assumption
+   id, grep for the exact string, not just eyeball a sorted list — a
+   duplicate hides easily in eighty-plus rows.*
+2. **Department-scoped supervisor rules, promised in `fmes_record_rules.xml`'s
+   own header comment since Phase 1** ("arrive in Phase 8, once
+   `res.users.fmes_department_ids` exists"), are delivered here for this
+   phase's own two new models (`fmes.manpower.log`, `fmes.operator.
+   allocation`) — an empty `fmes_department_ids` reads as "responsible for
+   all departments," matching the field's own help text, via a genuine
+   Python conditional in `domain_force` rather than a domain clause. Managers
+   still need their own explicit unrestricted rule on both models, for the
+   same cumulative-hierarchy reason D5.3 already established — a Plant
+   Manager with no personal `fmes_department_ids` would otherwise be caught
+   by the supervisor's own restrictive rule. **Not** retrofitted onto the
+   department-scoped models from earlier phases (`fmes.production.entry`,
+   `mrp.workcenter.productivity`, the plan/plan-line pair) — a larger,
+   separate exercise, noted below rather than folded into this commit.
+3. Two Odoo-18-specific view errors, both caught by the install itself rather
+   than by inspection: `tracking=True` is not a valid parameter on a
+   `Selection` field on a model that does not inherit `mail.thread` (removed
+   — `fmes.operator.allocation` has no chatter); and `quick_add` is not a
+   valid `<calendar>` attribute in Odoo 18 (removed from the roster calendar
+   view).
 
 **Commit.** `feat(manpower): add operator allocation, manpower logging and impact analysis`
 

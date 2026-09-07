@@ -211,5 +211,96 @@
             </field>
         </record>
 
+        <!--
+            Department-scoped rules for supervisors, promised above since
+            Phase 1 and delivered here for this phase's own two new models
+            (res.users.fmes_department_ids has existed since Phase 4). Not
+            retrofitted onto earlier phases' models in this same commit —
+            that is a larger, separate exercise noted in MEMORY.md rather
+            than folded into this one.
+
+            An empty fmes_department_ids means "responsible for all
+            departments" (the field's own help text), so the domain is a
+            genuine Python conditional, not a domain clause — evaluated by
+            ir.rule the same way the existing rules already use `user` and
+            `company_ids`.
+
+            Both models need the SAME explicit-unrestricted-manager pattern
+            D5.3 established: group_fmes_manager implies group_fmes_supervisor,
+            so without its own unrestricted rule a Plant Manager would be
+            caught by the department-scoped supervisor rule too.
+        -->
+        <record id="fmes_manpower_log_company_rule" model="ir.rule">
+            <field name="name">Manpower Log: multi-company</field>
+            <field name="model_id" ref="model_fmes_manpower_log"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_manpower_log_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Manpower Log: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_manpower_log"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                [('department_id', 'in', user.fmes_department_ids.ids)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_manpower_log_manager_rule" model="ir.rule">
+            <field name="name">Manpower Log: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_manpower_log"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_operator_allocation_company_rule" model="ir.rule">
+            <field name="name">Operator Allocation: multi-company</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_operator_read_rule" model="ir.rule">
+            <field name="name">Operator Allocation: operator sees their own roster</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">
+                [('employee_id.user_id', '=', user.id)]
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Operator Allocation: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                [('department_id', 'in', user.fmes_department_ids.ids)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_manager_rule" model="ir.rule">
+            <field name="name">Operator Allocation: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_manpower_impact_report_company_rule" model="ir.rule">
+            <field name="name">Manpower Impact Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_manpower_impact_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
     </data>
 </odoo>
