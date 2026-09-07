@@ -86,13 +86,13 @@ drawn from the customer's existing process:
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 7.1 | Machine master management | REUSE + EXTEND | `maintenance.equipment` to `mrp.workcenter` bridge | 2 ✅, 7 |
-| 7.2 | Preventive maintenance scheduling | REUSE + NEW | `maintenance.request` recurrence + `fmes.maintenance.schedule` | 7 |
-| 7.3 | Breakdown maintenance tracking | REUSE | `maintenance_type='corrective'` linked to downtime log | 7 |
-| 7.4 | Maintenance history records | REUSE | `maintenance.request` history on equipment | 7 |
+| 7.1 | Machine master management | REUSE + EXTEND | `maintenance.equipment` to `mrp.workcenter` bridge | 2 ✅, 7 ✅ |
+| 7.2 | Preventive maintenance scheduling | REUSE + NEW | `maintenance.request` recurrence + `fmes.maintenance.schedule` | 7 ✅ |
+| 7.3 | Breakdown maintenance tracking | REUSE | `maintenance_type='corrective'` linked to downtime log | 7 ✅ |
+| 7.4 | Maintenance history records | REUSE | `maintenance.request` history on equipment | 7 ✅ |
 | 7.5 | Maintenance alerts and reminders | NEW | `fmes.alert.rule` type `maintenance_due` + activities | 11 |
-| 7.6 | Machine health monitoring | REUSE + NEW | Native MTBF / MTTR + composite health score | 7 |
-| 7.7 | Maintenance KPI reports | NEW | `fmes.maintenance.report` + QWeb/XLSX | 7, 12 |
+| 7.6 | Machine health monitoring | REUSE + NEW | Native MTBF / MTTR + composite health score | 7 ✅ |
+| 7.7 | Maintenance KPI reports | NEW | `fmes.maintenance.report` + QWeb/XLSX | 7 ✅, 12 |
 
 ## R8 — Production Resource Management
 

@@ -6,3 +6,4 @@ from . import test_planning
 from . import test_execution
 from . import test_downtime
 from . import test_utilization
+from . import test_maintenance

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Maintenance KPI report (Requirement 7.7)                    -->
+        <!-- ============================================================ -->
+        <record id="fmes_maintenance_report_view_list" model="ir.ui.view">
+            <field name="name">fmes.maintenance.report.list</field>
+            <field name="model">fmes.maintenance.report</field>
+            <field name="arch" type="xml">
+                <list string="Maintenance KPIs" create="0" edit="0" delete="0"
+                      sample="1"
+                      decoration-danger="has_pm_due and pm_compliance_pct &lt; 80">
+                    <field name="month"/>
+                    <field name="equipment_id"/>
+                    <field name="workcenter_id" optional="show"/>
+                    <field name="department_id" optional="hide"/>
+                    <field name="request_count"/>
+                    <field name="preventive_count" optional="show"/>
+                    <field name="corrective_count" optional="show"/>
+                    <field name="pm_compliance_pct" widget="percentage"
+                           invisible="not has_pm_due"/>
+                    <field name="has_pm_due" column_invisible="True"/>
+                    <field name="overdue_count" optional="show"/>
+                    <field name="mtbf" optional="show"/>
+                    <field name="mttr" optional="show"/>
+                    <field name="downtime_hours" widget="float_time"
+                           optional="show"/>
+                    <field name="cost" optional="show"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_maintenance_report_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.maintenance.report.pivot</field>
+            <field name="model">fmes.maintenance.report</field>
+            <field name="arch" type="xml">
+                <pivot string="Maintenance KPIs" sample="1">
+                    <field name="equipment_id" type="row"/>
+                    <field name="month" type="col" interval="month"/>
+                    <field name="request_count" type="measure"/>
+                    <field name="preventive_count" type="measure"/>
+                    <field name="corrective_count" type="measure"/>
+                    <field name="pm_compliance_pct" type="measure"/>
+                    <field name="downtime_hours" type="measure"/>
+                    <field name="cost" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_maintenance_report_view_graph" model="ir.ui.view">
+            <field name="name">fmes.maintenance.report.graph</field>
+            <field name="model">fmes.maintenance.report</field>
+            <field name="arch" type="xml">
+                <graph string="PM vs Breakdown" type="bar" sample="1">
+                    <field name="month" interval="month"/>
+                    <field name="preventive_count" type="measure"/>
+                    <field name="corrective_count" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_maintenance_report_view_search" model="ir.ui.view">
+            <field name="name">fmes.maintenance.report.search</field>
+            <field name="model">fmes.maintenance.report</field>
+            <field name="arch" type="xml">
+                <search string="Maintenance KPIs">
+                    <field name="equipment_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id"/>
+                    <filter name="filter_breakdowns_only" string="Breakdowns Only"
+                            domain="[('corrective_count', '&gt;', 0)]"/>
+                    <filter name="filter_overdue" string="Has Overdue PM"
+                            domain="[('overdue_count', '&gt;', 0)]"/>
+                    <filter name="filter_poor_compliance"
+                            string="PM Compliance Below 80%"
+                            domain="[('has_pm_due', '=', True),
+                                     ('pm_compliance_pct', '&lt;', 80)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_equipment" string="Equipment"
+                                context="{'group_by': 'equipment_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_month" string="Month"
+                                context="{'group_by': 'month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_maintenance_report" model="ir.actions.act_window">
+            <field name="name">Maintenance KPIs</field>
+            <field name="res_model">fmes.maintenance.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_maintenance_report_view_search"/>
+            <field name="context">{'search_default_group_equipment': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No maintenance requests yet
+                </p>
+                <p>
+                    PM vs breakdown split, PM compliance, MTBF, MTTR, downtime
+                    hours and cost, per machine per month.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

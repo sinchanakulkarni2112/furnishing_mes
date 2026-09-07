@@ -76,7 +76,8 @@
         <menuitem id="menu_fmes_maintenance"
                   name="Maintenance"
                   parent="menu_fmes_root"
-                  sequence="50"/>
+                  sequence="50"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
 
         <!-- Manpower — Phase 8 -->
         <menuitem id="menu_fmes_manpower"
@@ -209,6 +210,28 @@
                   action="action_fmes_import_batch"
                   sequence="60"
                   groups="furnishing_mes.group_fmes_manager"/>
+
+        <!-- ============================================================ -->
+        <!--  Maintenance                                                 -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_maintenance_schedules"
+                  name="Preventive Schedules"
+                  parent="menu_fmes_maintenance"
+                  action="action_fmes_maintenance_schedule"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_maintenance_requests"
+                  name="Maintenance Requests"
+                  parent="menu_fmes_maintenance"
+                  action="maintenance.hr_equipment_request_action_cal"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_maintenance_kpis"
+                  name="Maintenance KPIs"
+                  parent="menu_fmes_maintenance"
+                  action="action_fmes_maintenance_report"
+                  sequence="30"/>
 
         <!-- ============================================================ -->
         <!--  Configuration                                               -->

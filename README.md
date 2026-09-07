@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 6 of 15 — Machine utilisation and OEE ✅ |
-| **Next** | Phase 7 — Maintenance management |
-| **Module version** | `18.0.6.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 235 tests passing · no install warnings |
+| **Phase** | 7 of 15 — Maintenance management ✅ |
+| **Next** | Phase 8 — Manpower & resource management |
+| **Module version** | `18.0.7.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 268 tests passing · no install warnings |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

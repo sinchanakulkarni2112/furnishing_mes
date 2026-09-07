@@ -870,7 +870,101 @@ join strategy does not automatically respect.
 
 ### Next
 
-Phase 7 - Maintenance Management.
+Phase 8 - Manpower & Resource Management.
+
+---
+
+## Phase 7 — Maintenance Management
+*Completed 2026-09-07 - module version `18.0.7.0.0`*
+
+### Delivered
+
+`fmes.maintenance.schedule` (time-based or usage-based preventive templates,
+never appearing on anyone's work queue directly) plus
+`fmes.maintenance.checklist.line`; the `fmes_generate_preventive_requests`
+cron, which raises a real `maintenance.request` `lead_time_days` ahead of
+`next_due_date` and refuses to raise a second one while the first is still
+open; usage-based triggering off accumulated approved productive hours
+(`_check_usage_triggers`, assumption A51); the `maintenance.request`
+extension (work center, origin schedule, a frozen `fmes_due_date` snapshot
+for PM-compliance, the downtime link, cost, a snapshotted checklist result);
+`maintenance.equipment.fmes_health_score` (assumption A50); and
+`fmes.maintenance.report`, the month x equipment SQL view, with `mtbf`/`mttr`
+layered on top as ordinary computes reading the native equipment fields
+directly rather than reimplementing them.
+
+### Verified, not assumed
+
+- **268 tests, 0 failed, 0 errors**
+- Clean install on the dev database and a fresh `--without-demo=all`
+  database, both zero warnings; module version confirmed `18.0.7.0.0` in
+  `ir_module_module` on both
+- End-to-end on the demo plant: backdating a schedule's `last_done_date` put
+  it inside its own lead-time window -> the cron raised exactly one
+  preventive request -> a second cron run raised nothing further -> marking
+  it done moved `last_done_date` forward and recomputed `next_due_date` a
+  month out -> a breakdown logged against the same machine produced a
+  corrective request carrying its work center and a live downtime figure
+  (0.0h running, ~0.22h once stopped) -> the equipment's health score read
+  92 (100 minus the 8-point penalty for that one recent breakdown) -> the
+  KPI report showed 6 equipment/month rows, `mtbf`/`mttr` read straight off
+  the native equipment fields.
+
+### Decisions
+
+**D7.1 - Native `maintenance.equipment` carries its own restrictive record
+rule that our own ACL grant does not override.**
+`maintenance/security/maintenance.xml`'s `equipment_rule_user` limits anyone
+WITHOUT `maintenance.group_equipment_manager` to equipment they personally
+follow (a mail.thread follower, via `message_partner_ids`) — supervisors and
+managers are exempt because `group_fmes_supervisor` implies
+`group_equipment_manager` (Phase 1), but operators are not. Our own
+`ir.model.access.csv` grants operators plain read on `maintenance.equipment`,
+which made it look safe to read `equipment.mtbf` / `.expected_mtbf` directly
+in the health-score compute — a test proving an operator could read the
+score on a machine they do not follow failed with a genuine `AccessError`,
+the ACL and the record rule being two different, independently-enforced
+layers (the same class of gap D5.3 found on our OWN rules, this time on a
+NATIVE one). Fixed by reading `mtbf`, `expected_mtbf`, `fmes_schedule_ids`
+and `maintenance_ids` through `equipment.sudo()` inside the compute — the
+score is a read-only 0-100 summary, not the underlying rows, so it should
+not depend on who happens to follow this specific equipment record.
+
+Left alone, out of this phase's scope: `mrp.workcenter._compute_fmes_current
+_state` (Phase 2/4) searches `maintenance.request` the same non-sudo way to
+decide whether a machine shows as "under maintenance," and is likely exposed
+to the identical gap for an operator with no personal history on that
+request — worth revisiting whenever operator-facing machine status is
+touched again (Phase 11's alert work is the natural point).
+
+**D7.2 - Native `maintenance.request.write()` re-stamps `close_date` to the
+real "today" whenever `stage_id` is in the same vals dict, silently
+overriding any explicit `close_date` passed alongside it.** Found by a
+PM-compliance test that backdated a request's close date to prove an
+on-time closure — it passed on the first attempt, but for the wrong reason:
+the real test-run date happened to still read as "late" against the fixed
+due date used, coincidentally matching what the test expected. Re-ordering
+the assertion (proving the ON-TIME case, where the coincidence broke) is
+what surfaced it. Fixed with a second, separate `write({'close_date': ...})`
+call after the stage-changing one — the same "two writes, deliberately"
+shape Phase 5 already uses for `fmes_approved_by`/`_on` (D5.2).
+
+*Generalisable:* when native code re-derives a field as a SIDE EFFECT of a
+write (not just defends it), passing your own value for that field in the
+SAME vals dict is not reliable — a separate follow-up write is the only way
+to know which one wins.
+
+**D7.3 - The month x equipment grain needed its own frozen due-date, not
+just the schedule's live `next_due_date`.** `fmes.maintenance.schedule.
+next_due_date` moves forward the moment a cycle completes, so by the time
+anyone looks BACK at a historical request to judge "was it closed on time,"
+the schedule's own field no longer reflects what was due for THAT specific
+visit. Added `maintenance.request.fmes_due_date` — not in the original
+Phase 0 field list, but the same reasoning Phase 4/5 apply to an approved
+entry's own frozen figures — a snapshot taken once, at generation, never
+touched again. `fmes.maintenance.report` also needed its own `has_pm_due`
+boolean, the same null-handling pattern `has_target` established in Phase 4:
+a month with no PM due for a machine reads as "—", not a misleading 0%.
 
 ---
 
@@ -972,6 +1066,21 @@ Phase 7 - Maintenance Management.
   stack binds to 127.0.0.1.
 - **Windows bind-mount performance** on `C:\` is poor — clone into the WSL 2
   filesystem.
+- **An ACL grant and a record rule are independent, and a native module's own
+  restrictive rule can silently defeat a grant we add ourselves.** Native
+  `maintenance.equipment` restricts anyone without
+  `maintenance.group_equipment_manager` to equipment they personally follow,
+  regardless of what `ir.model.access.csv` allows. Check for existing record
+  rules on any NATIVE model before assuming our own ACL row is the whole
+  story — `grep` the owning addon's `security/*.xml`, not just its
+  `ir.model.access.csv`.
+- **When native `write()` re-derives a field as a side effect of another
+  field changing, passing your own value for it in the SAME vals dict does
+  not survive.** `maintenance.request.write()` re-stamps `close_date` to
+  today whenever `stage_id` changes in the same call, discarding any
+  explicit value given alongside it. A follow-up, separate write is the only
+  reliable way to set such a field to something other than what native code
+  would derive.
 - **A fresh clone must set two things before its first commit** — both live in
   local `.git/config` and are therefore not carried by the clone:
 

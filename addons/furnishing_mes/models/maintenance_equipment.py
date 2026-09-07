@@ -9,9 +9,23 @@ Native `mtbf`, `mttr`, `expected_mtbf`, `latest_failure_date` and
 `estimated_next_failure` are reused as-is and never recomputed by us.
 """
 
+from datetime import timedelta
+
 from odoo import api, fields, models
 
 from .mrp_workcenter import CRITICALITY
+
+# Health score weights (Requirement 7.6, assumption A50 — docs/15). Each
+# factor is independently capped so no single one can sink the whole score
+# on its own; a machine with no failure history yet or no target set is not
+# penalised for the MTBF factor at all (absence of bad data is not itself
+# bad — the same reasoning behind Phase 4's has_target/D-style null handling).
+MTBF_SHORTFALL_WEIGHT = 30.0
+OVERDUE_PM_PENALTY_PER = 10.0
+OVERDUE_PM_PENALTY_CAP = 30.0
+BREAKDOWN_PENALTY_PER = 8.0
+BREAKDOWN_PENALTY_CAP = 40.0
+BREAKDOWN_WINDOW_DAYS = 90
 
 
 class MaintenanceEquipment(models.Model):
@@ -29,6 +43,51 @@ class MaintenanceEquipment(models.Model):
     fmes_department_id = fields.Many2one(
         related='workcenter_id.department_id', store=True, readonly=True,
         string='Department')
+    fmes_schedule_ids = fields.One2many(
+        'fmes.maintenance.schedule', 'equipment_id', string='PM Schedules')
+    fmes_health_score = fields.Float(
+        compute='_compute_fmes_health_score', string='Health Score',
+        aggregator=None,
+        help="0-100 composite: MTBF against the expected target, currently "
+             "overdue preventive schedules, and breakdown frequency in the "
+             "last 90 days (Requirement 7.6, assumption A50). Not a native "
+             "Odoo figure — MTBF/MTTR themselves are read as-is from "
+             "Odoo's own compute, only combined here.")
+
+    # ------------------------------------------------------------------
+    # Health score (Requirement 7, deliverable 5)
+    # ------------------------------------------------------------------
+    @api.depends('mtbf', 'expected_mtbf', 'fmes_schedule_ids.next_due_date',
+                 'fmes_schedule_ids.state', 'maintenance_ids.maintenance_type',
+                 'maintenance_ids.request_date')
+    def _compute_fmes_health_score(self):
+        today = fields.Date.context_today(self)
+        window_start = today - timedelta(days=BREAKDOWN_WINDOW_DAYS)
+        for equipment in self:
+            # sudo(): native maintenance.equipment carries its own record
+            # rule restricting a plain employee to equipment they follow
+            # (maintenance/security/maintenance.xml, equipment_rule_user) —
+            # our own ACL already lets any internal user read this model at
+            # all, and the score is a read-only 0-100 summary, not the
+            # underlying request/schedule rows themselves, so it should not
+            # depend on who happens to follow this specific record.
+            record = equipment.sudo()
+            score = 100.0
+            if record.expected_mtbf and record.mtbf:
+                shortfall = max(
+                    0.0, 1.0 - (record.mtbf / record.expected_mtbf))
+                score -= MTBF_SHORTFALL_WEIGHT * shortfall
+            overdue = record.fmes_schedule_ids.filtered(
+                lambda s: s.state == 'active' and s.next_due_date
+                and s.next_due_date < today)
+            score -= min(OVERDUE_PM_PENALTY_CAP,
+                        OVERDUE_PM_PENALTY_PER * len(overdue))
+            breakdowns = record.maintenance_ids.filtered(
+                lambda r: r.maintenance_type == 'corrective'
+                and r.request_date and r.request_date >= window_start)
+            score -= min(BREAKDOWN_PENALTY_CAP,
+                        BREAKDOWN_PENALTY_PER * len(breakdowns))
+            equipment.fmes_health_score = max(0.0, score)
 
     # ------------------------------------------------------------------
     # The equipment <-> work center bridge

@@ -507,7 +507,9 @@ recompute is a deterministic function of current data, not a one-time label.
 
 ---
 
-## Phase 7 — Maintenance Management
+## Phase 7 — Maintenance Management ✅
+
+*Completed 2026-09-07 · module version `18.0.7.0.0`*
 
 **Goal.** Requirement 7.
 
@@ -528,10 +530,54 @@ recompute is a deterministic function of current data, not a one-time label.
 9. Tests: schedule recurrence, lead-time generation, no duplicate open requests,
    MTBF/MTTR sanity
 
-**Exit criteria**
-- Preventive requests appear automatically before due dates
-- A breakdown logged on the terminal produces a maintenance request with the
-  correct machine, downtime and reporter
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| Preventive requests appear automatically before due dates | ✅ `_cron_generate_due_requests` raises a request `lead_time_days` ahead of `next_due_date`; verified idempotent (a second cron run on the same day raises nothing new) |
+| A breakdown logged on the terminal produces a maintenance request with the correct machine, downtime and reporter | ✅ `_fmes_escalate_if_required` (Phase 5) now also stamps `workcenter_id` and `fmes_productivity_id`; `fmes_downtime_hours` tracks the event's own live duration |
+| Tests pass | ✅ 268 tests, 0 failed, 0 errors |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+End-to-end on the demo plant: a schedule's `last_done_date` moved back to put
+it inside its own lead-time window → the cron raised exactly one preventive
+request, a second cron run raised nothing further → marking that request done
+moved `last_done_date` forward and recomputed `next_due_date` a month out →
+a breakdown logged against the same machine created a corrective request
+carrying its work center and a live downtime figure (0.0 h running, ~0.22 h
+once stopped) → the equipment's health score read 92 (100 minus the 8-point
+penalty for that one recent breakdown) → the KPI report showed 6 equipment/
+month rows, reading `mtbf`/`mttr` straight off the native equipment fields.
+
+**Deviations and findings**
+
+1. **Native `maintenance.equipment` carries its own restrictive record rule**
+   (`maintenance/security/maintenance.xml`, `equipment_rule_user`) limiting
+   anyone without `maintenance.group_equipment_manager` to equipment they
+   personally follow. Supervisors/managers are exempt (that group is implied
+   by `group_fmes_supervisor`, Phase 1) — operators are not, so a test proving
+   an operator could compute `fmes_health_score` on a machine they do not
+   follow failed with an `AccessError`, even though our own ACL grants
+   operators plain read access to the model. Fixed by having the health-score
+   compute read `mtbf`, `expected_mtbf`, `fmes_schedule_ids` and
+   `maintenance_ids` through `equipment.sudo()` — the score is a read-only
+   0-100 summary, not the underlying rows, so it should not depend on
+   follower status. `_compute_fmes_current_state` (Phase 2/4) reads
+   `maintenance.request` the same non-sudo way and is likely exposed to the
+   same gap for an operator viewing a machine they have no request history
+   on; out of this phase's scope to touch, logged in MEMORY.md for whoever
+   next touches operator-facing machine status (a natural fit for Phase 11's
+   alert work).
+2. **Native `maintenance.request.write()` re-stamps `close_date` to the real
+   "today" whenever `stage_id` is in the same vals dict, silently overriding
+   any explicit `close_date` passed alongside it.** A PM-compliance test
+   backdating a request's close date to prove an on-time closure passed for
+   the wrong reason at first (the real test-run date happened to still read
+   as "late" by coincidence) before this was caught and fixed with a second,
+   separate write for the backdated value.
+3. The SQL view needed its own `has_pm_due` boolean, the same null-handling
+   pattern Phase 4's `has_target` already established: a month with no PM due
+   for a machine must read as "—", not a misleading 0% compliance.
 
 **Commit.** `feat(maintenance): add preventive scheduling, breakdown tracking and maintenance kpis`
 

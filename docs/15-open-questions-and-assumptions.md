@@ -150,6 +150,7 @@ lives" column names the record or field to change.
 | `A20` | Preventive maintenance: **monthly routine, quarterly major**, per machine type; raised **7 days** before due | Common interval structure for this machine class | `fmes.maintenance.schedule` |
 | `A21` | One in-house maintenance team | Simplest structure; more teams are just more records | `maintenance.team` |
 | `A22` | Maintenance cost tracked but optional | Present without forcing data entry the customer may not have | `maintenance.request.fmes_cost` |
+| `A51` | A **usage-based** schedule becomes due the moment accumulated run hours cross its threshold — not projected forward from a run-rate estimate | No reliable daily-rate average exists yet to project from; "due now" is the defensible reading once the threshold is actually crossed, checked on every cron run | `fmes.maintenance.schedule._check_usage_triggers` |
 
 ## B.5 Targets & Thresholds
 
@@ -162,6 +163,7 @@ most likely to need tuning, and the easiest to tune.
 | `A29` | **Achievement target 95 %** of daily plan | Standard plan-adherence expectation | Alert rule |
 | `A30` | Machine flagged **under-utilised below 60 %** | Consistent with typical baseline OEE | Alert rule / dashboard |
 | `A49` | Machine **suggested as a bottleneck at ≥ 90 %** rolling utilisation | The pragmatic, defensible reading of "constrains overall throughput" without a full theory-of-constraints/routing model this project has no data to support yet — a starting point a Plant Manager applies deliberately and can always override by hand | `fmes.utilization.service.BOTTLENECK_THRESHOLD_PCT` |
+| `A50` | Equipment **health score** (0-100) = 100 minus an MTBF-shortfall penalty (weight 30) minus overdue-PM penalty (10/PM, capped 30) minus 90-day breakdown-frequency penalty (8/event, capped 40) | A defensible, capped composite so no single factor can sink the score alone; matches the plant's own 90-day historical window used elsewhere (`A10`) | `maintenance.equipment.fmes_health_score` |
 | `A31` | **Excess downtime** alert at > 60 min unplanned in one shift, or > 10 % of shift time | Roughly one-eighth of a shift — material enough to warrant a look | Alert rule |
 | `A32` | **Critical backlog** at > 15 days aged, or an order > 7 days past deadline | Conventional ageing buckets | Alert rule |
 | `A33` | **Maintenance due** alert 7 days ahead; overdue alert on the due date | Gives a week to schedule around production | Alert rule |

@@ -193,5 +193,23 @@
             </field>
         </record>
 
+        <record id="fmes_maintenance_schedule_company_rule" model="ir.rule">
+            <field name="name">Maintenance Schedule: multi-company</field>
+            <field name="model_id" ref="model_fmes_maintenance_schedule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_maintenance_report_company_rule" model="ir.rule">
+            <field name="name">Maintenance Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_maintenance_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
     </data>
 </odoo>

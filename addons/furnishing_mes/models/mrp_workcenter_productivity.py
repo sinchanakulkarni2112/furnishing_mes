@@ -349,6 +349,8 @@ class MrpWorkcenterProductivity(models.Model):
                     reason=event.loss_id.name,
                     machine=event.workcenter_id.display_name),
                 'equipment_id': equipment.id,
+                'workcenter_id': event.workcenter_id.id,
+                'fmes_productivity_id': event.id,
                 'maintenance_type': 'corrective',
                 'maintenance_team_id': self._fmes_default_maintenance_team().id,
                 'description': event.fmes_remarks or event.loss_id.name,

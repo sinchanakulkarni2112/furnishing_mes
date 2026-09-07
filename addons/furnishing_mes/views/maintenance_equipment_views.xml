@@ -15,6 +15,7 @@
                     <field name="fmes_department_id"
                            invisible="not workcenter_id"/>
                     <field name="fmes_criticality"/>
+                    <field name="fmes_health_score" widget="progressbar"/>
                 </xpath>
             </field>
         </record>
@@ -28,6 +29,8 @@
                     <field name="workcenter_id" optional="show"/>
                     <field name="fmes_department_id" optional="hide"/>
                     <field name="fmes_criticality" optional="show"/>
+                    <field name="fmes_health_score" optional="show"
+                           widget="progressbar"/>
                 </xpath>
             </field>
         </record>

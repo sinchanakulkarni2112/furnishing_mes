@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Requirement 7.3. The native form already covers everything a
+            technician needs day to day; this adds only what our own
+            scheduler and downtime escalation contribute.
+        -->
+        <record id="hr_equipment_request_view_form_fmes" model="ir.ui.view">
+            <field name="name">maintenance.request.form.fmes</field>
+            <field name="model">maintenance.request</field>
+            <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='equipment_id']" position="after">
+                    <field name="workcenter_id" readonly="1"
+                           invisible="not workcenter_id"/>
+                    <field name="fmes_schedule_id" readonly="1"
+                           invisible="not fmes_schedule_id"/>
+                    <field name="fmes_due_date" readonly="1"
+                           invisible="not fmes_due_date"/>
+                    <field name="fmes_productivity_id" readonly="1"
+                           invisible="not fmes_productivity_id"/>
+                    <field name="fmes_downtime_hours" widget="float_time"
+                           invisible="not fmes_productivity_id"/>
+                </xpath>
+                <xpath expr="//field[@name='priority']" position="after">
+                    <field name="currency_id" invisible="1"/>
+                    <field name="fmes_cost"/>
+                </xpath>
+                <xpath expr="//notebook/page[1]" position="after">
+                    <page string="Checklist" name="fmes_checklist"
+                          invisible="not fmes_checklist_result_ids">
+                        <field name="fmes_checklist_result_ids">
+                            <list editable="bottom">
+                                <field name="sequence" widget="handle"/>
+                                <field name="name"/>
+                                <field name="is_mandatory"/>
+                                <field name="expected_value"/>
+                                <field name="actual_value"/>
+                                <field name="is_done"/>
+                            </list>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="hr_equipment_request_view_tree_fmes" model="ir.ui.view">
+            <field name="name">maintenance.request.list.fmes</field>
+            <field name="model">maintenance.request</field>
+            <field name="inherit_id" ref="maintenance.hr_equipment_request_view_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="workcenter_id" optional="show"/>
+                    <field name="maintenance_type" optional="show"/>
+                    <field name="fmes_due_date" optional="hide"/>
+                    <field name="close_date" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.6.0.0',
+    'version': '18.0.7.0.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -79,6 +79,9 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'views/maintenance_equipment_views.xml',
         'views/fmes_utilization_report_views.xml',
         'views/mrp_workcenter_utilization_views.xml',
+        'views/fmes_maintenance_schedule_views.xml',
+        'views/maintenance_request_views.xml',
+        'views/fmes_maintenance_report_views.xml',
         'views/menus.xml',
     ],
 
@@ -90,6 +93,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'demo/fmes_demo_products.xml',
         'demo/fmes_demo_capacity.xml',
         'demo/fmes_demo_orders.xml',
+        'demo/fmes_demo_maintenance.xml',
     ],
 
     'assets': {
