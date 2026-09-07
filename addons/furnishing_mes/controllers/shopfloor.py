@@ -8,8 +8,15 @@ on a factory floor, which is the least trustworthy client in the building.
 """
 
 from odoo import _, fields, http
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
+
+from ..models.mrp_workcenter_productivity_loss import FMES_LOSS_CATEGORY
+
+# Errors the operator caused (bad input, a busy machine, a missing remark) are
+# reported back as a friendly {ok: False, error} rather than as a 500 — a
+# tablet on the shop floor should never show a raw traceback.
+_USER_FACING_ERRORS = (UserError, AccessError, ValidationError, ValueError)
 
 
 class FmesShopFloor(http.Controller):
@@ -146,6 +153,30 @@ class FmesShopFloor(http.Controller):
             'actual_manpower': entry.actual_manpower,
             'state': entry.state,
             'editable': entry.state in ('draft', 'rejected'),
+            'downtime_events': [
+                self._downtime_payload(ev)
+                # Own sudo() here is safe: the entry itself has already
+                # passed the caller's own read access, and its linked events
+                # are read-only display data for a screen the operator is
+                # already authorised to be looking at.
+                for ev in entry.sudo().productivity_ids.sorted(
+                    lambda e: e.date_start, reverse=True)
+            ],
+        }
+
+    def _downtime_payload(self, event):
+        return {
+            'id': event.id,
+            'loss_id': event.loss_id.id,
+            'loss_name': event.loss_id.name,
+            'category': event.fmes_category,
+            'remarks': event.fmes_remarks or '',
+            'date_start': fields.Datetime.to_string(event.date_start),
+            'date_end': fields.Datetime.to_string(event.date_end)
+            if event.date_end else None,
+            'duration_minutes': event.duration,
+            'running': event.fmes_is_running,
+            'state': event.fmes_state,
         }
 
     @http.route('/fmes/terminal/record', type='json', auth='user')
@@ -154,33 +185,48 @@ class FmesShopFloor(http.Controller):
 
         Only the fields an operator is allowed to touch are accepted; anything
         else in the payload is ignored rather than trusted.
-        """
-        entry = self._entry_for_user(entry_id)
-        if entry.state not in ('draft', 'rejected'):
-            return {'ok': False,
-                    'error': _("This entry has already been submitted.")}
 
-        allowed = {'actual_qty', 'rejected_qty', 'run_hours',
-                   'downtime_hours', 'actual_manpower', 'note'}
-        payload = {k: v for k, v in (values or {}).items() if k in allowed}
-        if not payload:
-            return {'ok': False, 'error': _("Nothing to save.")}
+        The whole body runs inside one try/except, not just the write() call.
+        Odoo does not always validate a record's constraints synchronously
+        inside write()/create() -- some are only checked at the next point
+        something forces a flush, which can be a later field read. Building
+        the JSON response reads fields on the record just written, so a
+        constraint violation can surface there instead of at the write()
+        line. A tablet on the shop floor gets {'ok': False, 'error'} either
+        way, never a raw exception.
+        """
         try:
+            entry = self._entry_for_user(entry_id)
+            if entry.state not in ('draft', 'rejected'):
+                return {'ok': False,
+                        'error': _("This entry has already been submitted.")}
+
+            # downtime_hours is deliberately not in this whitelist from
+            # Phase 5 onward: it is kept in step automatically from coded
+            # downtime events (see the downtime/* routes below), not typed
+            # directly.
+            allowed = {'actual_qty', 'rejected_qty', 'run_hours',
+                       'actual_manpower', 'note'}
+            payload = {k: v for k, v in (values or {}).items()
+                      if k in allowed}
+            if not payload:
+                return {'ok': False, 'error': _("Nothing to save.")}
             entry.write(payload)
-        except (UserError, AccessError, ValueError) as exc:
+            result = {'ok': True, 'entry': self._entry_payload(entry)}
+        except _USER_FACING_ERRORS as exc:
             return {'ok': False, 'error': str(exc)}
-        return {'ok': True, 'entry': self._entry_payload(entry)}
+        return result
 
     @http.route('/fmes/terminal/submit', type='json', auth='user')
     def submit(self, entry_ids, **kwargs):
         """Submit a shift's entries for supervisor approval."""
-        entries = request.env['fmes.production.entry'].browse(
-            [int(i) for i in entry_ids]).exists()
-        for entry in entries:
-            self._entry_for_user(entry.id)
         try:
+            entries = request.env['fmes.production.entry'].browse(
+                [int(i) for i in entry_ids]).exists()
+            for entry in entries:
+                self._entry_for_user(entry.id)
             entries.action_submit()
-        except (UserError, AccessError) as exc:
+        except _USER_FACING_ERRORS as exc:
             return {'ok': False, 'error': str(exc)}
         return {'ok': True, 'submitted': len(entries)}
 
@@ -188,19 +234,20 @@ class FmesShopFloor(http.Controller):
     def create_entry(self, workcenter_id, shift_id, product_id, date=None,
                      **kwargs):
         """Add a line for something produced that was not planned."""
-        machine = self._check_workcenter(workcenter_id)
-        Entry = request.env['fmes.production.entry']
-        day = date or fields.Date.context_today(Entry)
         try:
+            machine = self._check_workcenter(workcenter_id)
+            Entry = request.env['fmes.production.entry']
+            day = date or fields.Date.context_today(Entry)
             entry = Entry.create({
                 'date': day,
                 'shift_id': int(shift_id),
                 'workcenter_id': machine.id,
                 'product_id': int(product_id),
             })
-        except Exception as exc:
+            result = {'ok': True, 'entry': self._entry_payload(entry)}
+        except _USER_FACING_ERRORS as exc:
             return {'ok': False, 'error': str(exc)}
-        return {'ok': True, 'entry': self._entry_payload(entry)}
+        return result
 
     @http.route('/fmes/terminal/products', type='json', auth='user')
     def products(self, workcenter_id, **kwargs):
@@ -217,3 +264,93 @@ class FmesShopFloor(http.Controller):
                     [('categ_id', 'child_of', row.product_category_id.id)],
                     limit=40)
         return [{'id': p.id, 'name': p.display_name} for p in products[:60]]
+
+    # ------------------------------------------------------------------
+    # Downtime — reason picker, running timer (Requirement 6)
+    # ------------------------------------------------------------------
+    @http.route('/fmes/terminal/downtime/reasons', type='json', auth='user')
+    def downtime_reasons(self, **kwargs):
+        """Loss reasons grouped by category, for the terminal's reason grid.
+
+        Only categorised reasons are offered — never an uncategorised one,
+        so an operator cannot even choose to log downtime with no reason.
+        Odoo's own "Fully Productive Time" entry (loss_type='productive') is
+        never a downtime reason and is excluded.
+        """
+        Loss = request.env['mrp.workcenter.productivity.loss'].sudo()
+        reasons = Loss.search([
+            ('loss_type', '!=', 'productive'),
+            ('fmes_category', '!=', False),
+        ], order='sequence, id')
+
+        by_category = {}
+        for reason in reasons:
+            by_category.setdefault(reason.fmes_category, []).append({
+                'id': reason.id,
+                'name': reason.name,
+                'requires_remark': reason.fmes_category == 'other',
+            })
+
+        # FMES_LOSS_CATEGORY carries the display order and labels already
+        # used everywhere else in the module — one source of truth, not a
+        # second copy of the same ten strings.
+        return [{
+            'category': key,
+            'label': label,
+            'reasons': by_category[key],
+        } for key, label in FMES_LOSS_CATEGORY if key in by_category]
+
+    @http.route('/fmes/terminal/downtime/start', type='json', auth='user')
+    def downtime_start(self, entry_id, loss_id, remarks=None, **kwargs):
+        """Start the timer: one open event, tied to one entry.
+
+        The model itself validates the reason/remark rule synchronously in
+        create() (see FmesWorkcenterProductivity._fmes_validate_downtime_rules)
+        rather than relying solely on api.constrains, so this try/except is
+        guaranteed to actually catch it — see that method's docstring for why
+        api.constrains alone was not reliable enough here (Phase 5, D5.4).
+        """
+        try:
+            entry = self._entry_for_user(entry_id)
+            event = request.env['mrp.workcenter.productivity'].create({
+                'workcenter_id': entry.workcenter_id.id,
+                'loss_id': int(loss_id),
+                'fmes_entry_id': entry.id,
+                'fmes_remarks': remarks or False,
+                'date_start': fields.Datetime.now(),
+            })
+            result = {'ok': True, 'event': self._downtime_payload(event),
+                     'entry': self._entry_payload(entry)}
+        except _USER_FACING_ERRORS as exc:
+            return {'ok': False, 'error': str(exc)}
+        return result
+
+    @http.route('/fmes/terminal/downtime/stop', type='json', auth='user')
+    def downtime_stop(self, event_id, remarks=None, **kwargs):
+        """Stop the timer. A remark for 'Other' can be supplied here too,
+        since the operator often only knows what to write once it is over.
+
+        Whole body in one try/except — see the note on record() for why:
+        building the response reads fields on the just-written record, and a
+        deferred constraint check can surface there rather than at write().
+        """
+        try:
+            event = request.env['mrp.workcenter.productivity'].browse(
+                int(event_id)).exists()
+            if not event:
+                return {'ok': False,
+                        'error': _("That downtime event no longer exists.")}
+            self._check_workcenter(event.workcenter_id.id)
+            if not event.fmes_is_running:
+                return {'ok': False,
+                        'error': _("That event has already been stopped.")}
+            vals = {'date_end': fields.Datetime.now()}
+            if remarks:
+                vals['fmes_remarks'] = remarks
+            event.write(vals)
+            result = {'ok': True, 'event': self._downtime_payload(event),
+                     'entry': self._entry_payload(event.fmes_entry_id)
+                     if event.fmes_entry_id else None}
+        except _USER_FACING_ERRORS as exc:
+            return {'ok': False, 'error': str(exc)}
+        return result

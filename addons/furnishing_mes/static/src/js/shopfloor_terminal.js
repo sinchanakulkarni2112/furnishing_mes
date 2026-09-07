@@ -43,16 +43,26 @@ export class FmesShopFloorTerminal extends Component {
             keypad: null,          // { entryId, field, label, value }
             pendingWrites: 0,      // unsaved because the network failed
             lastSync: null,
+            downtimeReasons: [],   // grouped by category, loaded once
+            downtimeModal: null,   // { entry, step: 'reasons'|'remark', reason }
+            now: Date.now(),       // ticks every second, drives the running timer
         });
 
         onWillStart(async () => {
             await this.loadMachines();
             await this.loadShifts();
+            await this.loadDowntimeReasons();
             this.state.loading = false;
         });
 
         this.timer = setInterval(() => this.refreshQuietly(), REFRESH_MS);
-        onWillUnmount(() => clearInterval(this.timer));
+        this.tickTimer = setInterval(() => {
+            this.state.now = Date.now();
+        }, 1000);
+        onWillUnmount(() => {
+            clearInterval(this.timer);
+            clearInterval(this.tickTimer);
+        });
     }
 
     // ------------------------------------------------------------------
@@ -70,6 +80,11 @@ export class FmesShopFloorTerminal extends Component {
         if (!this.state.shiftId && this.state.shifts.length) {
             this.state.shiftId = this.state.shifts[0].id;
         }
+    }
+
+    async loadDowntimeReasons() {
+        this.state.downtimeReasons = await rpc(
+            "/fmes/terminal/downtime/reasons", {});
     }
 
     async loadBoard() {
@@ -194,6 +209,114 @@ export class FmesShopFloorTerminal extends Component {
     }
 
     // ------------------------------------------------------------------
+    // Downtime — reason picker and running timer
+    // ------------------------------------------------------------------
+    runningEventFor(entry) {
+        return entry.downtime_events.find((ev) => ev.running) || null;
+    }
+
+    elapsedLabel(dateStartIso) {
+        // date_start comes back as a naive UTC string ("YYYY-MM-DD HH:MM:SS");
+        // append Z so the browser parses it as UTC rather than local time.
+        const start = new Date(dateStartIso.replace(" ", "T") + "Z").getTime();
+        const seconds = Math.max(0, Math.floor((this.state.now - start) / 1000));
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        const pad = (n) => String(n).padStart(2, "0");
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+    }
+
+    openDowntimeReasons(entry) {
+        if (this.runningEventFor(entry)) {
+            // A running timer opens straight to "stop", not the reason grid.
+            return;
+        }
+        this.state.downtimeModal = { entry, step: "reasons", reason: null,
+                                     remarks: "" };
+    }
+
+    pickDowntimeReason(reason) {
+        const modal = this.state.downtimeModal;
+        if (!modal) {
+            return;
+        }
+        if (reason.requires_remark) {
+            // "Other" needs a remark before the server will accept it at
+            // all (the model itself refuses to save one without a note), so
+            // ask for it now rather than letting the start call fail.
+            modal.step = "remark";
+            modal.reason = reason;
+            return;
+        }
+        this.startDowntime(modal.entry, reason.id, "");
+    }
+
+    async confirmDowntimeRemark() {
+        const modal = this.state.downtimeModal;
+        if (!modal || !modal.reason) {
+            return;
+        }
+        if (!modal.remarks.trim()) {
+            this.notification.add(
+                _t("A note is required for 'Other'."), { type: "warning" });
+            return;
+        }
+        await this.startDowntime(modal.entry, modal.reason.id, modal.remarks);
+    }
+
+    closeDowntimeModal() {
+        this.state.downtimeModal = null;
+    }
+
+    async startDowntime(entry, lossId, remarks) {
+        try {
+            const result = await rpc("/fmes/terminal/downtime/start", {
+                entry_id: entry.id,
+                loss_id: lossId,
+                remarks: remarks || null,
+            });
+            if (!result.ok) {
+                this.notification.add(result.error, { type: "warning" });
+                return;
+            }
+            this.applyEntryUpdate(result.entry);
+            this.state.downtimeModal = null;
+        } catch {
+            this.notification.add(
+                _t("Could not reach the server. Downtime was not logged — try again."),
+                { type: "danger", sticky: true });
+        }
+    }
+
+    async stopDowntime(entry, event) {
+        try {
+            const result = await rpc("/fmes/terminal/downtime/stop", {
+                event_id: event.id,
+            });
+            if (!result.ok) {
+                this.notification.add(result.error, { type: "warning" });
+                return;
+            }
+            if (result.entry) {
+                this.applyEntryUpdate(result.entry);
+            }
+        } catch {
+            this.notification.add(
+                _t("Could not reach the server. The timer is still running — try again."),
+                { type: "danger", sticky: true });
+        }
+    }
+
+    applyEntryUpdate(entry) {
+        const index = this.state.entries.findIndex((e) => e.id === entry.id);
+        if (index !== -1) {
+            this.state.entries[index] = entry;
+        }
+        this.state.lastSync = new Date();
+    }
+
+    // ------------------------------------------------------------------
     // Saving
     // ------------------------------------------------------------------
     async save(entryId, values) {
@@ -206,11 +329,7 @@ export class FmesShopFloorTerminal extends Component {
                 this.notification.add(result.error, { type: "warning" });
                 return;
             }
-            const index = this.state.entries.findIndex((e) => e.id === entryId);
-            if (index !== -1) {
-                this.state.entries[index] = result.entry;
-            }
-            this.state.lastSync = new Date();
+            this.applyEntryUpdate(result.entry);
         } catch {
             // The network dropped. Say so plainly and keep what was typed on
             // screen: an operator who is told nothing assumes it saved.

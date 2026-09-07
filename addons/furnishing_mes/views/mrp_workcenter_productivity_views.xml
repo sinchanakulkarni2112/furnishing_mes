@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Extend Odoo's own productivity form                         -->
+        <!--                                                              -->
+        <!--  mrp.oee_form_view already exists as the plain time-log form  -->
+        <!--  behind Odoo's OEE report. We add our workflow to the same    -->
+        <!--  view rather than forking it, so both stay in step.           -->
+        <!-- ============================================================ -->
+        <record id="oee_form_view_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.productivity.form.fmes</field>
+            <field name="model">mrp.workcenter.productivity</field>
+            <field name="inherit_id" ref="mrp.oee_form_view"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//group[1]" position="before">
+                    <header>
+                        <button name="action_approve" type="object"
+                                string="Approve" class="btn-primary"
+                                invisible="fmes_state != 'draft' or fmes_is_running"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
+                        <button name="action_reject" type="object"
+                                string="Reject"
+                                invisible="fmes_state != 'draft'"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
+                        <button name="action_reset_to_draft" type="object"
+                                string="Reopen"
+                                invisible="fmes_state == 'draft'"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
+                        <field name="fmes_state" widget="statusbar"
+                               statusbar_visible="draft,approved"/>
+                    </header>
+                </xpath>
+
+                <xpath expr="//field[@name='workcenter_id']" position="after">
+                    <field name="fmes_entry_id"/>
+                    <field name="fmes_shift_id" readonly="1"/>
+                    <field name="fmes_is_running" invisible="1"/>
+                </xpath>
+
+                <xpath expr="//field[@name='loss_id']" position="after">
+                    <field name="fmes_category" readonly="1"/>
+                </xpath>
+
+                <xpath expr="//field[@name='duration']" position="after">
+                    <field name="fmes_reported_by" readonly="1"/>
+                    <field name="fmes_maintenance_request_id" readonly="1"
+                           invisible="not fmes_maintenance_request_id"/>
+                </xpath>
+
+                <xpath expr="//field[@name='description']" position="before">
+                    <field name="fmes_remarks"
+                           placeholder="Required when the reason is 'Other'."/>
+                </xpath>
+
+                <xpath expr="//field[@name='description']" position="after">
+                    <group string="Approval"
+                           groups="furnishing_mes.group_fmes_supervisor">
+                        <field name="fmes_approved_by"/>
+                        <field name="fmes_approved_on"/>
+                    </group>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Extend the list and search views                            -->
+        <!-- ============================================================ -->
+        <record id="oee_tree_view_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.productivity.list.fmes</field>
+            <field name="model">mrp.workcenter.productivity</field>
+            <field name="inherit_id" ref="mrp.oee_tree_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='loss_id']" position="after">
+                    <field name="fmes_category" optional="show"/>
+                    <field name="fmes_shift_id" optional="show"/>
+                    <field name="fmes_entry_id" optional="hide"/>
+                </xpath>
+                <xpath expr="//field[@name='duration']" position="after">
+                    <field name="fmes_state" widget="badge"
+                           decoration-success="fmes_state == 'approved'"
+                           decoration-danger="fmes_state == 'rejected'"/>
+                    <field name="fmes_maintenance_request_id" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="oee_search_view_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.productivity.search.fmes</field>
+            <field name="model">mrp.workcenter.productivity</field>
+            <field name="inherit_id" ref="mrp.oee_search_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='loss_id']" position="after">
+                    <field name="fmes_category"/>
+                    <field name="fmes_shift_id"/>
+                    <field name="fmes_entry_id"/>
+                </xpath>
+                <xpath expr="//filter[@name='productive']" position="after">
+                    <separator/>
+                    <filter name="fmes_filter_awaiting" string="Awaiting Approval"
+                            domain="[('fmes_state', '=', 'draft'),
+                                     ('date_end', '!=', False)]"/>
+                    <filter name="fmes_filter_approved" string="Approved"
+                            domain="[('fmes_state', '=', 'approved')]"/>
+                    <filter name="fmes_filter_running" string="Currently Running"
+                            domain="[('fmes_is_running', '=', True)]"/>
+                    <filter name="fmes_filter_escalated" string="Raised Maintenance"
+                            domain="[('fmes_maintenance_request_id', '!=', False)]"/>
+                </xpath>
+                <!-- The native "Group by..." block has no name attribute, and
+                     view inheritance may not select on @string. Reach it via
+                     the parent axis from a filter we know is inside it. -->
+                <xpath expr="//filter[@name='loss_group']/parent::group"
+                       position="inside">
+                    <filter string="Downtime Category" name="fmes_group_category"
+                            context="{'group_by': 'fmes_category'}"/>
+                    <filter string="Shift" name="fmes_group_shift"
+                            context="{'group_by': 'fmes_shift_id'}"/>
+                    <filter string="Status" name="fmes_group_state"
+                            context="{'group_by': 'fmes_state'}"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Actions                                                     -->
+        <!-- ============================================================ -->
+        <record id="action_fmes_downtime_events" model="ir.actions.act_window">
+            <field name="name">Downtime Events</field>
+            <field name="res_model">mrp.workcenter.productivity</field>
+            <field name="view_mode">list,form,pivot,graph</field>
+            <field name="domain">[('loss_type', '!=', 'productive')]</field>
+            <field name="context">{'search_default_fmes_group_category': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No downtime logged yet
+                </p>
+                <p>
+                    Every stoppage an operator logs from the Shop-Floor
+                    Terminal appears here with a coded reason, ready for
+                    supervisor review.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_downtime_approval_queue" model="ir.actions.act_window">
+            <field name="name">Downtime Approval Queue</field>
+            <field name="res_model">mrp.workcenter.productivity</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('fmes_state', '=', 'draft'),
+                                  ('date_end', '!=', False),
+                                  ('loss_type', '!=', 'productive')]</field>
+            <field name="context">{'search_default_fmes_group_category': 0}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Nothing waiting for review
+                </p>
+                <p>
+                    Completed downtime events land here until a supervisor
+                    approves or rejects them. A running event is not shown
+                    until it has an end time.
+                </p>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Loss analysis (Requirement 6.3) — the pre-aggregated report  -->
+        <!-- ============================================================ -->
+        <record id="fmes_downtime_report_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.pivot</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <pivot string="Downtime Loss Analysis" sample="1"
+                       disable_linking="0">
+                    <field name="fmes_category" type="row"/>
+                    <field name="workcenter_id" type="row"/>
+                    <field name="date" type="col" interval="week"/>
+                    <field name="downtime_hours" type="measure"/>
+                    <field name="event_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_view_graph" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.graph</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <graph string="Downtime by Reason" type="bar" sample="1">
+                    <field name="loss_id"/>
+                    <field name="downtime_hours" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_view_list" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.list</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <list string="Downtime Analysis" create="0" edit="0"
+                      delete="0" sample="1"
+                      decoration-danger="pct_of_available &gt; 20">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="loss_id"/>
+                    <field name="fmes_category" optional="show"/>
+                    <field name="is_planned" optional="hide"/>
+                    <field name="downtime_hours" sum="Total"/>
+                    <field name="event_count" sum="Events"/>
+                    <field name="avg_event_duration" optional="hide"/>
+                    <field name="pct_of_available" widget="percentage"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_view_search" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.search</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <search string="Downtime Analysis">
+                    <field name="workcenter_id"/>
+                    <field name="loss_id"/>
+                    <field name="fmes_category"/>
+                    <filter name="filter_this_month" string="This Month"
+                            domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    <filter name="filter_unplanned" string="Unplanned"
+                            domain="[('is_planned', '=', False)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_category" string="Category"
+                                context="{'group_by': 'fmes_category'}"/>
+                        <filter name="group_machine" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_reason" string="Loss Reason"
+                                context="{'group_by': 'loss_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_downtime_report" model="ir.actions.act_window">
+            <field name="name">Loss Analysis</field>
+            <field name="res_model">fmes.downtime.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_downtime_report_view_search"/>
+            <field name="context">{'search_default_group_category': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No approved downtime yet
+                </p>
+                <p>
+                    Only approved, completed downtime events appear here —
+                    the same rule production reports follow, so what
+                    management sees is always reviewed.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

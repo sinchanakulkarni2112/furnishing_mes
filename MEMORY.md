@@ -593,6 +593,204 @@ this phase.
 
 ---
 
+## Phase 5 — Downtime Management
+*Completed 2026-09-07 - module version `18.0.5.0.0`*
+
+### Delivered
+
+`mrp.workcenter.productivity` extended with the shift/entry link, plant
+category, remarks, reporter, a draft/approved/rejected workflow and the
+maintenance-escalation link; the reason-picker-and-running-timer downtime flow
+in the shop-floor terminal, replacing Phase 4's plain typed-hours field; the
+supervisor downtime approval queue; auto-escalation to `maintenance.request`
+at creation time (not approval time - a broken machine needs attention now);
+`fmes.downtime.report`, the SQL view backing loss analysis; and the seeded
+default maintenance team that a production install would otherwise lack.
+
+### Verified, not assumed
+
+- **216 tests, 0 failed, 0 errors**
+- Clean install on three separate fresh databases: with demo data, and
+  explicitly `--without-demo=all` (the real production path) - both zero
+  warnings
+- End-to-end on the demo plant: plan -> entries -> six coded downtime events
+  (one auto-escalating) -> `downtime_hours` rolled up automatically -> entries
+  and downtime both approved -> an approved event correctly refused further
+  edits -> `fmes.downtime.report` showed 3.25 hours across the events after an
+  explicit flush -> a rejected event, edited by the operator who logged it,
+  correctly returned to draft
+- Escalation confirmed working against a true zero-demo-data database, using
+  the seeded "Machine Maintenance" team preferentially over an unrelated
+  auto-created one
+
+### Decisions
+
+**D5.1 - Every `mrp.workcenter` silently inherited the company's Mon-Fri
+business-hours calendar, which zeroed downtime duration outside those hours.**
+The single most consequential bug this phase found. Odoo's native
+`mrp.workcenter.productivity.duration` compute calls
+`loss_id._convert_to_duration()`, which — for any non-productive/performance
+loss type on a work center that HAS a `resource_calendar_id` — computes
+duration from that calendar's scheduled working hours, not wall-clock elapsed
+time. Every machine gets a calendar by default via `resource.mixin`. A plant
+running three shifts is down for stretches of every 24 hours a Mon-Fri 8-5
+calendar knows nothing about: a night-shift stoppage computed to exactly 0.0
+minutes. Found by a duration test returning 0.0 for a real 45-minute
+stoppage — not by inspection; nothing before Phase 5 ever read `duration`.
+
+Fixed by defaulting `mrp.workcenter.resource_calendar_id` to empty in our own
+extension. This module's capacity and availability model is `fmes.shift`
+(Phase 3, D3.4) — never Odoo's resource calendar — so the field should never
+have carried a value here at all. Affects every machine created since
+Phase 2; a genuinely fresh install is what surfaces the fix, not an upgrade of
+a live database (the ORM field default only applies at record creation).
+
+*Generalisable:* a field carrying a default inherited from a mixin
+(`resource.mixin`, here) can silently change the behaviour of a DIFFERENT
+native computation (`_convert_to_duration`) that reads it, in a way that has
+nothing to do with why the mixin was inherited in the first place. Check what
+else a native field feeds before assuming an unused-looking default is inert.
+
+**D5.2 - Field-level `groups=` blocks a write even to CLEAR a restricted field
+to False.** The auto-revert-to-draft path (editing a rejected event returns it
+to draft, D5.-adjacent design decision below) included the supervisor-only
+`fmes_approved_by`/`fmes_approved_on` in the SAME vals dict as the operator's
+own edit, just to null them out — and Odoo refuses the whole write regardless
+of the value, because `groups=` is a field-existence check, not a value check.
+Fixed by moving the stamp-or-clear of those two fields into a separate,
+narrow `sudo()` write, decoupled entirely from the caller's own vals.
+
+*Generalisable:* never let a supervisor-only field ride along in vals a
+non-supervisor's own write constructs, even to null it — sudo() a dedicated
+follow-up write for administrative metadata instead.
+
+**D5.3 - Supervisors and managers were caught by the OPERATOR's own
+restrictive record rules, because the role hierarchy is cumulative.** Phase
+1's `implied_ids` design means a Supervisor IS, transitively, an Operator too
+— real group membership, not just a permission superset. Odoo evaluates a
+non-global `ir.rule` against every group a user belongs to, INCLUDING implied
+ones. With no OTHER non-global rule on `mrp.workcenter.productivity` for
+`group_fmes_supervisor` to OR against, the operator's restrictive domain
+silently applied to supervisors and managers as well — surfaced as a Plant
+Manager unable to even READ their own record while trying to reopen it.
+`mrp.group_mrp_user`'s native ACL grants the base RWCD permission; it does
+nothing to exempt anyone from an `ir.rule` domain, because ACLs and record
+rules are different layers entirely.
+
+Fixed with an explicit, unrestricted `[(1,'=',1)]` rule for
+`group_fmes_supervisor` — the EXACT pattern Phase 4 already used for
+`fmes.production.entry` (`fmes_entry_supervisor_rule`), just missed here on
+the wrong assumption that the native ACL alone would be enough this time.
+
+*Generalisable, and now a hard project rule:* **any model that gets an
+operator-scoped RESTRICTIVE `ir.rule` must ALSO get an explicit unrestricted
+rule for `group_fmes_supervisor` in the SAME commit**, precisely because of
+the cumulative hierarchy. Audited the rest of the record rules file while
+fixing this: `fmes.production.plan`/`.plan.line`/`fmes.capacity.matrix`/
+`fmes.shift` all use ACL-level restriction (`perm_write=0` for operator), not
+`ir.rule`-level, so they were never exposed to this trap. Only
+`fmes.production.entry` (Phase 4, already correct) and
+`mrp.workcenter.productivity` (Phase 5, now fixed) carry operator-restrictive
+record rules.
+
+**D5.4 - `@api.constrains` on a computed field is not reliable enough for a
+caller to catch, once `mail.thread` tracking is in the mix.** Both
+downtime-categorisation rules read `fmes_category`, a stored related field.
+Discovered the hard way: a `/fmes/terminal/downtime/start` request correctly
+caught its own `ValidationError` and returned `{'ok': False, 'error': ...}` —
+confirmed by instrumented logging showing "CAUGHT" — and the test STILL saw an
+uncaught exception. Fetching the raw HTTP response body (bypassing the test
+helper's own interpretation) showed why: Odoo's HTTP layer flushes the
+environment AFTER the controller returns, inside its own
+`_transactioning`/`retrying` wrapper, entirely outside any try/except the
+controller can write — and THAT flush re-triggers `mail.thread`'s own
+`_compute_field_value` -> `_validate_fields()` for the tracked, computed
+field, raising the SAME constraint a second time, this time with nothing
+catching it. An explicit `event.flush_recordset()` inside the controller's
+own try block was NOT sufficient on its own to fully drain whatever
+mail.thread schedules — only `_check_one_open_event_per_machine`, which
+depends on plain, uncomputed fields, fired reliably and synchronously the
+whole time.
+
+Fixed at the right layer — the MODEL, not the controller — by validating both
+rules early and synchronously in `create()`/`write()`, reading the loss
+reason's category DIRECTLY (`self.env['mrp.workcenter.productivity.loss'].
+browse(loss_id).fmes_category`) rather than through the computed
+`fmes_category` field. This needs no flush and cannot be deferred: it either
+raises right there, in the caller's own call stack, or it does not raise at
+all. The `@api.constrains` versions stay as a documented backstop.
+
+*Generalisable, and the most important lesson of this phase:* **never rely on
+`@api.constrains` alone for a rule a calling layer (especially a JSON-RPC
+controller) must be able to catch reliably, once the constraint depends on a
+COMPUTED field on a model with mail.thread tracking enabled.** Validate early,
+in plain Python, in create()/write() itself, reading the underlying data
+directly rather than through the compute. This generalises to ANY future
+model built the same way (extend a core model, add mail.thread, add a
+constrains on a related+stored field) — audit for this pattern before shipping
+a controller that depends on catching it.
+
+**D5.5 - `action_reject()`'s chatter note must be best-effort, never able to
+undo an otherwise-successful rejection.** Found running the end-to-end script
+with a demo user that had no email configured: `message_post()` requires a
+sender email, and its `UserError` propagated out of `action_reject()` even
+though the STATE CHANGE (the actual rejection) had already been written.
+Wrapped in a narrow `try/except UserError: pass` — the note is an audit-trail
+nicety, not something that should be able to block the action it is
+documenting.
+
+**D5.6 - Downtime correctly reduces OEE once productive time is logged, but
+nothing in the system logs productive time yet — recorded as a Phase 6
+prerequisite, not a Phase 5 gap.** Odoo's native OEE is
+`productive_time / (productive_time + blocked_time)`, both sides read from
+`mrp.workcenter.productivity`. Phase 5 (correctly, per its own scope) only
+ever writes the LOSS side; `fmes.production.entry.run_hours` is a plain number
+that has never been mirrored into a `loss_type='productive'` productivity
+record. Consequence, confirmed on the demo plant: every machine's native OEE
+currently reads 0.0%, however accurately its downtime is coded, because the
+denominator's productive component is always zero. The Phase 5
+"OEE consistency" test is deliberately narrower than this and still correct:
+it proves our downtime extension does not BREAK native OEE once productive
+time exists (by logging both sides itself, inside the test) — it never
+claimed the system produces meaningful OEE unassisted before Phase 6 wires up
+the productive side. Added explicitly to Phase 6's deliverable list in the
+build plan so it is not rediscovered as a surprise.
+
+### Gotchas found the hard way
+
+- **A duration/timing bug can hide behind a passing test suite until the
+  first test that actually reads the affected field.** `resource_calendar_id`
+  had been silently wrong since Phase 2; nothing broke until Phase 5 read
+  `duration` for the first time.
+- **"Is my class name in the compiled CSS" is not a green signal on its own**
+  (restated from Phase 4, D4.6) — and neither, it turns out, is "did my
+  try/except log that it caught the exception": check the actual wire
+  response when a test's OWN interpretation of a result is in question, not
+  just whether your code path executed.
+- **A quick shell reproduction that "just works" does not rule out a bug that
+  only manifests through the real HTTP dispatch path.** The difference here
+  was Odoo's own post-dispatch flush, which a shell session never triggers
+  the same way. When a shell test and an HTTP test disagree on IDENTICAL
+  application code, suspect the FRAMEWORK layer around the code, not the code
+  itself, before adding more workarounds to the code.
+- **`env.cr.flush()` before querying a `_auto=False` SQL-view report model**
+  is needed whenever the query runs in the SAME transaction as an unflushed
+  write — a raw SQL view sees only what has actually reached the table. Real
+  HTTP usage never hits this (Odoo flushes and commits between every
+  request), but a one-session debugging/demo script will, and a "0 rows"
+  result from a report immediately after writing the data it should contain
+  is the tell.
+
+### Next
+
+**Phase 6 - Machine Utilisation & OEE.** `fmes.utilization.report`, the
+availability/performance/quality factors, bottleneck ranking, and — per D5.6
+above — mirroring `run_hours` into a productive-type productivity log on
+approval, which is what will make native OEE read a real number for the first
+time.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |
@@ -608,6 +806,44 @@ this phase.
 
 ## Gotchas Worth Remembering
 
+- **A field's default, inherited from a mixin, can silently change a
+  DIFFERENT native computation that happens to read it.** `mrp.workcenter`'s
+  default `resource_calendar_id` (from `resource.mixin`) made every downtime
+  duration outside Mon-Fri 8-5 compute to zero, via a totally different code
+  path (`mrp.workcenter.productivity._compute_duration`). Check what else a
+  native field feeds before assuming an unused-looking default is inert.
+- **Field-level `groups=` blocks a write even to clear the field to `False`.**
+  Stamp or clear a restricted field in its own `sudo()` write, never mixed
+  into a non-privileged caller's own vals.
+- **Any model with an operator-scoped RESTRICTIVE `ir.rule` needs an explicit
+  unrestricted rule for `group_fmes_supervisor` too, in the same commit.**
+  The role hierarchy is cumulative (`implied_ids`), so a Supervisor and
+  Manager ARE, transitively, Operators — Odoo evaluates a non-global
+  `ir.rule` against every group a user belongs to, including implied ones,
+  and a native ACL grants the base permission but does not exempt anyone
+  from an `ir.rule` domain. Audit every model that adds an operator record
+  rule for this.
+- **`@api.constrains` on a computed field is not reliable enough for a
+  caller to catch, once `mail.thread` tracking is involved.** Odoo can defer
+  that field's recompute-and-validate cycle past `create()`/`write()`
+  returning, to the framework's OWN next flush — for a JSON-RPC controller,
+  that is the HTTP layer's post-dispatch `env.cr.flush()`, outside any
+  try/except the controller can write. Validate such a rule early, in plain
+  Python, in `create()`/`write()` itself, reading the underlying data
+  directly rather than through the compute.
+- **When a shell reproduction and a real HTTP test disagree on identical
+  code, suspect the framework layer around the code, not the code.** Fetch
+  the RAW response body (bypassing any test helper's own interpretation)
+  before adding more workarounds.
+- **`env.cr.flush()` before querying a `_auto=False` SQL-view report model**
+  whenever the query runs in the same transaction as an unflushed write — a
+  raw SQL view sees only what has reached the table. Real HTTP requests
+  never hit this (Odoo flushes and commits between requests); a one-session
+  debugging script will.
+- **A chatter `message_post()` call must be best-effort**, never able to
+  undo the state change it is meant to be documenting — it can fail for
+  reasons (no sender email configured) that have nothing to do with whether
+  the action itself should succeed.
 - **`max_cron_threads` must be ≥ 2** in production. The backlog snapshot,
   carry-forward, preventive-maintenance and alert crons all run overnight and
   would otherwise serialise behind one another.

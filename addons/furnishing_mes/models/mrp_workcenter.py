@@ -24,6 +24,24 @@ CRITICALITY = [
 class MrpWorkcenter(models.Model):
     _inherit = 'mrp.workcenter'
 
+    # Odoo's resource.mixin gives every new work center the company's
+    # default working calendar (typically Mon-Fri business hours). This
+    # module deliberately does NOT use that calendar for capacity or
+    # availability — fmes.shift and its net_hours are what govern that
+    # (Phase 3, D3.4) — so the default is turned off here rather than left
+    # to leak into behaviour that depends on it.
+    #
+    # It matters more than it looks: mrp.workcenter.productivity.duration
+    # (native, computed) calls loss_id._convert_to_duration(), which for any
+    # non-productive/performance loss type on a work center that HAS a
+    # calendar computes duration from that calendar's working hours, not
+    # wall-clock elapsed time. A plant running three shifts is down for
+    # stretches of every 24 hours the default Mon-Fri 8-5 calendar knows
+    # nothing about — a night-shift stoppage would silently compute to zero
+    # minutes of downtime. Found in Phase 5 by a duration test that returned
+    # 0.0 for a real 45-minute stoppage; recorded in MEMORY.md as D5.1.
+    resource_calendar_id = fields.Many2one(default=False)
+
     fmes_machine_code = fields.Char(
         string='Machine Code', index=True, copy=False, tracking=True,
         help="The plant's own code for this machine, as used on the shop "

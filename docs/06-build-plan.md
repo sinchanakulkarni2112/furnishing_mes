@@ -44,7 +44,7 @@ Say **"do phase N"**. The following happens, every time, without further prompti
 | 2 | Master Data & Capacity Matrix | R1.2, R1.6, R3.2, R7.1 | ✅ |
 | 3 | Production Planning Automation | R1 | ✅ |
 | 4 | Daily Tracking & Shop-Floor Terminal | R2, R3.1, R3.4, R3.5 | ✅ |
-| 5 | Downtime Management | R6 | ⬜ |
+| 5 | Downtime Management | R6 | ✅ |
 | 6 | Machine Utilisation & OEE | R5, R3.6 | ⬜ |
 | 7 | Maintenance Management | R7 | ⬜ |
 | 8 | Manpower & Resource Management | R8 | ⬜ |
@@ -334,7 +334,9 @@ figures refused further edits.
 
 ---
 
-## Phase 5 — Downtime Management
+## Phase 5 — Downtime Management ✅
+
+*Completed 2026-09-07 · module version `18.0.5.0.0`*
 
 **Goal.** Requirement 6.
 
@@ -354,9 +356,77 @@ figures refused further edits.
 8. Tests: duration maths, category rollup, escalation, OEE consistency with
    Odoo's native computation
 
-**Exit criteria**
-- Every downtime minute carries a coded reason; no uncategorised bucket
-- Pareto view identifies the top three loss reasons for a period
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| Every downtime minute carries a coded reason; no uncategorised bucket | ✅ enforced in `create()`/`write()`, not just the UI — verified by a test that a reason lacking a category is refused |
+| Pareto view identifies the top three loss reasons for a period | ✅ `fmes.downtime.report` pivot/graph, grouped by category and machine |
+| Tests pass | ✅ 216 tests, 0 failed, 0 errors |
+| No warnings on install, with or without demo data | ✅ verified on three fresh databases: with demo data, and explicitly `--without-demo=all` |
+
+End-to-end on the demo plant: a plan released and entries generated → coded
+downtime logged on six entries, one auto-escalating to a maintenance request →
+`downtime_hours` rolled up onto the entry automatically → entries and downtime
+both submitted and approved → approved downtime refused a further edit →
+`fmes.downtime.report` showed 3.25 hours across the coded events → a rejected
+event, edited by the operator who logged it, correctly returned to draft.
+
+**Deviations and findings — four real bugs, caught by actually running the
+code rather than only asserting against it in isolation**
+
+1. **Every machine defaulted to the company's Mon–Fri business-hours calendar,
+   which silently zeroed downtime duration outside those hours.** Odoo's
+   native `mrp.workcenter.productivity.duration` compute calls
+   `loss_id._convert_to_duration()`, which for a non-productive loss type on a
+   work center *with* a `resource_calendar_id` computes duration from that
+   calendar's working hours, not wall-clock elapsed time. A three-shift plant
+   is down for stretches of every 24 hours that calendar knows nothing about —
+   a night-shift stoppage computed to exactly 0.0 minutes. Fixed by defaulting
+   `resource_calendar_id` to empty on `mrp.workcenter`, since this module's
+   capacity model is `fmes.shift`, never Odoo's resource calendar. Affected
+   every machine created since Phase 2.
+2. **Field-level `groups=` blocked an operator's write even when only
+   *clearing* a restricted field to `False`.** The auto-revert-to-draft path
+   (editing a rejected event returns it to draft) included the
+   supervisor-only `fmes_approved_by`/`fmes_approved_on` fields in its own
+   vals just to clear them, which Odoo refuses regardless of the value.
+   Fixed by stamping or clearing those two fields in a separate `sudo()`
+   write, decoupled from the caller's own vals.
+3. **Supervisors and managers were caught by the operator's own restrictive
+   record rules**, because Phase 1's cumulative role hierarchy
+   (`implied_ids`) means a Supervisor *is*, transitively, an Operator too.
+   Odoo evaluates a non-global `ir.rule` against every group a user belongs
+   to, including implied ones, and with no other non-global rule on this
+   model to widen it back out, the operator's restriction silently applied to
+   everyone above them as well. Fixed with an explicit, unrestricted rule for
+   `group_fmes_supervisor` — the same pattern Phase 4 already used for
+   `fmes.production.entry`, missed here on the assumption that the native
+   `mrp.group_mrp_user` ACL alone would be enough (it grants the base
+   permission; it does not exempt anyone from an `ir.rule` domain).
+4. **`@api.constrains` on a computed field is not reliable enough for a
+   caller to catch.** Both downtime-categorisation rules read `fmes_category`,
+   a stored related field. On a model with `mail.thread`'s tracking enabled,
+   Odoo can defer that field's recompute-and-validate cycle past
+   `create()`/`write()` returning, to the *next* flush — which, for a
+   JSON-RPC controller, is the HTTP layer's own post-dispatch
+   `env.cr.flush()`, entirely outside any try/except the controller can
+   write. A downtime/start request correctly caught and returned
+   `{'ok': False, ...}` for this exact violation, and *still* surfaced an
+   uncaught `ValidationError` moments later, traced via the raw response body
+   to `mail_thread.py`'s own `_compute_field_value` calling
+   `_validate_fields`. Fixed by validating both rules early and
+   synchronously in `create()`/`write()`, reading the loss reason directly
+   rather than through the computed field, so the check needs no flush and
+   cannot be deferred. The `api.constrains` versions stay as a backstop.
+   *Generalisable: never rely on `api.constrains` alone for a rule a calling
+   layer must be able to catch reliably, once a computed field and
+   `mail.thread` tracking are both in play — validate early in plain Python
+   instead.*
+5. A fifth, smaller finding: `action_reject()`'s chatter note is now
+   best-effort (wrapped, never allowed to undo an otherwise-successful
+   rejection) after it surfaced that a user with no email configured could
+   not reject a downtime event at all, since `message_post()` requires one.
 
 **Commit.** `feat(downtime): add digital downtime capture, approval and loss analysis`
 
@@ -377,7 +447,19 @@ figures refused further edits.
 6. Bottleneck analysis — load vs capacity ranking; auto-suggest `fmes_is_bottleneck`
 7. OEE views built on Odoo's native `mrp.workcenter.oee`, with our downtime
    categories feeding the availability factor correctly
-8. Tests: utilisation maths against a fixture shift, bottleneck ranking order
+8. **Mirror `fmes.production.entry.run_hours` into a `loss_type='productive'`
+   `mrp.workcenter.productivity` record on approval.** Confirmed necessary in
+   Phase 5: native OEE is `productive_time / (productive_time + blocked_time)`,
+   and our system logs only the loss (downtime) side of that ratio through
+   Phase 5 — nothing yet writes the productive side, so every machine's native
+   OEE reads as 0% however much downtime is correctly coded. This is not a
+   Phase 5 defect (ADR-001/D5.4's own "OEE consistency" test is intentionally
+   narrower: it proves downtime we log correctly *reduces* OEE once productive
+   time exists, not that productive time gets logged automatically) — it is
+   the specific piece of wiring that makes native OEE meaningful, and it
+   belongs here, once run_hours has a settled definition to mirror from.
+9. Tests: utilisation maths against a fixture shift, bottleneck ranking order,
+   and native OEE reading a real, non-zero value once run_hours is mirrored
 
 **Exit criteria**
 - Utilisation % is available per machine per day and per month

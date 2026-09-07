@@ -106,8 +106,16 @@ class FmesProductionEntry(models.Model):
         help="Productive time on this machine during the shift.")
     downtime_hours = fields.Float(
         string='Downtime Hours', tracking=True,
-        help="Time lost during the shift. Phase 5 replaces this with the sum "
-             "of coded downtime events, so every lost hour carries a reason.")
+        help="Time lost during the shift. Kept in step automatically with "
+             "coded downtime events logged from the terminal (Phase 5); "
+             "still directly editable for entries migrated from Excel, "
+             "which predate reason-level detail and have no events behind "
+             "them.")
+    productivity_ids = fields.One2many(
+        'mrp.workcenter.productivity', 'fmes_entry_id',
+        string='Downtime Events')
+    downtime_event_count = fields.Integer(
+        compute='_compute_downtime_event_count')
     available_hours = fields.Float(
         compute='_compute_hours', store=True,
         help="Net shift hours: the capacity this slot had.")
@@ -215,6 +223,59 @@ class FmesProductionEntry(models.Model):
                 else entry.workcenter_id.fmes_std_manpower)
             entry.manpower_shortage = (
                 entry.std_manpower - entry.actual_manpower)
+
+    def _compute_downtime_event_count(self):
+        counts = dict(self.env['mrp.workcenter.productivity']._read_group(
+            [('fmes_entry_id', 'in', self.ids)],
+            groupby=['fmes_entry_id'],
+            aggregates=['__count'])) if self.ids else {}
+        for entry in self:
+            entry.downtime_event_count = counts.get(entry, 0)
+
+    # ==================================================================
+    # Downtime rollup (Phase 5)
+    # ==================================================================
+    def _fmes_recompute_downtime_hours(self):
+        """Sum coded downtime events onto `downtime_hours`.
+
+        Two things keep this safe to call liberally, from any downtime event
+        create/write:
+
+        - Entries already approved are skipped. Once a shift is signed off,
+          its downtime figure is frozen exactly like every other locked
+          field — reviewing an individual downtime event's category later
+          must not silently move a number the supervisor already approved.
+        - An entry with no linked events at all is left untouched. A row
+          migrated from the customer's Excel history has no per-event detail
+          behind it; overwriting its imported figure with zero because
+          nothing in the new system has been logged yet would be a real data
+          loss, not a correction.
+        """
+        Productivity = self.env['mrp.workcenter.productivity']
+        for entry in self:
+            if entry.state == 'approved':
+                continue
+            events = Productivity.search([
+                ('fmes_entry_id', '=', entry.id),
+                ('date_end', '!=', False),
+            ])
+            if not events:
+                continue
+            total_hours = sum(events.mapped('duration')) / 60.0
+            entry.with_context(fmes_bypass_lock=True).write(
+                {'downtime_hours': total_hours})
+
+    def action_open_downtime_events(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Downtime: %s', self.name),
+            'res_model': 'mrp.workcenter.productivity',
+            'view_mode': 'list,form',
+            'domain': [('fmes_entry_id', '=', self.id)],
+            'context': {'default_fmes_entry_id': self.id,
+                       'default_workcenter_id': self.workcenter_id.id},
+        }
 
     # ==================================================================
     # Constraints

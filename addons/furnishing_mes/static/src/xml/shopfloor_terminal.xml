@@ -159,12 +159,26 @@
                                       t-esc="formatNumber(entry.run_hours)"/>
                             </button>
 
-                            <button class="fmes-t-field fmes-t-field-down"
-                                    t-on-click="() => this.openKeypad(entry, 'downtime_hours', 'Downtime hours')">
+                            <t t-set="running" t-value="runningEventFor(entry)"/>
+                            <button t-if="running"
+                                    class="fmes-t-field fmes-t-field-down fmes-t-field-running"
+                                    t-on-click="() => this.stopDowntime(entry, running)">
+                                <span class="fmes-t-field-label">
+                                    <t t-esc="running.loss_name"/>
+                                </span>
+                                <span class="fmes-t-field-value fmes-t-timer"
+                                      t-esc="elapsedLabel(running.date_start)"/>
+                                <span class="fmes-t-field-hint">tap to stop</span>
+                            </button>
+                            <button t-else="" class="fmes-t-field fmes-t-field-down"
+                                    t-att-disabled="!entry.editable"
+                                    t-on-click="() => this.openDowntimeReasons(entry)">
                                 <span class="fmes-t-field-label">Downtime</span>
                                 <span class="fmes-t-field-value"
                                       t-esc="formatNumber(entry.downtime_hours)"/>
-                                <span class="fmes-t-field-hint">hours</span>
+                                <span class="fmes-t-field-hint">
+                                    <t t-esc="entry.downtime_events.length"/> event(s) — tap to log
+                                </span>
                             </button>
 
                             <button class="fmes-t-field"
@@ -238,6 +252,64 @@
                         <button class="fmes-t-key-ok"
                                 t-on-click="confirmKeypad">Save</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- ================= downtime reason picker ================= -->
+            <div t-if="state.downtimeModal" class="fmes-t-keypad-backdrop"
+                 t-on-click="closeDowntimeModal">
+                <div class="fmes-t-downtime-modal" t-on-click.stop="() => {}">
+
+                    <t t-if="state.downtimeModal.step === 'reasons'">
+                        <div class="fmes-t-keypad-head">
+                            <div class="fmes-t-keypad-label">Log Downtime</div>
+                            <div class="fmes-t-keypad-product"
+                                 t-esc="state.downtimeModal.entry.product"/>
+                        </div>
+                        <div class="fmes-t-reason-grid">
+                            <t t-foreach="state.downtimeReasons" t-as="group"
+                               t-key="group.category">
+                                <div class="fmes-t-reason-group-label"
+                                     t-esc="group.label"/>
+                                <div class="fmes-t-reason-tiles">
+                                    <button t-foreach="group.reasons" t-as="reason"
+                                            t-key="reason.id"
+                                            t-attf-class="fmes-t-reason-tile fmes-t-reason-{{group.category}}"
+                                            t-on-click="() => this.pickDowntimeReason(reason)">
+                                        <t t-esc="reason.name"/>
+                                    </button>
+                                </div>
+                            </t>
+                        </div>
+                        <div class="fmes-t-keypad-actions">
+                            <button class="fmes-t-key-cancel"
+                                    style="grid-column: span 3"
+                                    t-on-click="closeDowntimeModal">Cancel</button>
+                        </div>
+                    </t>
+
+                    <t t-elif="state.downtimeModal.step === 'remark'">
+                        <div class="fmes-t-keypad-head">
+                            <div class="fmes-t-keypad-label">
+                                <t t-esc="state.downtimeModal.reason.name"/>
+                            </div>
+                            <div class="fmes-t-keypad-product">
+                                A note is required for this reason
+                            </div>
+                        </div>
+                        <textarea class="fmes-t-remark-input"
+                                  t-model="state.downtimeModal.remarks"
+                                  placeholder="What happened?"/>
+                        <div class="fmes-t-keypad-actions">
+                            <button class="fmes-t-key-cancel"
+                                    t-on-click="closeDowntimeModal">Cancel</button>
+                            <button class="fmes-t-key-ok" style="grid-column: span 2"
+                                    t-on-click="confirmDowntimeRemark">
+                                Start
+                            </button>
+                        </div>
+                    </t>
+
                 </div>
             </div>
         </div>

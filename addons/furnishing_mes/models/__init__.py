@@ -8,4 +8,5 @@ from . import fmes_production_entry
 from . import mrp_workcenter
 from . import maintenance_equipment
 from . import mrp_workcenter_productivity_loss
+from . import mrp_workcenter_productivity
 from . import res_users

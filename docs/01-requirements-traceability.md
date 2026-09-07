@@ -70,10 +70,10 @@ completeness at handover.
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 6.1 | Capture downtime reasons digitally | EXTEND | `mrp.workcenter.productivity.loss` + `fmes_category` | 2 (taxonomy) ✅, 5 |
-| 6.2 | Measure downtime hours | REUSE | `mrp.workcenter.productivity.duration` | 5 |
-| 6.3 | Analyse loss reasons | NEW | `fmes.downtime.report` pivot and Pareto view | 5, 10 |
-| 6.4 | Generate downtime reports | NEW | QWeb PDF + XLSX Downtime Report | 5, 12 |
+| 6.1 | Capture downtime reasons digitally | EXTEND | `mrp.workcenter.productivity.loss` + `fmes_category` | 2 (taxonomy) ✅, 5 ✅ |
+| 6.2 | Measure downtime hours | REUSE | `mrp.workcenter.productivity.duration` | 5 ✅ |
+| 6.3 | Analyse loss reasons | NEW | `fmes.downtime.report` pivot and Pareto view | 5 ✅, 10 |
+| 6.4 | Generate downtime reports | NEW | Pivot/list now; QWeb PDF + XLSX in 12 | 5 ✅, 12 |
 
 **Reason taxonomy** — seeded as `mrp.workcenter.productivity.loss` records, all
 drawn from the customer's existing process:

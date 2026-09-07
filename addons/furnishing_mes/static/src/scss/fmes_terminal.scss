@@ -429,4 +429,107 @@
     .fmes-t-key-clear { background: #4a5b6d; }
     .fmes-t-key-cancel { background: #4a2b33; }
     .fmes-t-key-ok { background: var(--t-good); color: #06301a; }
+
+    // ------------------------------------------------------ downtime field
+    .fmes-t-field-running {
+        background: var(--t-bad);
+        animation: fmes-pulse 2s ease-in-out infinite;
+
+        &:hover { border-color: #fff; }
+    }
+
+    .fmes-t-timer {
+        font-variant-numeric: tabular-nums;
+        font-size: 26px;
+    }
+
+    @keyframes fmes-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.82; }
+    }
+
+    // ------------------------------------------------ downtime reason grid
+    .fmes-t-downtime-modal {
+        // Not min(560px, 100%) — see the .fmes-t-keypad note in MEMORY.md
+        // (D4.6): Sass claims min() as its own function and refuses to mix
+        // units, which fails the entire backend asset bundle compile.
+        width: 560px;
+        max-width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 20px;
+        border-radius: 18px;
+        background: var(--t-panel);
+        border: 2px solid var(--t-line);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .fmes-t-reason-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .fmes-t-reason-group-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--t-muted);
+    }
+
+    .fmes-t-reason-tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 8px;
+    }
+
+    .fmes-t-reason-tile {
+        min-height: 56px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #1e3d5c;
+        border: 2px solid transparent;
+        font-size: 15px;
+        font-weight: 600;
+        text-align: center;
+        line-height: 1.2;
+
+        &:hover { border-color: var(--t-accent); }
+        &:active { transform: scale(0.97); }
+    }
+
+    // A light colour cue per category. Never the only signal — the reason
+    // name is always the actual label — but it helps an operator spot the
+    // right tile fast on a grid of ten.
+    .fmes-t-reason-maintenance,
+    .fmes-t-reason-power_failure { background: #4a2b33; }
+    .fmes-t-reason-material_shortage,
+    .fmes-t-reason-material_handling { background: #4a3b1e; }
+    .fmes-t-reason-operator_absence,
+    .fmes-t-reason-manpower_rescheduling,
+    .fmes-t-reason-operator_inefficiency { background: #1e3a4a; }
+    .fmes-t-reason-changeover { background: #2a3d1e; }
+    .fmes-t-reason-unscheduled_stoppage { background: #3a1e4a; }
+    .fmes-t-reason-other { background: #333; }
+
+    .fmes-t-remark-input {
+        width: 100%;
+        min-height: 100px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 2px solid var(--t-line);
+        background: #0a1a2b;
+        color: var(--t-text);
+        font-size: 17px;
+        font-family: inherit;
+        resize: vertical;
+
+        &:focus {
+            outline: none;
+            border-color: var(--t-accent);
+        }
+    }
 }

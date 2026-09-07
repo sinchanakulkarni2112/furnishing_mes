@@ -119,5 +119,70 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
 
+        <record id="fmes_downtime_report_company_rule" model="ir.rule">
+            <field name="name">Downtime Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_downtime_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!--
+            Operator scoping on downtime events, mirroring the two-rule split
+            used for fmes.production.entry in Phase 4: reading follows the
+            machines the operator is assigned to (or their own creation),
+            writing is limited to still-open records regardless of machine.
+
+            A Supervisor and a Plant Manager ALSO hold group_fmes_operator,
+            because Phase 1's role hierarchy is cumulative (implied_ids): a
+            Supervisor implies Operator, a Manager implies Supervisor. Odoo
+            evaluates a non-global ir.rule against every group a user belongs
+            to, including implied ones — so the operator rules below would
+            silently apply to supervisors and managers too, with no other
+            non-global rule on this model to OR against and widen it back
+            out. mrp.group_mrp_user's native ACL grants the base RWCD
+            permission, but that is a different layer (ACL, not ir.rule) and
+            does not exempt anyone from an ir.rule domain.
+            An explicit, unrestricted rule for group_fmes_supervisor is what
+            fixes this — found by a real AccessError when a Plant Manager
+            (who is also, transitively, an Operator) tried to reopen an
+            approved event and was refused read access to their own record.
+        -->
+        <record id="fmes_productivity_supervisor_rule" model="ir.rule">
+            <field name="name">Downtime Event: supervisor sees everything</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_productivity_operator_read_rule" model="ir.rule">
+            <field name="name">Downtime Event: operator sees own machines</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">
+                ['|',
+                 ('create_uid', '=', user.id),
+                 ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
+            </field>
+        </record>
+
+        <record id="fmes_productivity_operator_write_rule" model="ir.rule">
+            <field name="name">Downtime Event: operator edits own drafts</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+            <field name="domain_force">
+                [('fmes_state', 'in', ('draft', 'rejected'))]
+            </field>
+        </record>
+
     </data>
 </odoo>

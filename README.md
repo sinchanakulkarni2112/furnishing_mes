@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 4 of 15 — Daily tracking and shop-floor terminal ✅ |
-| **Next** | Phase 5 — Downtime management |
-| **Module version** | `18.0.4.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community · 169 tests passing · no install warnings |
+| **Phase** | 5 of 15 — Downtime management ✅ |
+| **Next** | Phase 6 — Machine utilisation and OEE |
+| **Module version** | `18.0.5.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 216 tests passing · no install warnings |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

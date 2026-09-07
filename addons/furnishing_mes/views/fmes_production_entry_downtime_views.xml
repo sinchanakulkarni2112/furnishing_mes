@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Phase 5 addition to the Phase 4 production entry form: a button
+            box holding a stat button onto the coded downtime events behind
+            this shift. Phase 4's form had no button box yet, so this view
+            adds both the box and the button together in one pass.
+        -->
+        <record id="fmes_entry_view_form_downtime" model="ir.ui.view">
+            <field name="name">fmes.production.entry.form.downtime</field>
+            <field name="model">fmes.production.entry</field>
+            <field name="inherit_id" ref="fmes_entry_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[hasclass('oe_title')]" position="before">
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_downtime_events"
+                                type="object" class="oe_stat_button"
+                                icon="fa-clock-o"
+                                invisible="not downtime_event_count">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="downtime_event_count"/>
+                                </span>
+                                <span class="o_stat_text">Downtime Events</span>
+                            </div>
+                        </button>
+                    </div>
+                </xpath>
+                <xpath expr="//field[@name='downtime_hours']" position="after">
+                    <field name="downtime_event_count" invisible="1"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

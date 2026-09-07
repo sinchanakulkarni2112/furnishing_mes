@@ -672,16 +672,21 @@ class TestShopFloorTerminal(HttpCase):
         self.assertAlmostEqual(self.entry.planned_qty, 60.0, places=4)
 
     def test_recording_on_another_machine_is_refused(self):
+        """A graceful {ok: False}, not a raised exception over the wire.
+
+        make_jsonrpc_request raises JsonRpcException itself whenever an
+        exception escapes the controller uncaught, so this is a stricter
+        check than searching the raw response text for the word "error" —
+        that string is present either way, which is what let a real gap
+        (the whole route body needs to be inside the try/except, not just
+        the write() call — Phase 5, D5.3) go unnoticed here originally.
+        """
         self.authenticate('fmes_terminal_op', 'fmes_terminal_op')
-        response = self.url_open(
-            '/fmes/terminal/record',
-            data=self._json_payload({
-                'entry_id': self.blocked_entry.id,
-                'values': {'actual_qty': 5.0},
-            }),
-            headers={'Content-Type': 'application/json'},
-            timeout=60)
-        self.assertIn('error', response.text)
+        result = self.make_jsonrpc_request('/fmes/terminal/record', {
+            'entry_id': self.blocked_entry.id,
+            'values': {'actual_qty': 5.0},
+        })
+        self.assertFalse(result['ok'])
         self.blocked_entry.invalidate_recordset()
         self.assertEqual(self.blocked_entry.actual_qty, 0.0)
 

@@ -51,7 +51,26 @@
         <menuitem id="menu_fmes_downtime"
                   name="Downtime"
                   parent="menu_fmes_root"
-                  sequence="40"/>
+                  sequence="40"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_downtime_events"
+                  name="Downtime Events"
+                  parent="menu_fmes_downtime"
+                  action="action_fmes_downtime_events"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_downtime_approval_queue"
+                  name="Approval Queue"
+                  parent="menu_fmes_downtime"
+                  action="action_fmes_downtime_approval_queue"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_downtime_loss_analysis"
+                  name="Loss Analysis"
+                  parent="menu_fmes_downtime"
+                  action="action_fmes_downtime_report"
+                  sequence="30"/>
 
         <!-- Maintenance — Phase 7 -->
         <menuitem id="menu_fmes_maintenance"
