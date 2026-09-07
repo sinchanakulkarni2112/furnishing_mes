@@ -128,6 +128,64 @@
                   sequence="50"/>
 
         <!-- ============================================================ -->
+        <!--  Dashboard                                                   -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_live_status"
+                  name="Live Production Status"
+                  parent="menu_fmes_dashboard"
+                  action="action_fmes_live_status"
+                  sequence="20"/>
+
+        <!-- ============================================================ -->
+        <!--  Production                                                  -->
+        <!--                                                              -->
+        <!--  The terminal is the only item an operator sees; everything  -->
+        <!--  else here is supervisor and above.                          -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_terminal"
+                  name="Shop Floor Terminal"
+                  parent="menu_fmes_production"
+                  action="action_fmes_shopfloor_terminal"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_entries"
+                  name="Production Entries"
+                  parent="menu_fmes_production"
+                  action="action_fmes_production_entry"
+                  sequence="20"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_approval_queue"
+                  name="Approval Queue"
+                  parent="menu_fmes_production"
+                  action="action_fmes_approval_queue"
+                  sequence="30"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_planned_vs_actual"
+                  name="Planned vs Actual"
+                  parent="menu_fmes_production"
+                  action="action_fmes_planned_vs_actual"
+                  sequence="40"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_import_output"
+                  name="Import Daily Output"
+                  parent="menu_fmes_production"
+                  action="action_fmes_production_import"
+                  sequence="50"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_import_batches"
+                  name="Import Batches"
+                  parent="menu_fmes_production"
+                  action="action_fmes_import_batch"
+                  sequence="60"
+                  groups="furnishing_mes.group_fmes_manager"/>
+
+        <!-- ============================================================ -->
         <!--  Configuration                                               -->
         <!-- ============================================================ -->
 

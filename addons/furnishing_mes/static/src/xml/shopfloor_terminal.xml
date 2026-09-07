@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="furnishing_mes.ShopFloorTerminal">
+        <div class="fmes-terminal">
+
+            <!-- ================= machine picker ================= -->
+            <t t-if="state.step === 'pick'">
+                <div class="fmes-t-header">
+                    <div>
+                        <h1>Shop Floor Terminal</h1>
+                        <div class="fmes-t-sub">
+                            <t t-esc="state.userName"/> — choose your machine
+                        </div>
+                    </div>
+                </div>
+
+                <div t-if="state.loading" class="fmes-t-loading">Loading…</div>
+
+                <div t-elif="!state.machines.length" class="fmes-t-empty">
+                    <p>No machines are available to you.</p>
+                    <p class="fmes-t-sub">
+                        Ask your supervisor to assign you to a machine.
+                    </p>
+                </div>
+
+                <div t-else="" class="fmes-t-machine-grid">
+                    <button t-foreach="state.machines" t-as="machine"
+                            t-key="machine.id"
+                            class="fmes-t-machine"
+                            t-on-click="() => this.selectMachine(machine)">
+                        <div class="fmes-t-machine-top">
+                            <span class="fmes-t-machine-name"
+                                  t-esc="machine.name"/>
+                            <span t-attf-class="fmes-t-state fmes-t-state-{{machine.state}}"
+                                  t-esc="machine.state"/>
+                        </div>
+                        <div class="fmes-t-machine-code">
+                            <t t-esc="machine.code"/>
+                            <t t-if="machine.department">
+                                · <t t-esc="machine.department"/>
+                            </t>
+                        </div>
+                        <div class="fmes-t-machine-figures">
+                            <span><t t-esc="formatNumber(machine.produced)"/></span>
+                            <span class="fmes-t-sub">
+                                of <t t-esc="formatNumber(machine.target)"/>
+                            </span>
+                        </div>
+                    </button>
+                </div>
+            </t>
+
+            <!-- ================= work screen ================= -->
+            <t t-else="">
+                <div class="fmes-t-header">
+                    <button class="fmes-t-back" t-on-click="backToMachines">
+                        ← Machines
+                    </button>
+                    <div class="fmes-t-title-block">
+                        <h1 t-esc="state.machine.name"/>
+                        <div class="fmes-t-sub">
+                            <t t-esc="state.machine.code"/>
+                            <span t-attf-class="fmes-t-state fmes-t-state-{{state.machine.state}}"
+                                  t-esc="state.machine.state"/>
+                        </div>
+                    </div>
+                    <div class="fmes-t-shifts">
+                        <button t-foreach="state.shifts" t-as="shift"
+                                t-key="shift.id"
+                                t-attf-class="fmes-t-shift {{shift.id === state.shiftId ? 'active' : ''}}"
+                                t-on-click="() => this.selectShift(shift.id)">
+                            <span class="fmes-t-shift-code" t-esc="shift.code"/>
+                            <span class="fmes-t-shift-range" t-esc="shift.range"/>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- headline figures -->
+                <div class="fmes-t-summary">
+                    <div class="fmes-t-stat">
+                        <span class="fmes-t-stat-label">Target</span>
+                        <span class="fmes-t-stat-value"
+                              t-esc="formatNumber(totals.target)"/>
+                    </div>
+                    <div class="fmes-t-stat">
+                        <span class="fmes-t-stat-label">Produced</span>
+                        <span class="fmes-t-stat-value fmes-t-strong"
+                              t-esc="formatNumber(totals.produced)"/>
+                    </div>
+                    <div class="fmes-t-stat">
+                        <span class="fmes-t-stat-label">Rejected</span>
+                        <span class="fmes-t-stat-value"
+                              t-esc="formatNumber(totals.rejected)"/>
+                    </div>
+                    <div class="fmes-t-stat">
+                        <span class="fmes-t-stat-label">Achievement</span>
+                        <span t-if="totals.hasTarget"
+                              t-attf-class="fmes-t-stat-value {{achievementClass(totals.achievement, true)}}">
+                            <t t-esc="totals.achievement.toFixed(0)"/>%
+                        </span>
+                        <span t-else="" class="fmes-t-stat-value fmes-t-neutral">
+                            no target
+                        </span>
+                    </div>
+                </div>
+
+                <div t-if="totals.hasTarget" class="fmes-t-progress">
+                    <div t-attf-class="fmes-t-progress-bar {{achievementClass(totals.achievement, true)}}"
+                         t-attf-style="width: {{barWidth(totals.achievement)}}"/>
+                </div>
+
+                <div t-if="state.pendingWrites" class="fmes-t-offline">
+                    <t t-esc="state.pendingWrites"/> change(s) could not be saved.
+                    Check the network and enter them again.
+                </div>
+
+                <!-- entries -->
+                <div t-if="state.loading" class="fmes-t-loading">Loading…</div>
+
+                <div t-elif="!state.entries.length" class="fmes-t-empty">
+                    <p>Nothing planned for this machine on this shift.</p>
+                    <p class="fmes-t-sub">
+                        Targets appear here once a plan has been released.
+                    </p>
+                </div>
+
+                <div t-else="" class="fmes-t-entries">
+                    <div t-foreach="state.entries" t-as="entry" t-key="entry.id"
+                         t-attf-class="fmes-t-entry {{entry.editable ? '' : 'locked'}}">
+                        <div class="fmes-t-entry-head">
+                            <span class="fmes-t-product" t-esc="entry.product"/>
+                            <span t-attf-class="fmes-t-badge fmes-t-badge-{{entry.state}}"
+                                  t-esc="entry.state"/>
+                        </div>
+
+                        <div class="fmes-t-fields">
+                            <button class="fmes-t-field"
+                                    t-on-click="() => this.openKeypad(entry, 'actual_qty', 'Produced')">
+                                <span class="fmes-t-field-label">Produced</span>
+                                <span class="fmes-t-field-value"
+                                      t-esc="formatNumber(entry.actual_qty)"/>
+                                <span class="fmes-t-field-hint">
+                                    target <t t-esc="formatNumber(entry.planned_qty)"/>
+                                </span>
+                            </button>
+
+                            <button class="fmes-t-field"
+                                    t-on-click="() => this.openKeypad(entry, 'rejected_qty', 'Rejected')">
+                                <span class="fmes-t-field-label">Rejected</span>
+                                <span class="fmes-t-field-value"
+                                      t-esc="formatNumber(entry.rejected_qty)"/>
+                            </button>
+
+                            <button class="fmes-t-field"
+                                    t-on-click="() => this.openKeypad(entry, 'run_hours', 'Run hours')">
+                                <span class="fmes-t-field-label">Run hours</span>
+                                <span class="fmes-t-field-value"
+                                      t-esc="formatNumber(entry.run_hours)"/>
+                            </button>
+
+                            <button class="fmes-t-field fmes-t-field-down"
+                                    t-on-click="() => this.openKeypad(entry, 'downtime_hours', 'Downtime hours')">
+                                <span class="fmes-t-field-label">Downtime</span>
+                                <span class="fmes-t-field-value"
+                                      t-esc="formatNumber(entry.downtime_hours)"/>
+                                <span class="fmes-t-field-hint">hours</span>
+                            </button>
+
+                            <button class="fmes-t-field"
+                                    t-on-click="() => this.openKeypad(entry, 'actual_manpower', 'Operators')">
+                                <span class="fmes-t-field-label">Operators</span>
+                                <span class="fmes-t-field-value"
+                                      t-esc="formatNumber(entry.actual_manpower)"/>
+                            </button>
+
+                            <div class="fmes-t-field fmes-t-field-readonly">
+                                <span class="fmes-t-field-label">Achievement</span>
+                                <span t-if="entry.has_target"
+                                      t-attf-class="fmes-t-field-value {{achievementClass(entry.achievement, true)}}">
+                                    <t t-esc="entry.achievement.toFixed(0)"/>%
+                                </span>
+                                <span t-else="" class="fmes-t-field-value fmes-t-neutral">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- footer -->
+                <div class="fmes-t-footer">
+                    <div class="fmes-t-footer-info">
+                        <span>Downtime today:
+                            <strong t-esc="formatNumber(totals.downtime)"/> h</span>
+                        <span t-if="lastSyncLabel" class="fmes-t-sub">
+                            saved <t t-esc="lastSyncLabel"/>
+                        </span>
+                    </div>
+                    <button class="fmes-t-submit"
+                            t-att-disabled="!pendingCount"
+                            t-on-click="submitShift">
+                        Submit shift
+                        <span t-if="pendingCount">
+                            (<t t-esc="pendingCount"/>)
+                        </span>
+                    </button>
+                </div>
+            </t>
+
+            <!-- ================= numeric keypad ================= -->
+            <div t-if="state.keypad" class="fmes-t-keypad-backdrop"
+                 t-on-click="closeKeypad">
+                <div class="fmes-t-keypad" t-on-click.stop="() => {}">
+                    <div class="fmes-t-keypad-head">
+                        <div class="fmes-t-keypad-label"
+                             t-esc="state.keypad.label"/>
+                        <div class="fmes-t-keypad-product"
+                             t-esc="state.keypad.product"/>
+                    </div>
+                    <div class="fmes-t-keypad-display"
+                         t-esc="state.keypad.value"/>
+                    <div class="fmes-t-keypad-grid">
+                        <t t-foreach="['7','8','9','4','5','6','1','2','3','.','0']"
+                           t-as="key" t-key="key">
+                            <button class="fmes-t-key"
+                                    t-on-click="() => this.keypadPress(key)"
+                                    t-esc="key"/>
+                        </t>
+                        <button class="fmes-t-key fmes-t-key-back"
+                                t-on-click="() => this.keypadPress('back')">⌫</button>
+                    </div>
+                    <div class="fmes-t-keypad-actions">
+                        <button class="fmes-t-key-clear"
+                                t-on-click="() => this.keypadPress('clear')">
+                            Clear
+                        </button>
+                        <button class="fmes-t-key-cancel"
+                                t-on-click="closeKeypad">Cancel</button>
+                        <button class="fmes-t-key-ok"
+                                t-on-click="confirmKeypad">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

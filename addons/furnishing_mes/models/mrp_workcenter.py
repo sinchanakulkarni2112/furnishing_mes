@@ -56,6 +56,25 @@ class MrpWorkcenter(models.Model):
     fmes_capacity_count = fields.Integer(
         compute='_compute_fmes_capacity_count', string='Capacity Rates Defined')
 
+    fmes_current_state = fields.Selection(
+        [('running', 'Running'),
+         ('idle', 'Idle'),
+         ('maintenance', 'Under Maintenance'),
+         ('blocked', 'Blocked')],
+        compute='_compute_fmes_current_state', string='Live Status',
+        help="What this machine is doing right now (Requirement 3.5). Not "
+             "stored: it is a view of the present, and storing it would mean "
+             "trusting a value that is stale the moment it is written.")
+    fmes_today_target = fields.Float(
+        compute='_compute_fmes_today', string="Today's Target",
+        digits='Product Unit of Measure')
+    fmes_today_produced = fields.Float(
+        compute='_compute_fmes_today', string="Today's Output",
+        digits='Product Unit of Measure')
+    fmes_today_achievement = fields.Float(
+        compute='_compute_fmes_today', string="Today's Achievement %",
+        aggregator=None)
+
     _sql_constraints = [
         ('fmes_equipment_uniq',
          'unique(equipment_id)',
@@ -73,6 +92,59 @@ class MrpWorkcenter(models.Model):
             aggregates=['__count'])) if self.ids else {}
         for workcenter in self:
             workcenter.fmes_capacity_count = counts.get(workcenter, 0)
+
+    def _compute_fmes_current_state(self):
+        """Live status, from what is actually happening on the machine.
+
+        Order matters: a machine under maintenance is under maintenance even if
+        a work order is still nominally in progress on it.
+        """
+        Request = self.env['maintenance.request']
+        open_equipment = set()
+        equipment_ids = self.mapped('equipment_id').ids
+        if equipment_ids:
+            open_equipment = set(Request.search([
+                ('equipment_id', 'in', equipment_ids),
+                ('stage_id.done', '=', False),
+                ('maintenance_type', '=', 'corrective'),
+            ]).mapped('equipment_id').ids)
+
+        running = set()
+        if self.ids:
+            running = set(self.env['mrp.workorder'].search([
+                ('workcenter_id', 'in', self.ids),
+                ('state', '=', 'progress'),
+            ]).mapped('workcenter_id').ids)
+
+        for workcenter in self:
+            if workcenter.equipment_id.id in open_equipment:
+                workcenter.fmes_current_state = 'maintenance'
+            elif workcenter.id in running:
+                workcenter.fmes_current_state = 'running'
+            else:
+                workcenter.fmes_current_state = 'idle'
+
+    def _compute_fmes_today(self):
+        """Today's target and output, for the live production board."""
+        today = fields.Date.context_today(self)
+        entries_by_wc = {}
+        if self.ids:
+            entries = self.env['fmes.production.entry'].search([
+                ('workcenter_id', 'in', self.ids),
+                ('date', '=', today),
+            ])
+            for entry in entries:
+                bucket = entries_by_wc.setdefault(
+                    entry.workcenter_id.id, [0.0, 0.0])
+                bucket[0] += entry.planned_qty
+                bucket[1] += entry.actual_qty
+
+        for workcenter in self:
+            target, produced = entries_by_wc.get(workcenter.id, (0.0, 0.0))
+            workcenter.fmes_today_target = target
+            workcenter.fmes_today_produced = produced
+            workcenter.fmes_today_achievement = (
+                produced / target * 100.0) if target else 0.0
 
     # ------------------------------------------------------------------
     # The work center <-> equipment bridge

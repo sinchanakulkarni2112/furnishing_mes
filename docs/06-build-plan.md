@@ -43,7 +43,7 @@ Say **"do phase N"**. The following happens, every time, without further prompti
 | 1 | Docker Foundation & Module Skeleton | R3.3 | ✅ |
 | 2 | Master Data & Capacity Matrix | R1.2, R1.6, R3.2, R7.1 | ✅ |
 | 3 | Production Planning Automation | R1 | ✅ |
-| 4 | Daily Tracking & Shop-Floor Terminal | R2, R3.1, R3.4, R3.5 | ⬜ |
+| 4 | Daily Tracking & Shop-Floor Terminal | R2, R3.1, R3.4, R3.5 | ✅ |
 | 5 | Downtime Management | R6 | ⬜ |
 | 6 | Machine Utilisation & OEE | R5, R3.6 | ⬜ |
 | 7 | Maintenance Management | R7 | ⬜ |
@@ -265,7 +265,9 @@ machine-wise, shift-wise plans without Excel.
 
 ---
 
-## Phase 4 — Daily Tracking & Shop-Floor Terminal
+## Phase 4 — Daily Tracking & Shop-Floor Terminal ✅
+
+*Completed 2026-09-06 · module version `18.0.4.0.0`*
 
 **Goal.** Requirement 2 and the real-time half of Requirement 3.
 
@@ -294,10 +296,39 @@ machine-wise, shift-wise plans without Excel.
 8. Tests: achievement computation, uniqueness constraint, approval immutability,
    operator scoping, importer round-trip
 
-**Exit criteria**
-- An operator records a shift's output on a tablet without touching the backoffice
-- A supervisor approves the shift and the daily report reflects it
-- A historical DAY WISE OUTPUT sheet imports without manual cleanup
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| An operator records a shift's output on a tablet without the backoffice | ✅ OWL terminal with machine picker, numeric keypad and one-tap submit; every endpoint re-authorises server-side |
+| A supervisor approves the shift and it reaches the reports | ✅ approval queue; only approved entries reach reporting views |
+| A DAY WISE OUTPUT sheet imports without manual cleanup | ✅ header detection, guessed column mapping, row-level validation, reversible batch |
+| Tests pass | ✅ 169 tests, 0 failed, 0 errors |
+| No warnings on install or upgrade | ✅ clean at `--log-level=warn` on a fresh database |
+
+End-to-end on the demo plant: plan released (246 lines) → 82 entries generated
+(idempotent on re-run) → output recorded → submitted and approved → 61 plan
+lines `done`, 21 `partial` → the shortfall carried into the next plan → approved
+figures refused further edits.
+
+**Deviations from the original spec**
+
+1. **Operator scoping is by machine assignment, not the daily roster.**
+   `fmes.operator.allocation` arrives in Phase 8. Assignment on the user is
+   real scoping that works today and stays useful afterwards — a permanent
+   assignment and a day's allocation are different things. An unassigned
+   operator is not locked out but sees only their own entries.
+2. **No per-operator PIN (assumption A16).** Operators authenticate with a
+   normal Odoo login. A PIN is a second authentication mechanism to build and
+   secure, and individual logins give a stronger audit trail. Question Q12 is
+   still open; if the plant wants shared sessions, the PIN layers on top of
+   what is here.
+3. **Downtime is captured as hours, not yet as coded events.** The terminal has
+   a downtime field feeding `downtime_hours`; Phase 5 replaces it with reason-
+   coded events and recomputes the field from them.
+4. **The live status board is a kanban, not an OWL component.** Odoo's kanban
+   already does auto-refresh, grouping and drill-through; a custom component
+   would have been more code for less.
 
 **Commit.** `feat(execution): add daily production tracking, shop-floor terminal and excel importer`
 

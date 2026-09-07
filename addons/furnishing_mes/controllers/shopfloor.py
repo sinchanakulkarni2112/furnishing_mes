@@ -1,0 +1,219 @@
+# -*- coding: utf-8 -*-
+"""Shop-floor terminal endpoints.
+
+Every route re-derives what the calling user is allowed to touch from the
+server's own view of their scope. Nothing here trusts a machine id, an entry id
+or a quantity because the client sent it: the terminal runs on a shared tablet
+on a factory floor, which is the least trustworthy client in the building.
+"""
+
+from odoo import _, fields, http
+from odoo.exceptions import AccessError, UserError
+from odoo.http import request
+
+
+class FmesShopFloor(http.Controller):
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _allowed_workcenters(self):
+        """Machines the current user may record on.
+
+        Phase 8 adds the daily roster as a second source; this method is the
+        only place that has to change.
+        """
+        user = request.env.user
+        if user.has_group('furnishing_mes.group_fmes_supervisor'):
+            return request.env['mrp.workcenter'].search(
+                [('active', '=', True)])
+        allowed = user.fmes_allowed_workcenter_ids
+        if allowed:
+            return allowed
+        # Unscoped operator: may record anywhere, but the record rules still
+        # limit them to their own entries.
+        return request.env['mrp.workcenter'].search([('active', '=', True)])
+
+    def _check_workcenter(self, workcenter_id):
+        machine = request.env['mrp.workcenter'].browse(
+            int(workcenter_id)).exists()
+        if not machine or machine not in self._allowed_workcenters():
+            raise AccessError(_(
+                "You are not assigned to that machine."))
+        return machine
+
+    def _entry_for_user(self, entry_id):
+        entry = request.env['fmes.production.entry'].browse(
+            int(entry_id)).exists()
+        if not entry:
+            raise UserError(_("That entry no longer exists."))
+        # Record rules decide visibility; this makes them do their job rather
+        # than trusting the id that arrived from the tablet.
+        entry.check_access('write')
+        self._check_workcenter(entry.workcenter_id.id)
+        return entry
+
+    # ------------------------------------------------------------------
+    # Routes
+    # ------------------------------------------------------------------
+    @http.route('/fmes/terminal/machines', type='json', auth='user')
+    def machines(self, **kwargs):
+        """Machines the operator may pick from, with today's status."""
+        machines = self._allowed_workcenters()
+        return {
+            'user': request.env.user.display_name,
+            'scoped': request.env.user.fmes_has_machine_scope,
+            # sudo() only for the live-status computes, and only for machines
+            # already established as this user's. Operators hold no rights on
+            # mrp.workorder or maintenance.request, which those computes read.
+            'machines': [{
+                'id': m.id,
+                'name': m.name,
+                'code': m.fmes_machine_code or m.code or '',
+                'department': m.department_id.name or '',
+                'state': m.sudo().fmes_current_state,
+                'target': m.sudo().fmes_today_target,
+                'produced': m.sudo().fmes_today_produced,
+                'achievement': m.sudo().fmes_today_achievement,
+            } for m in machines],
+        }
+
+    @http.route('/fmes/terminal/shifts', type='json', auth='user')
+    def shifts(self, **kwargs):
+        shifts = request.env['fmes.shift'].search(
+            [('company_id', '=', request.env.company.id)],
+            order='sequence, start_time, id')
+        return [{
+            'id': s.id, 'code': s.code, 'name': s.name,
+            'range': s.time_range, 'net_hours': s.net_hours,
+        } for s in shifts]
+
+    @http.route('/fmes/terminal/board', type='json', auth='user')
+    def board(self, workcenter_id, shift_id=None, date=None, **kwargs):
+        """Everything the terminal shows for one machine and shift."""
+        machine = self._check_workcenter(workcenter_id)
+        Entry = request.env['fmes.production.entry']
+        day = date or fields.Date.context_today(Entry)
+
+        domain = [('workcenter_id', '=', machine.id), ('date', '=', day)]
+        if shift_id:
+            domain.append(('shift_id', '=', int(shift_id)))
+        entries = Entry.search(domain)
+
+        # The machine is already authorised above, so reading its work orders
+        # with elevated rights is safe. Entries below stay on the user's own
+        # rights, because the record rules are what scope them.
+        workorders = request.env['mrp.workorder'].sudo().search([
+            ('workcenter_id', '=', machine.id),
+            ('state', 'not in', ('done', 'cancel')),
+        ], order='date_start, id', limit=10)
+
+        return {
+            'machine': {
+                'id': machine.id,
+                'name': machine.name,
+                'code': machine.fmes_machine_code or machine.code or '',
+                'state': machine.sudo().fmes_current_state,
+            },
+            'date': str(day),
+            'entries': [self._entry_payload(e) for e in entries],
+            'workorders': [{
+                'id': w.id,
+                'name': w.name,
+                'production': w.production_id.name,
+                'product': w.production_id.product_id.display_name,
+                'qty': w.qty_production,
+                'produced': w.qty_produced,
+                'state': w.state,
+            } for w in workorders],
+        }
+
+    def _entry_payload(self, entry):
+        return {
+            'id': entry.id,
+            'name': entry.name,
+            'product': entry.product_id.display_name,
+            'product_id': entry.product_id.id,
+            'shift': entry.shift_id.code,
+            'shift_id': entry.shift_id.id,
+            'planned_qty': entry.planned_qty,
+            'actual_qty': entry.actual_qty,
+            'rejected_qty': entry.rejected_qty,
+            'achievement': entry.achievement_pct,
+            'has_target': entry.has_target,
+            'run_hours': entry.run_hours,
+            'downtime_hours': entry.downtime_hours,
+            'actual_manpower': entry.actual_manpower,
+            'state': entry.state,
+            'editable': entry.state in ('draft', 'rejected'),
+        }
+
+    @http.route('/fmes/terminal/record', type='json', auth='user')
+    def record(self, entry_id, values, **kwargs):
+        """Save what the operator typed.
+
+        Only the fields an operator is allowed to touch are accepted; anything
+        else in the payload is ignored rather than trusted.
+        """
+        entry = self._entry_for_user(entry_id)
+        if entry.state not in ('draft', 'rejected'):
+            return {'ok': False,
+                    'error': _("This entry has already been submitted.")}
+
+        allowed = {'actual_qty', 'rejected_qty', 'run_hours',
+                   'downtime_hours', 'actual_manpower', 'note'}
+        payload = {k: v for k, v in (values or {}).items() if k in allowed}
+        if not payload:
+            return {'ok': False, 'error': _("Nothing to save.")}
+        try:
+            entry.write(payload)
+        except (UserError, AccessError, ValueError) as exc:
+            return {'ok': False, 'error': str(exc)}
+        return {'ok': True, 'entry': self._entry_payload(entry)}
+
+    @http.route('/fmes/terminal/submit', type='json', auth='user')
+    def submit(self, entry_ids, **kwargs):
+        """Submit a shift's entries for supervisor approval."""
+        entries = request.env['fmes.production.entry'].browse(
+            [int(i) for i in entry_ids]).exists()
+        for entry in entries:
+            self._entry_for_user(entry.id)
+        try:
+            entries.action_submit()
+        except (UserError, AccessError) as exc:
+            return {'ok': False, 'error': str(exc)}
+        return {'ok': True, 'submitted': len(entries)}
+
+    @http.route('/fmes/terminal/create_entry', type='json', auth='user')
+    def create_entry(self, workcenter_id, shift_id, product_id, date=None,
+                     **kwargs):
+        """Add a line for something produced that was not planned."""
+        machine = self._check_workcenter(workcenter_id)
+        Entry = request.env['fmes.production.entry']
+        day = date or fields.Date.context_today(Entry)
+        try:
+            entry = Entry.create({
+                'date': day,
+                'shift_id': int(shift_id),
+                'workcenter_id': machine.id,
+                'product_id': int(product_id),
+            })
+        except Exception as exc:
+            return {'ok': False, 'error': str(exc)}
+        return {'ok': True, 'entry': self._entry_payload(entry)}
+
+    @http.route('/fmes/terminal/products', type='json', auth='user')
+    def products(self, workcenter_id, **kwargs):
+        """Products this machine has a capacity rate for."""
+        machine = self._check_workcenter(workcenter_id)
+        rows = request.env['fmes.capacity.matrix'].sudo().search([
+            ('workcenter_id', '=', machine.id), ('active', '=', True)])
+        products = request.env['product.product']
+        for row in rows:
+            if row.product_id:
+                products |= row.product_id
+            elif row.product_category_id:
+                products |= products.search(
+                    [('categ_id', 'child_of', row.product_category_id.id)],
+                    limit=40)
+        return [{'id': p.id, 'name': p.display_name} for p in products[:60]]

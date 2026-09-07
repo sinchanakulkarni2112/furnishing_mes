@@ -45,7 +45,7 @@ answer differs from our assumption.
 | Q9 | How much **historical Excel data** should be migrated, and from when? | Last 12 months, if available (`A13`) | Medium — determines whether trend charts are useful at go-live or only after months of use |
 | Q10 | Who physically **enters production data**, and when? Operator during the shift, or supervisor at shift end? | Operator during shift, supervisor approves at shift end (`A14`) | **High** — determines whether the terminal is the primary surface or a secondary one |
 | Q11 | Will **tablets or terminals be available on the shop floor**? How many, and is there reliable Wi-Fi? | One shared tablet per department, intermittent Wi-Fi assumed (`A15`) | **High** — drives the offline-tolerance design. We are building for unreliable Wi-Fi regardless, which is the safe direction |
-| Q12 | Do operators get **individual logins**, or is a shared machine account with a PIN acceptable? | Shared machine session + per-operator PIN (`A16`) | Medium — affects the audit trail granularity. Individual logins are better for accountability but need more onboarding |
+| Q12 | Do operators get **individual logins**, or is a shared machine account with a PIN acceptable? | Individual Odoo logins, no PIN (`A16`, revised in Phase 4) | Low now — a PIN layer can still be added on top of individual logins later if the plant wants shared-tablet handover; nothing in the terminal design blocks it |
 | Q13 | Is **rejection / rework quantity** currently recorded? At what stage? | Captured per production entry (`A17`) | Medium — needed for the Quality factor of OEE. Without it, OEE overstates |
 
 ## A.3 — Needed before Phase 5 & 7 (Downtime, Maintenance)
@@ -138,7 +138,7 @@ lives" column names the record or field to change.
 | `A13` | 12 months of history migrated if available | Enough for year-on-year trend at go-live | Import batch |
 | `A14` | Operator enters output during the shift; **supervisor approves at shift end** | Standard two-step MES control — capture at source, verify before it becomes reportable | `fmes.production.entry.state` |
 | `A15` | Shop-floor Wi-Fi is **assumed unreliable**; the terminal queues writes and retries | Designing for the worse case costs little and cannot backfire | Terminal OWL component |
-| `A16` | Shared machine session with **per-operator PIN** for handover | Standard shop-floor pattern; avoids 40 logins per shift | Terminal auth |
+| `A16` | **Revised in Phase 4.** Operators authenticate with a normal individual Odoo login, no PIN. Machine scoping is done separately via `res.users.fmes_workcenter_ids` | A PIN is a second authentication mechanism to build and secure; individual logins give a stronger audit trail (`fmes.production.entry.create_uid`/`submitted_by` are then meaningful) and Odoo's own login is already fast on a saved/kiosk browser. If the plant insists on shared-tablet handover, a PIN can be layered on top without changing the terminal | Terminal auth (`controllers/shopfloor.py`) |
 | `A17` | **Rejected quantity captured per entry**, feeding the Quality factor of OEE | Without it OEE is overstated and meaningless | `fmes.production.entry.rejected_qty` |
 | `A19` | Minimum loggable downtime **5 minutes** | Below this, logging costs more than the data is worth | Config parameter |
 

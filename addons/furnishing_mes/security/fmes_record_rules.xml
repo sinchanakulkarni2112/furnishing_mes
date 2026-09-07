@@ -50,5 +50,74 @@
             </field>
         </record>
 
+        <record id="fmes_production_entry_company_rule" model="ir.rule">
+            <field name="name">Production Entry: multi-company</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_import_batch_company_rule" model="ir.rule">
+            <field name="name">Import Batch: multi-company</field>
+            <field name="model_id" ref="model_fmes_import_batch"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!--
+            Operator scoping on production entries.
+
+            Two rules, because reading and writing need different limits:
+
+            READ  — the machines the operator is assigned to, plus anything
+                    they recorded themselves. An operator with no machine
+                    assignment therefore sees only their own work rather than
+                    the whole plant.
+            WRITE — their own entries, and only while still draft. Once a shift
+                    is submitted it stops being theirs to change.
+
+            Supervisors and above are not subject to either: they hold their own
+            group's rules, and Odoo applies the union of the rules a user's
+            groups grant.
+        -->
+        <record id="fmes_entry_operator_read_rule" model="ir.rule">
+            <field name="name">Production Entry: operator sees own machines</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">
+                ['|',
+                 ('create_uid', '=', user.id),
+                 ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
+            </field>
+        </record>
+
+        <record id="fmes_entry_operator_write_rule" model="ir.rule">
+            <field name="name">Production Entry: operator edits own drafts</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+            <field name="domain_force">
+                [('state', 'in', ('draft', 'submitted', 'rejected'))]
+            </field>
+        </record>
+
+        <record id="fmes_entry_supervisor_rule" model="ir.rule">
+            <field name="name">Production Entry: supervisor sees everything</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
     </data>
 </odoo>

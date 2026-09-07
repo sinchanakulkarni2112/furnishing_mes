@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.3.0.0',
+    'version': '18.0.4.0.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -63,11 +63,15 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         # Configuration data
         'data/fmes_sequences.xml',
         'data/fmes_loss_reasons.xml',
+        'data/fmes_crons.xml',
 
         # Views, then menus (menus reference the actions above)
         'views/fmes_shift_views.xml',
         'views/fmes_capacity_matrix_views.xml',
         'views/fmes_production_plan_views.xml',
+        'views/fmes_production_entry_views.xml',
+        'views/fmes_live_status_views.xml',
+        'views/res_users_views.xml',
         'views/mrp_workcenter_views.xml',
         'views/maintenance_equipment_views.xml',
         'views/menus.xml',
@@ -86,8 +90,11 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
     'assets': {
         'web.assets_backend': [
             'furnishing_mes/static/src/scss/fmes_board.scss',
+            'furnishing_mes/static/src/scss/fmes_terminal.scss',
             'furnishing_mes/static/src/js/scheduling_board.js',
+            'furnishing_mes/static/src/js/shopfloor_terminal.js',
             'furnishing_mes/static/src/xml/scheduling_board.xml',
+            'furnishing_mes/static/src/xml/shopfloor_terminal.xml',
         ],
     },
 

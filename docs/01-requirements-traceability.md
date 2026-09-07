@@ -21,28 +21,28 @@ completeness at handover.
 | 1.4 | Consider machine availability | EXTEND | Efficiency + downtime-history derating in the engine | 3 ✅ |
 | 1.5 | Machine-wise production schedules | NEW | `fmes.production.plan.line` grouped by `workcenter_id` | 3 ✅ |
 | 1.6 | Shift-wise production plans | NEW | `fmes.shift` + `shift_id` on every plan line | 2 ✅, 3 ✅ |
-| 1.7 | Reduce Excel dependency | NEW | Scheduling Board (OWL) + XLSX export | 3 ✅, 4 |
+| 1.7 | Reduce Excel dependency | NEW | Scheduling Board + XLSX export + DAY WISE OUTPUT importer | 3 ✅, 4 ✅ |
 
 ## R2 — Daily Production Plan & Output Tracking
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 2.1 | Capture daily production targets | NEW | `fmes.production.entry.planned_qty` | 4 |
-| 2.2 | Record actual production output | NEW | `fmes.production.entry.actual_qty` + Shop-Floor Terminal | 4 |
-| 2.3 | Compare planned vs actual | NEW | `achievement_pct` computed + variance views | 4 |
-| 2.4 | Date-wise production reports | NEW | `fmes.production.report` SQL view, QWeb + XLSX | 4, 12 |
-| 2.5 | Shift-wise production reports | NEW | Same, grouped by `shift_id` | 4, 12 |
+| 2.1 | Capture daily production targets | NEW | `fmes.production.entry.planned_qty` | 4 ✅ |
+| 2.2 | Record actual production output | NEW | `fmes.production.entry.actual_qty` + Shop-Floor Terminal | 4 ✅ |
+| 2.3 | Compare planned vs actual | NEW | `achievement_pct` computed + variance views | 4 ✅ |
+| 2.4 | Date-wise production reports | NEW | Pivot/graph views now; SQL view + PDF in 12 | 4 ✅, 12 |
+| 2.5 | Shift-wise production reports | NEW | Same, grouped by `shift_id` | 4 ✅, 12 |
 | 2.6 | Track production performance daily | NEW | Daily Production Report + dashboard KPI | 10, 12 |
 
 ## R3 — Production Monitoring
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 3.1 | Monitor machine-wise | REUSE + NEW | `mrp.workcenter` kanban + live status board | 4, 6 |
+| 3.1 | Monitor machine-wise | REUSE + NEW | `mrp.workcenter` kanban + live status board | 4 ✅, 6 |
 | 3.2 | Monitor department-wise | EXTEND | `department_id` (`hr.department`) on `mrp.workcenter` | 2 ✅, 6 |
 | 3.3 | Centralised production database | REUSE | PostgreSQL 15, single Odoo database | 1 ✅ |
-| 3.4 | Historical production records | NEW | `fmes.production.entry`, locked after approval | 4 |
-| 3.5 | Real-time production status | NEW | OWL live board over `mrp.workorder` state | 4, 10 |
+| 3.4 | Historical production records | NEW | `fmes.production.entry`, locked after approval | 4 ✅ |
+| 3.5 | Real-time production status | NEW | Live machine kanban with today's achievement | 4 ✅, 10 |
 | 3.6 | Machine utilisation & productivity | REUSE + NEW | `mrp.workcenter.oee` + `fmes.utilization.report` | 6 |
 
 ## R4 — Backlog and Carry-Forward Order Management

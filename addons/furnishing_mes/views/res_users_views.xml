@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Machine and department assignment.
+
+            This is what scopes an operator to their own machines on the shared
+            shop-floor tablet. Phase 8 adds the daily roster as a second source;
+            a permanent assignment and a day's allocation are different things
+            and both are useful.
+        -->
+        <record id="res_users_view_form_fmes" model="ir.ui.view">
+            <field name="name">res.users.form.fmes</field>
+            <field name="model">res.users</field>
+            <field name="inherit_id" ref="base.view_users_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//notebook" position="inside">
+                    <page string="Furnishing MES" name="fmes"
+                          groups="furnishing_mes.group_fmes_supervisor">
+                        <group>
+                            <group string="Shop Floor Access">
+                                <field name="fmes_workcenter_ids"
+                                       widget="many2many_tags"
+                                       placeholder="All machines"
+                                       options="{'no_create': True}"/>
+                                <field name="fmes_has_machine_scope"
+                                       invisible="1"/>
+                            </group>
+                            <group string="Responsibility">
+                                <field name="fmes_department_ids"
+                                       widget="many2many_tags"
+                                       placeholder="All departments"
+                                       options="{'no_create': True}"/>
+                            </group>
+                        </group>
+                        <div class="alert alert-info" role="status">
+                            An operator with no machines assigned can still
+                            record production, but will only ever see entries
+                            they created themselves. Assign machines to let them
+                            see and continue a colleague's shift.
+                        </div>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -466,6 +466,133 @@ and the DAY WISE OUTPUT importer.
 
 ---
 
+## Phase 4 — Daily Tracking & Shop-Floor Terminal
+*Completed 2026-09-06/07 - module version `18.0.4.0.0`*
+
+### Delivered
+
+`fmes.production.entry` (draft -> submitted -> approved), `fmes.import.batch`,
+the operator machine-scoping fields on `res.users`, live machine status on
+`mrp.workcenter`, the OWL shop-floor terminal with its `/fmes/terminal/*`
+JSON-RPC endpoints, the DAY WISE OUTPUT importer wizard (configurable column
+mapping, guessed from headers), the approval queue, planned-vs-actual views,
+and the daily entry-generation cron.
+
+### Verified, not assumed
+
+- **169 tests, 0 failed, 0 errors**
+- Fresh-database install clean at `--log-level=warn`
+- End-to-end on the demo plant: plan released (246 lines) -> 82 entries
+  generated from it (second generation run produced 0 - confirmed idempotent)
+  -> output recorded -> submitted and approved -> 61 plan lines `done`, 21
+  `partial` -> the 203.77-unit shortfall carried into the next plan -> a write
+  to an approved entry's `actual_qty` raised `AccessError`
+- Backend CSS bundle compiles with both `fmes-board` and `fmes-terminal` rules
+  present (see D4.5 below - it did NOT compile on the first attempt)
+
+### Decisions
+
+**D4.1 - Only `state='approved'` entries may ever feed a report or KPI.**
+Everything downstream (Phase 6 onward) must filter on this. Restated here
+because it is the single rule Requirement 3.4 and the "no restating history"
+guarantee both depend on, and getting it wrong once poisons every later phase
+silently.
+
+**D4.2 - The state lock closes the direct-write hole, not just the UI.**
+`write()` blocks `state='approved'` unless the caller is a supervisor/manager
+or `self.env.su`. Discovered by testing: a plain `search().write({'state':
+'approved'})` bypasses `action_approve()` and every check inside it, and Odoo's
+record rules do not catch this on their own -- they evaluate against the record
+as it currently is, not as the write would make it. The superuser exemption
+(`self.env.su`) is required too, or crons and data loads (including this
+project's own tests) fail approving anything, which is a bug, not security.
+
+**D4.3 - Approval writes actual output back onto the plan line
+(`_sync_plan_line`), closing the loop opened in Phase 3.** Only *approved*
+entries move `qty_done`; submitted-but-unapproved output does not touch the
+plan. Reopening an approved entry (Plant Manager only) rolls the plan line back
+to `pending`/`partial`, so the state machines for entry and plan line can never
+drift out of step with each other. This is what makes the shortfall carry
+forward automatically in Phase 3's engine without either model needing to know
+about the other's internals.
+
+**D4.4 - Every `/fmes/terminal/*` route re-derives the caller's rights from the
+server, never trusts what the client sent.** The terminal runs on a shared
+tablet -- the least trustworthy client in the building. `_check_workcenter`
+re-validates the machine id against `_allowed_workcenter_ids` on every call;
+`record()` accepts only an explicit whitelist of fields (`actual_qty`,
+`rejected_qty`, `run_hours`, `downtime_hours`, `actual_manpower`, `note`) and
+silently drops anything else in the payload, so a crafted request setting
+`state` or `planned_qty` has no effect. Unit-tested by sending exactly that
+payload and asserting nothing outside the whitelist moved.
+
+**D4.5 - `sudo()` only after the machine is already authorised, and only for
+what an operator has no rights on.** Live machine status reads
+`mrp.workorder`/`maintenance.request`, which operators cannot see directly.
+`_check_workcenter()` runs first and raises if the machine is not theirs;
+`sudo()` is called only on a machine that has already passed that gate. This is
+the "assert ownership before `sudo()`" rule from the security doc, applied for
+real rather than as a principle.
+
+**D4.6 - `min(420px, 100%)` in SCSS broke the entire backend asset bundle, not
+just the terminal.** Sass claims `min()` as its own function and refuses to mix
+`px` with `%`, so the whole `web.assets_backend` compile failed -- which would
+have taken Odoo's own UI styling down with it, not merely left the terminal
+unstyled. Found only by forcing a bundle rebuild and reading the compile
+traceback; the earlier "does `fmes-terminal` appear in the CSS" check had
+silently passed on a stale cached bundle. Fixed with explicit `width: 420px;
+max-width: 100%;`. `minmax()` inside `repeat()` is unaffected -- Sass does not
+intercept CSS Grid's own `minmax`.
+
+*Generalisable:* never trust "is my string present in the compiled bundle" as a
+green signal without first clearing cached `ir.attachment` asset records -- a
+compile failure can leave the previous good bundle serving silently. Also:
+CSS's own `min()`/`max()`/`clamp()` are unsafe to write literally in an Odoo
+SCSS file: use two declarations (`width` + `max-width`) instead.
+
+**D4.7 - The DAY WISE OUTPUT importer is built to a configurable, guessed
+column mapping -- never a fixed layout.** The real file (question Q8) is still
+unseen. Header titles are matched against keyword hints (`_guess_mapping`) to
+pre-fill the mapping form, which the user can still override before
+previewing. When the real file arrives, onboarding it is a mapping choice, not
+a rework. Every import is a reversible `fmes.import.batch`; reverting is
+refused if any of its entries were approved, so a bad import cannot be used to
+quietly erase signed-off history via the back door.
+
+**D4.8 - Operator machine scoping uses a real, permanent assignment
+(`res.users.fmes_workcenter_ids` / `fmes_department_ids`), not a placeholder.**
+`fmes.operator.allocation` (the *daily* roster) arrives in Phase 8, but a
+permanent "this person normally runs these machines" assignment and a "today
+this person is on this machine" allocation are genuinely different pieces of
+information, and both are useful once the roster exists. An operator with no
+assignment is not locked out (the terminal would be useless on day one) but is
+scoped down to seeing only entries they created themselves -- never the whole
+plant by default.
+
+**D4.9 (assumption revision, A16) - No per-operator PIN; individual Odoo
+logins instead.** The Phase 0 assumption proposed a shared machine session with
+a PIN. Building it in Phase 4 without deciding this would mean guessing a whole
+second authentication mechanism. Individual logins are simpler, give
+`create_uid`/`submitted_by` real meaning for the audit trail, and Odoo's own
+login is fast enough on a saved/kiosk browser that the "40 logins a shift"
+friction the PIN was meant to avoid does not really apply. Recorded in
+`docs/15-open-questions-and-assumptions.md`; a PIN can still be layered on top
+later without changing the terminal if the plant insists on shared-tablet
+handover (question Q12 downgraded from Medium to Low impact).
+
+### Next
+
+**Phase 5 - Downtime Management.** Extends `mrp.workcenter.productivity`
+(already scaffolded in Phase 2's `fmes_category` field) with a shift/entry
+link, an approval workflow mirroring the production entry's, and replaces
+`fmes.production.entry.downtime_hours` -- currently a single typed number --
+with the sum of coded downtime events, so every lost hour finally carries a
+reason. Auto-escalation to `maintenance.request` for reasons flagged
+`fmes_requires_maintenance` (already seeded in Phase 2) is the other half of
+this phase.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |
@@ -499,6 +626,22 @@ and the DAY WISE OUTPUT importer.
   separators both break the parser.
 - **`@api.constrains` only fires for fields present in the write.** An "at least
   one of these fields" rule needs a SQL `CHECK` as well.
+- **A record rule cannot stop a write from *becoming* a value it forbids.**
+  Rules filter which records a query touches, evaluated against the record as
+  it is now — they do not see the proposed new values. A `write()` override
+  checking `vals` explicitly is the only way to block "set this specific field
+  to this specific value," e.g. locking who may set `state='approved'`.
+- **`sudo()` is safe only after ownership is asserted, not before.** Call the
+  authorisation check first (raise if it fails), and only `sudo()` the
+  follow-up reads on a record that has already passed — never sudo the check
+  itself.
+- **Sass claims `min()`/`max()`/`clamp()` as its own functions and will refuse
+  to mix units (e.g. `min(420px, 100%)`), failing the *entire* asset bundle
+  compile** — not just the one rule. A stale cached `ir.attachment` can then
+  keep serving the last-good bundle, so a passing "is my class name in the
+  compiled CSS" check can be a false negative. Clear cached asset attachments
+  and force a rebuild before trusting that check. Use two literal CSS
+  declarations instead of the shorthand function.
 - **Never use `docker compose exec` to run odoo.** It bypasses the image
   entrypoint (no `--db_*` arguments are built) and collides with the running
   server on port 8069. Use `docker compose run --rm web odoo ...`.
