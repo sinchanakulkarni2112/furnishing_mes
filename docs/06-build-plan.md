@@ -962,7 +962,9 @@ resolvable, and the Alert Center menu correctly resolving to its action.
 
 ---
 
-## Phase 12 — Reporting Suite
+## Phase 12 — Reporting Suite ✅
+
+*Completed 2026-09-07 · module version `18.0.12.0.0`*
 
 **Goal.** Requirement 12, all ten reports.
 
@@ -972,20 +974,115 @@ resolvable, and the Alert Center menu correctly resolving to its action.
    generated-on, page numbers) for:
    Daily Production · Machine Utilisation · Production Output Summary ·
    Downtime · Backlog · Carry Forward Order · Maintenance · Productivity ·
-   Exception · Monthly Management MIS
-2. XLSX export for each, via `xlsxwriter` (already bundled with Odoo)
-3. `wizards/report_export.py` — common parameter wizard (date range, department,
-   machine, shift, format)
-4. Scheduled delivery — `fmes.report.schedule` records driving a cron that emails
-   the chosen reports to chosen recipients daily / weekly / monthly
-5. Monthly MIS pack — a composite multi-section PDF for management
-6. Exception report — consolidated variance and threshold breaches for the period
+   Exception · Monthly Management MIS — ✅, as one shared `ir.actions.report`
+   + one generic QWeb template driven by `report_type` (see Decisions), not
+   ten near-identical template/action pairs, mirroring the same "one
+   reusable template" choice Phase 11 made for its mail template
+2. XLSX export for each, via `xlsxwriter` (already bundled with Odoo) — ✅,
+   one shared writer (`fmes.report.service.write_xlsx`) reading the exact
+   same data dict the PDF renders from
+3. `wizards/fmes_report_wizard.py` — common parameter wizard (date range,
+   department, machine, shift, product, format) — ✅
+4. Scheduled delivery — `fmes.report.schedule` records driving a cron that
+   emails the chosen reports to chosen recipients daily / weekly / monthly
+   — ✅, four seeded schedules per assumption `A36`
+5. Monthly MIS pack — a composite multi-section PDF for management — ✅,
+   seven summary-only sections plus a month-on-month achievement
+   comparison
+6. Exception report — consolidated variance and threshold breaches for the
+   period — ✅, built directly on Phase 11's own `fmes.alert` records for
+   the five threshold-breach alert types (see Decisions)
 7. Tests: each report renders for the demo dataset without error; figures
-   reconcile with the dashboard
+   reconcile with the dashboard — ✅ 26 new tests, against a small fixture
+   plant rather than the demo dataset itself (matching `tests/common.py`'s
+   own established "never depend on demo data" rule — see Decisions)
 
-**Exit criteria**
-- All ten named reports produce correct PDF and XLSX output
-- The daily production report can be scheduled to arrive by email each morning
+**Exit criteria — met**
+
+| Criterion | Result |
+|---|---|
+| All ten named reports produce correct PDF and XLSX output | ✅ all ten `get_report_data` types verified against fixture data; the shared QWeb template verified via its test-mode HTML render (not a forced real PDF — see Decisions) plus one manual `odoo shell` check confirming genuine `%PDF` bytes; XLSX verified by actually closing a real `xlsxwriter` workbook and reading back its sheets |
+| The daily production report can be scheduled to arrive by email each morning | ✅ seeded at 07:00 daily (assumption `A36`); the cron's own send path is tested end-to-end (attachment on a real `mail.mail`, `last_run`/`next_run` advancing correctly) |
+| Tests pass | ✅ 400 tests module-wide, 0 failed, 0 errors (26 new for this phase) |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+**Deviations and findings**
+
+1. **One shared report action, template and XLSX writer for all ten report
+   types, not ten pairs.** `services/report_service.py`'s `get_report_data`
+   returns one uniform shape — `{title, period_label, filters_label,
+   summary, columns, rows}` (plus `sections` for the Monthly MIS composite)
+   — for every report type; a single `ir.actions.report`
+   (`action_report_fmes_generic`) and a single QWeb template render
+   whichever type the wizard or a schedule asks for, and
+   `fmes.report.service.write_xlsx` writes the identical dict to a
+   workbook. A new report type is a new `_data_<type>` method, never a new
+   template — the same reasoning Phase 11 gave for its own single mail
+   template, applied here at larger scale.
+2. **docs/05's 8-item Reports menu covers all ten report types, not just
+   eight.** `production_output_summary` and `carry_forward_order` are not
+   the direct target of their own menu item; they are reachable by
+   switching the wizard's own `report_type` dropdown after opening it from
+   "Daily Production" or "Backlog & Carry Forward" respectively — those
+   two menu items just supply a convenient default, not an exclusive path.
+   Documented here since docs/05 predates this phase's own report_type
+   list and reads as if there were only eight reports.
+3. **A real QWeb-report gotcha, distinct from Phase 11's, caught only by an
+   actual render.** `record._fields['alert_type'].selection` — read from a
+   model INSTANCE of a `related=` Selection field — is not reliably the
+   plain list of tuples it looks like; Odoo returned a callable there
+   instead, and `dict()`-ing it raised `TypeError: 'function' object is
+   not iterable`. This is exactly the class of thing that is invisible to
+   `py_compile` and to a plain install, and only surfaces the moment
+   `_data_exception` actually runs — caught here, not in production,
+   because the Exception Report test builds and reads a real `fmes.alert`
+   row rather than stopping at an empty-data smoke test. Fixed by importing
+   `ALERT_TYPES` directly from `models/fmes_alert_rule.py` (the field's
+   OWN original definition, not a related copy) and building the label
+   dict from that, the same "single source of truth" pattern already used
+   for `REPORT_TYPES` itself.
+4. **A second real bug, found by the same Exception Report test once
+   folded into the Monthly MIS composite:** `fmes.maintenance.report`'s
+   view has no filter excluding equipment with no `mrp.workcenter` behind
+   it, so an unfiltered Maintenance Report included the `maintenance`
+   module's own generic IT-asset demo data (an "HP Laptop", "Acer Laptop",
+   a monitor) alongside genuine plant machinery — 6 rows where a
+   machine-scoped fixture expected 1. Fixed at the report layer (not by
+   touching Phase 7's already-shipped view): `_data_maintenance` now
+   requires `workcenter_id != False`, matching the report's own "Equipment
+   > Month" grouping, which implies a machine exists.
+5. **`ir.actions.report.report_action()`'s own default silently redirects
+   an admin user to a "configure your document layout" onboarding wizard**
+   whenever the current company has no `external_report_layout_id` set —
+   invisible until a test actually inspected the returned action dict and
+   found no `report_name` key at all. Not something a Plant Manager
+   clicking "Generate" should ever hit; fixed by calling `report_action(self,
+   config=False)` from the wizard.
+6. **Forcing a real wkhtmltopdf render inside the CLI test runner
+   deadlocks or times out** (`force_report_rendering=True` under
+   `--test-enable`), reproducibly, regardless of which report is being
+   rendered — an environment/tooling limitation of this specific
+   Docker/CLI combination, not a defect in this phase's own templates or
+   data. Confirmed by hand: the exact same template, rendered via `odoo
+   shell` against the live, already-running `web` service (real threaded
+   HTTP serving, not the single-process test runner), produced a genuine
+   27 KB `%PDF`-prefixed document in under a second, with only a benign
+   `ContentNotFoundError` warning for a missing logo image. The automated
+   test suite therefore verifies the exact same QWeb template and data
+   pipeline through `_render_qweb_pdf`'s own **default** test-mode
+   behaviour (an HTML fallback, which `test_enable` already provides
+   without forcing anything) rather than a forced PDF — this still catches
+   the class of bug finding 3 above demonstrates (a QWeb expression that
+   only fails to compile at actual render time), without the hang. Real
+   PDF generation itself was independently confirmed by hand instead,
+   matching the same "no browser available, verified manually" precedent
+   already established in Phase 10 and Phase 11.
+7. **`tests/common.py`'s own "never depend on demo data" rule turned out
+   to matter for a reason beyond drift-proofing figures:** the `maintenance`
+   module's stock demo equipment (finding 4) is exactly the kind of
+   pollution that rule exists to keep test assertions honest about. This
+   phase's fixtures build their own small plant, same as every earlier
+   phase's tests, rather than reading the demo dataset.
 
 **Commit.** `feat(reporting): add complete pdf and xlsx report suite with scheduled delivery`
 

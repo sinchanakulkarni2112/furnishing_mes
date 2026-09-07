@@ -149,10 +149,16 @@ Odoo views, no separate frontend.
 mock Sales Orders, Work Orders, Item Master, BOM and Customer Master inside Odoo
 so every downstream phase can be built and demonstrated without ERP access.
 
-## R12 — Reporting Requirements
+## R12 — Reporting Requirements ✅ (Phase 12)
 
-Phase 12 delivers all ten reports as QWeb PDF plus XLSX, each with a scheduled
-email option:
+All ten reports as QWeb PDF plus XLSX, each with a scheduled email option,
+via one shared data service (`services/report_service.py`), one shared
+`ir.actions.report`/QWeb template, and one shared XLSX writer — a new
+report type is a new `get_report_data` method, never a new template.
+`fmes.report.schedule` (four seeded defaults per assumption `A36`) drives an
+hourly cron (`fmes_send_scheduled_reports`) that emails the rendered
+PDF/XLSX as an attachment; a schedule that fails to render raises an
+activity for the Plant Manager rather than failing silently.
 
 | Report | Backing model |
 |---|---|

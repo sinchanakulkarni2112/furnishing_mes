@@ -370,5 +370,14 @@
             </field>
         </record>
 
+        <record id="fmes_report_schedule_company_rule" model="ir.rule">
+            <field name="name">Report Schedule: multi-company</field>
+            <field name="model_id" ref="model_fmes_report_schedule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
     </data>
 </odoo>

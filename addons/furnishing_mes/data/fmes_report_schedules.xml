@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Default schedules (Requirement 12, deliverable 4), per
+            assumption A36 (docs/15) and docs/11-reporting-analytics.md
+            section 5's own "typical configuration at go-live" list.
+
+            Seeded with NO recipients: `fmes.report.schedule._send_scheduled_
+            report` treats an empty recipient_ids as a legitimate no-op
+            (advance next_run, send nothing) rather than a failure, exactly
+            so these four can ship active and correctly timed from day one —
+            the real answer (who actually receives them) is a data edit once
+            the plant names its recipients, never a code change.
+
+            noupdate="1" so a plant that retimes or re-scopes a schedule
+            keeps its own edit across upgrades.
+        -->
+
+        <record id="report_schedule_daily_production" model="fmes.report.schedule">
+            <field name="name">Daily Production Report — Morning</field>
+            <field name="report_type">daily_production</field>
+            <field name="frequency">daily</field>
+            <field name="run_time">7.0</field>
+            <field name="period_offset">yesterday</field>
+            <field name="format">pdf</field>
+        </record>
+
+        <record id="report_schedule_downtime" model="fmes.report.schedule">
+            <field name="name">Downtime Report — Weekly</field>
+            <field name="report_type">downtime</field>
+            <field name="frequency">weekly</field>
+            <field name="day_of_week">0</field>
+            <field name="run_time">8.0</field>
+            <field name="period_offset">last_week</field>
+            <field name="format">pdf</field>
+        </record>
+
+        <record id="report_schedule_backlog" model="fmes.report.schedule">
+            <field name="name">Backlog Report — Evening</field>
+            <field name="report_type">backlog</field>
+            <field name="frequency">daily</field>
+            <field name="run_time">18.0</field>
+            <field name="period_offset">yesterday</field>
+            <field name="format">pdf</field>
+        </record>
+
+        <record id="report_schedule_monthly_mis" model="fmes.report.schedule">
+            <field name="name">Monthly Management MIS</field>
+            <field name="report_type">monthly_mis</field>
+            <field name="frequency">monthly</field>
+            <field name="day_of_month">1</field>
+            <field name="run_time">9.0</field>
+            <field name="period_offset">last_month</field>
+            <field name="format">both</field>
+        </record>
+
+    </data>
+</odoo>

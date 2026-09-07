@@ -70,8 +70,8 @@ answer differs from our assumption.
 | Q24 | What **alert thresholds** are meaningful? At what point does a manager want to be told? | Industry defaults (`A28`–`A33`) | Medium — thresholds are tunable records. Wrong ones cause alert fatigue, which is the main reason alert systems get ignored |
 | Q25 | **Who should receive which alerts**, and through which channel — in-app, email, or both? | In-app for all; email for critical only (`A34`) | Low |
 | Q26 | Are there **quiet hours**, or should night-shift alerts reach managers immediately? | Critical alerts always; others queue to 08:00 (`A35`) | Low |
-| Q27 | Is the 08:00 queue boundary meant in **plant-local time**, or is a plain UTC-hour check acceptable? | Plain UTC hour (`res.company` has no timezone field configured); documented as a simplification in `services/alert_engine.py` | Low — a one-line change once the server/company timezone is confirmed |
-| Q28 | Is **30 minutes** the right window before an unacknowledged critical alert escalates to the Plant Manager? Should it vary by alert type? | Flat 30 minutes for every critical alert (`A55`) | Low — a single constant to tune |
+| Q41 | Is the 08:00 queue boundary meant in **plant-local time**, or is a plain UTC-hour check acceptable? | Plain UTC hour (`res.company` has no timezone field configured); documented as a simplification in `services/alert_engine.py` | Low — a one-line change once the server/company timezone is confirmed |
+| Q42 | Is **30 minutes** the right window before an unacknowledged critical alert escalates to the Plant Manager? Should it vary by alert type? | Flat 30 minutes for every critical alert (`A55`) | Low — a single constant to tune |
 
 ## A.5 — Needed before Phase 12, 13, 15 (Reports, Portal, Deployment)
 
@@ -190,6 +190,7 @@ most likely to need tuning, and the easiest to tune.
 | `A43` | 30 internal users, 10 tablets, portal customers TBD | Sizes the worker configuration | `odoo.conf` |
 | `A42` | Nightly backup; **30 daily / 12 monthly / 3 yearly** retention, copied off-server | Conventional and defensible | `scripts/backup.sh` |
 | `A46` | **3 years** of online data retention | Matches the trend-analysis requirement | No purge cron |
+| `A56` | The **Backlog Report** for a date range shows the plant's backlog as it stood at the **latest snapshot on or before the range's end date** — not a range of snapshots | A backlog snapshot is a nightly point-in-time photograph (Phase 9), not a period-aggregated figure; "as of the end of the period" is the reading that matches how every other backlog view in the module already works | `fmes.report.service._data_backlog` |
 
 ## B.7 Language & Locale
 

@@ -37,3 +37,6 @@ package-lock.json
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Claude Code local session state (not project content)
+.claude/

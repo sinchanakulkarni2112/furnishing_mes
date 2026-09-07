@@ -19,4 +19,5 @@ from . import mrp_workcenter_productivity_loss
 from . import mrp_workcenter_productivity
 from . import fmes_alert_rule
 from . import fmes_alert
+from . import fmes_report_schedule
 from . import res_users

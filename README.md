@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 11 of 15 — Alerts & notifications ✅ |
-| **Next** | Phase 12 — Reporting suite |
-| **Module version** | `18.0.11.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 374 tests passing · no install warnings · rule-driven alert engine covering all 7 required alert types, with cooldown, escalation and event-based (`base_automation`) triggers verified end-to-end |
+| **Phase** | 12 of 15 — Reporting suite ✅ |
+| **Next** | Phase 13 — Customer portal |
+| **Module version** | `18.0.12.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 400 tests passing · no install warnings · all ten reports (PDF + XLSX) and scheduled email delivery verified against fixture data, with a real generated PDF confirmed by hand |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

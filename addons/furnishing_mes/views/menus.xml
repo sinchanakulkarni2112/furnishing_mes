@@ -120,6 +120,54 @@
                   sequence="90"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
+        <menuitem id="menu_fmes_report_daily_production"
+                  name="Daily Production"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_daily_production"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_report_machine_utilisation"
+                  name="Machine Utilisation"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_machine_utilisation"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_report_downtime"
+                  name="Downtime"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_downtime"
+                  sequence="30"/>
+
+        <menuitem id="menu_fmes_report_backlog"
+                  name="Backlog &amp; Carry Forward"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_backlog"
+                  sequence="40"/>
+
+        <menuitem id="menu_fmes_report_maintenance"
+                  name="Maintenance"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_maintenance"
+                  sequence="50"/>
+
+        <menuitem id="menu_fmes_report_productivity"
+                  name="Productivity"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_productivity"
+                  sequence="60"/>
+
+        <menuitem id="menu_fmes_report_exception"
+                  name="Exceptions"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_exception"
+                  sequence="70"/>
+
+        <menuitem id="menu_fmes_report_monthly_mis"
+                  name="Monthly MIS"
+                  parent="menu_fmes_reports"
+                  action="action_fmes_report_monthly_mis"
+                  sequence="80"/>
+
         <!-- Configuration — Plant Manager only -->
         <menuitem id="menu_fmes_configuration"
                   name="Configuration"
@@ -348,6 +396,12 @@
                   parent="menu_fmes_configuration"
                   action="action_fmes_loss_reason"
                   sequence="60"/>
+
+        <menuitem id="menu_fmes_config_report_schedules"
+                  name="Report Schedules"
+                  parent="menu_fmes_configuration"
+                  action="action_fmes_report_schedule"
+                  sequence="70"/>
 
     </data>
 </odoo>

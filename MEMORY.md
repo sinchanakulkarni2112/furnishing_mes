@@ -1375,6 +1375,124 @@ prefixing the command with `MSYS_NO_PATHCONV=1`; documented in
 
 ---
 
+## Phase 12 — Reporting Suite
+*Completed 2026-09-07 - module version `18.0.12.0.0`*
+
+### Delivered
+
+All ten required reports through ONE data service
+(`services/report_service.py`'s `get_report_data`), ONE `ir.actions.report`
++ QWeb template, and ONE `xlsxwriter`-based writer — a new report type is a
+new `_data_<type>` method returning the same uniform `{title, period_label,
+filters_label, summary, columns, rows}` shape (plus `sections` for the
+Monthly MIS composite), never a new template, the same "one reusable
+artefact" choice Phase 11 made for its mail template applied at ten-report
+scale. `fmes.report.wizard` (the common parameter screen: date range,
+department, machine, shift, product, format) and `fmes.report.schedule`
+(four seeded defaults per `A36`, driving an hourly cron that emails a
+rendered attachment and raises a Plant-Manager activity on failure rather
+than failing silently) are both thin callers of that same service, so a
+PDF, an XLSX and a scheduled email of the same report parameters can never
+quietly disagree. Backing data is entirely reused from earlier phases'
+report models (`fmes.production.report`, `fmes.utilization.report`,
+`fmes.downtime.report`, `fmes.maintenance.report`,
+`fmes.manpower.impact.report`, `fmes.backlog.snapshot`,
+`fmes.production.plan.line`) plus Phase 11's own `fmes.alert` for the
+Exception Report — this phase added no new aggregation logic, only
+presentation, reconciliation and delivery.
+
+### Verified, not assumed
+
+- Clean install and upgrade, with and without demo data, on genuinely fresh
+  databases
+- 400 tests module-wide (26 new for this phase), 0 failed, 0 errors
+- Every one of the ten report types produces real, correct rows and summary
+  figures against a small fixture plant (never the demo dataset — see
+  D12.4), including the Monthly MIS composite's seven sections
+- `production_output_summary`'s achievement % reconciles exactly with what
+  `fmes.dashboard.service.get_dashboard_data` computes for the identical
+  date range — both derive it the same sum-then-divide way from the same
+  underlying rows (D0.7), so this assertion is a genuine cross-check, not a
+  tautology
+- The scheduled-report cron's real send path: a schedule with a configured
+  recipient produces an actual `mail.mail` with an attachment and correctly
+  advances `last_run`/`next_run`; one with no recipients is a documented,
+  tested no-op rather than a failure; a forced exception raises a real
+  activity on a Plant Manager user
+- The exact QWeb template PDF rendering uses was exercised through
+  `_render_qweb_pdf`'s own test-mode HTML fallback (not a forced PDF — see
+  D12.5); a genuinely rendered PDF (27 KB, real `%PDF` bytes) was confirmed
+  once by hand via `odoo shell` against the live, already-running `web`
+  service
+
+### Decisions
+
+**D12.1 - `record._fields['<name>'].selection` is not reliably the plain
+option list it looks like, for a `related=` Selection field read off a
+model INSTANCE.** `fmes.alert.alert_type` (`related='rule_id.alert_type',
+store=True`) returned a callable there instead of the `ALERT_TYPES` list
+of tuples, and `dict()`-ing it raised `TypeError: 'function' object is not
+iterable` — invisible to `py_compile` and to a plain install, only
+surfacing when the Exception Report actually ran against a real alert row.
+Fixed by importing `ALERT_TYPES` directly from `models/fmes_alert_rule.py`
+(the field's OWN original definition) rather than introspecting a related
+copy at runtime — the same "single source of truth" pattern already used
+for this phase's own `REPORT_TYPES` list (imported by the wizard and the
+schedule model alike, so the three can never drift). *Generalisable:*
+resolve a Selection field's real options from where it was originally
+declared, never from `record._fields[...].selection` on a related copy.
+
+**D12.2 - `fmes.maintenance.report`'s view has no filter excluding
+equipment that isn't plant machinery**, so an unfiltered Maintenance
+Report pulled in the native `maintenance` module's own generic demo assets
+(an HP Laptop, an Acer Laptop, a monitor) alongside real machines — 6 rows
+where a machine-scoped test fixture expected 1. Not a Phase 7 defect (that
+view's own SELECT was never wrong for what IT does), but a real gap at the
+report layer, fixed there: `_data_maintenance` now requires
+`workcenter_id != False`, matching what "Equipment > Month" actually means
+for this plant's own Maintenance Report.
+
+**D12.3 - `ir.actions.report.report_action()`'s own default silently
+diverts an admin user to a "configure your document layout" onboarding
+wizard** whenever the current company has no `external_report_layout_id`
+set, returning a completely different action dict with no `report_name`
+key at all — caught only because a test inspected the wizard's own
+returned action rather than assuming `report_action()` always returns the
+report. Fixed by calling `report_action(self, config=False)` — a Plant
+Manager clicking Generate should never be redirected to a logo-setup
+wizard regardless of whether the company has configured Enterprise-style
+branding.
+
+**D12.4 - The `maintenance` module's own demo data (D12.2) is exactly the
+kind of pollution `tests/common.py`'s "never depend on demo data" rule
+already exists to keep assertions honest about** — this phase's fixtures
+build their own small plant, the same discipline every earlier phase's
+tests already follow, rather than reading the demo dataset. Worth
+recording as a concrete example of why that rule earns its keep, not just
+an abstract principle.
+
+**D12.5 - Forcing a real wkhtmltopdf render inside the CLI test runner
+(`force_report_rendering=True` under `--test-enable`) reproducibly hangs
+or times out, regardless of which report is rendered** — a genuine
+environment/tooling limitation of this Docker/CLI combination, not a
+defect in the templates or data. Root-caused by testing the SAME action
+against the live, already-running `web` service via `odoo shell` instead
+of the throwaway single-process test runner: it rendered a real 27 KB PDF
+in under a second, with only a benign `ContentNotFoundError` warning for a
+missing logo image. `_render_qweb_pdf` already provides an HTML fallback
+under `test_enable` when `force_report_rendering` is NOT set — the
+automated suite uses exactly that (still exercising the identical QWeb
+template and `_get_report_values`/`get_report_data` pipeline, the same
+class of bug D12.1 and Phase 11's own QWeb finding both demonstrate),
+while a genuinely rendered PDF was confirmed once by hand.
+*Generalisable:* never force a real wkhtmltopdf render from inside
+`odoo -d ... --test-enable --stop-after-init`; verify actual PDF bytes
+against a live, already-running server instead, the same way Phase 10 and
+Phase 11 already substituted a manual check for something no browser was
+available to verify visually.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |

@@ -50,3 +50,7 @@ access_fmes_alert_rule_supervisor,fmes.alert.rule.supervisor,model_fmes_alert_ru
 access_fmes_alert_rule_manager,fmes.alert.rule.manager,model_fmes_alert_rule,furnishing_mes.group_fmes_manager,1,1,1,1
 access_fmes_alert_supervisor,fmes.alert.supervisor,model_fmes_alert,furnishing_mes.group_fmes_supervisor,1,1,0,0
 access_fmes_alert_manager,fmes.alert.manager,model_fmes_alert,furnishing_mes.group_fmes_manager,1,1,1,1
+access_fmes_report_wizard_supervisor,fmes.report.wizard.supervisor,model_fmes_report_wizard,furnishing_mes.group_fmes_supervisor,1,1,1,1
+access_fmes_report_wizard_manager,fmes.report.wizard.manager,model_fmes_report_wizard,furnishing_mes.group_fmes_manager,1,1,1,1
+access_fmes_report_schedule_supervisor,fmes.report.schedule.supervisor,model_fmes_report_schedule,furnishing_mes.group_fmes_supervisor,1,0,0,0
+access_fmes_report_schedule_manager,fmes.report.schedule.manager,model_fmes_report_schedule,furnishing_mes.group_fmes_manager,1,1,1,1

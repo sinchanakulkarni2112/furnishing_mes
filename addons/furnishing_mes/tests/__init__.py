@@ -11,3 +11,4 @@ from . import test_manpower
 from . import test_backlog
 from . import test_dashboard
 from . import test_alerts
+from . import test_reports
