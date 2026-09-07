@@ -78,6 +78,16 @@ services:
     networks:
       - fmes-net
     restart: unless-stopped
+    # /web/health is genuinely exposed by Odoo 18 (verified: returns
+    # {"status": "pass"}, HTTP 200) — docs/08 section 7 monitors it the
+    # same way externally. start_period is generous because a first boot
+    # runs module installation before the server starts answering.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
 # ./config is mounted read-write because Odoo may rewrite odoo.conf when the
 # master password is verified through the database manager (it re-hashes the

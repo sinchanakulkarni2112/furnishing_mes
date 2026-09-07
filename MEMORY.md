@@ -1757,6 +1757,119 @@ the ORM's own field defaults entirely.
 
 ---
 
+## Phase 15 — Deployment, Documentation & Handover
+*Completed 2026-09-07 - module version `18.0.15.0.0`*
+
+### Delivered
+
+The final phase, closing the build plan: `docker-compose.prod.yml` and
+`config/odoo.prod.conf.example` (production overrides — loopback-only
+bind, Compose v2 resource limits, log rotation, workers/proxy_mode/
+list_db split into a git-ignored prod config, same pattern as `.env`);
+`deploy/nginx/furnishing_mes.conf`; `scripts/backup.sh` and
+`scripts/restore.sh` as real, executable, ACTUALLY-RUN files (not just
+transcribed from the doc that had specified them since Phase 0); a
+Docker healthcheck added to the `web` service itself, using `/web/health`
+after confirming live that Odoo 18 genuinely exposes it; a real bug fixed
+in the upgrade runbook; four persona manuals in `docs/manuals/`; an
+administrator guide (`docs/16`); a handover checklist and
+known-limitations register (`docs/17`); an ERP integration readiness
+review that found and closed a real gap between what `docs/09` claimed
+existed and what actually did.
+
+### Verified, not assumed
+
+- Fresh install from a dropped/recreated database installs cleanly with
+  the two new integration-seam pieces present (`fmes.sync.log`,
+  `fmes.integration.adapter` both register in `ir_model`)
+- Full regression suite: 433 tests, 0 failed, 0 errors, after the
+  integration-seam addition — no regression introduced
+- `scripts/backup.sh` and `scripts/restore.sh` run for real against the
+  live dev stack, round-trip: `res_users` (9) and `ir_attachment` (1255)
+  row counts identical before backup and after restore, `/web/health`
+  healthy immediately after the restored server restarted
+- `/web/health` confirmed live via `curl` (`{"status": "pass"}`, HTTP
+  200) rather than trusted from Odoo's own documentation
+- `docker-compose.prod.yml` and `docker-compose.yml` both validate with
+  `docker compose config`
+
+### Decisions
+
+**D15.1 - `docs/09-erp-integration-roadmap.md` claimed all three
+integration-seam components were "built during Phase 1 and left
+dormant." Direct verification against the codebase (`grep`, `ls`) showed
+only one of the three — the sync mixin — actually existed.** `fmes.sync.
+log` and the `services/integration/` abstract-adapter package were
+specified in the document from Phase 0/1 onward but never actually
+created — a documentation claim that had gone unchecked for fourteen
+phases. Found by applying this project's own standing discipline
+("verify against source, not memory") to a DOCUMENT about the project,
+not just to Odoo's own API surface, which is where that discipline had
+previously always been pointed. Fixed by building both for real rather
+than merely reporting the gap: `models/fmes_sync_log.py` (audit-trail
+model, exact field spec from `docs/03-data-model.md` §10.2 — `direction`,
+`entity`, record/success/error counts, `started_on`/`finished_on`,
+`state`, `payload_ref`, `message`, `company_id`) and `services/
+integration/adapter.py` (`fmes.integration.adapter`, an `AbstractModel`
+matching docs/09's own `fetch`/`push`/`test_connection` skeleton
+verbatim), wired into `models/__init__.py` and `services/__init__.py`,
+with a Manager-read-only ACL row and a multi-company record rule added
+in the same change — both new files pass `py_compile`, install cleanly,
+and the full 433-test suite still passes. `docs/09` §1/§3.2 and `docs/03`
+§10 heading corrected to state plainly what's true now (seam built and
+dormant) versus what was previously, inaccurately, claimed (seam built
+in Phase 1). No menu entry was added for `fmes.sync.log` — it would be
+permanently empty until a connector exists, so a menu item would be
+pure clutter, not a completed feature.
+*Generalisable:* a living document's own claim about what exists in the
+codebase can drift out of true exactly like code itself can — and
+because nothing except a human (or an agent doing what a human would)
+ever re-reads that claim against source, it can go uncaught far longer
+than a code bug would, since no test suite runs against documentation.
+
+**D15.2 - The sync mixin is deliberately NOT inherited into any of the
+five models `docs/09` names, and the document's own wording said the
+opposite.** `docs/09` §3.2's heading claimed the mixin was "Mixed into
+`res.partner`, `product.template`, ..." while `models/mixins.py`'s own
+docstring said the reverse: wiring happens "when the connector is
+built." Corrected the DOCUMENT, not the code — adding
+`erp_external_id`/`erp_sync_state`/etc. to five core, heavily-used
+tables ahead of an actual connector authorisation would be premature
+schema with no reader or writer, not a completed seam. Deferred
+explicitly to stage I2 of the ERP delivery plan in the same document
+(a one-line-per-model `_inherit` addition once authorised).
+*Generalisable:* the same verify-the-claim discipline as D15.1, found in
+the same read-through — worth noting as a SEPARATE decision because it
+is a different kind of gap (wrong tense/scope in a sentence, not a
+missing file) and was fixed by editing prose, not by writing code.
+
+**D15.3 - A Git-Bash-on-Windows environment quirk, not a script bug,
+blocked the very first real run of `scripts/backup.sh`.** `docker run
+--rm -v ... alpine tar ...` (the filestore-archive step) failed with
+`error getting credentials - err: exec: "docker-credential-desktop":
+executable file not found in %PATH%` because `alpine` had never been
+pulled in this environment, and Git Bash's MSYS-translated `PATH`
+prevents the Windows `docker.exe` binary from resolving its own
+credential helper when a pull is triggered from that shell — even though
+`which docker-credential-desktop.exe` succeeds via Bash's own path
+emulation. `pg_dump` itself (no image pull needed) succeeded on the
+first attempt; only the image-pull step failed. Fixed by running
+`docker pull alpine` once from PowerShell (native Windows PATH
+resolution, no MSYS translation), after which the image is cached
+locally and every subsequent `docker run`/`docker compose` invocation —
+from EITHER shell — uses the cached copy without needing the credential
+helper again. Re-ran `backup.sh` immediately after and it completed
+cleanly end-to-end; `restore.sh` was then also run for real, restoring
+from that exact backup, with `res_users` and `ir_attachment` counts
+verified identical before and after.
+*Generalisable:* the fix for a Windows/Git-Bash Docker credential-helper
+failure is "pull the image once from PowerShell, then Git Bash works
+too" — the credential helper is only ever consulted on a genuine
+registry pull, never for an already-cached image, so this is a one-time
+cost per new image, not a standing limitation of the dev workflow.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |

@@ -96,9 +96,9 @@ Bind mounts: `./addons` (our module, live-editable) and `./config/odoo.conf`.
 │           · alert evaluation · scheduled report email        │
 │  base_automation: state-change triggers                      │
 ├──────────────────────────────────────────────────────────────┤
-│ INTEGRATION SEAM  (stubbed — Phase 15 review, built later)   │
+│ INTEGRATION SEAM  (built + dormant; connector built later)   │
 │  fmes.integration.adapter (abstract) · fmes.sync.log          │
-│  erp_external_id / erp_sync_state mixin on synced models     │
+│  erp_external_id / erp_sync_state mixin (not yet inherited)  │
 ├──────────────────────────────────────────────────────────────┤
 │ PERSISTENCE — PostgreSQL 15                                  │
 └──────────────────────────────────────────────────────────────┘
@@ -158,28 +158,37 @@ addons/furnishing_mes/
 ├── models/
 │   ├── __init__.py
 │   ├── mixins.py                  # fmes.erp.sync.mixin
+│   ├── fmes_sync_log.py           # audit trail, Phase 15
 │   ├── fmes_shift.py
 │   ├── fmes_capacity_matrix.py
 │   ├── mrp_workcenter.py          # extension + equipment bridge
 │   ├── mrp_production.py
-│   ├── mrp_workorder.py
-│   ├── mrp_workcenter_productivity.py
+│   ├── mrp_workcenter_productivity(_loss).py
 │   ├── maintenance_equipment.py
 │   ├── maintenance_request.py
-│   ├── fmes_production_plan.py
+│   ├── fmes_production_plan(_line).py
 │   ├── fmes_production_entry.py
-│   ├── fmes_manpower.py
-│   ├── fmes_backlog.py
+│   ├── fmes_import_batch.py
+│   ├── fmes_manpower_log.py · fmes_operator_allocation.py
+│   ├── fmes_backlog_snapshot.py
 │   ├── fmes_maintenance_schedule.py
-│   ├── fmes_alert.py
+│   ├── fmes_maintenance_checklist_line(_result).py
+│   ├── fmes_alert(_rule).py
 │   ├── fmes_support_ticket.py
+│   ├── fmes_report_schedule.py
+│   ├── sale_order_line.py         # DAY WISE OUTPUT import target
 │   └── res_users.py               # department scoping
 ├── services/
 │   ├── __init__.py
 │   ├── planning_engine.py
 │   ├── utilization_service.py
 │   ├── backlog_service.py
-│   └── alert_engine.py
+│   ├── dashboard_service.py
+│   ├── alert_engine.py
+│   ├── report_service.py
+│   └── integration/            # fmes.integration.adapter (abstract, Phase 15)
+│       ├── __init__.py
+│       └── adapter.py
 ├── reports/
 │   ├── __init__.py
 │   ├── production_report.py       # SQL view models
@@ -264,8 +273,12 @@ day one rather than from go-live.
 
 ### ADR-006 — Defer ERP 10.8, but not its data contract
 
-**Decision.** No connector is built now, but the sync mixin, `fmes.sync.log`, and
-the field-level mapping table are specified in Phase 0 and stubbed in Phase 1.
+**Decision.** No connector is built now, but the seam — the sync mixin,
+`fmes.sync.log`, and the abstract `fmes.integration.adapter` — is specified in
+Phase 0 and, as of Phase 15's own readiness review, actually built and
+dormant. The field-level mapping table stays a skeleton; it cannot be
+finalised without real ERP 10.8 access. See
+[`09-erp-integration-roadmap.md`](09-erp-integration-roadmap.md).
 
 **Why.** Retrofitting external identity onto records that already exist in
 production is a data-migration exercise. Reserving the columns now costs nothing.

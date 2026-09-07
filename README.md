@@ -14,10 +14,9 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 14 of 15 — Security hardening, testing & QA ✅ |
-| **Next** | Phase 15 — Deployment, documentation & handover |
-| **Module version** | `18.0.14.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 433 tests passing (17 new, dedicated security suite) · no install warnings from this module · 87% test coverage on `models/`+`services/` · a real 195k-row backup/restore drill (8s dump, 44s restore, row counts matched) · a genuine security gap found and closed: operator write access was not machine-scoped |
+| **Phase** | 15 of 15 — Deployment, documentation & handover ✅ — **project complete** |
+| **Module version** | `18.0.15.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 433 tests passing, 0 failed/0 errors · no install warnings from this module · 87% test coverage on `models/`+`services/` (Phase 14) · `scripts/backup.sh`/`restore.sh` run for real against the live stack — row counts identical before and after · production compose/config, reverse-proxy sample, four persona manuals, admin guide and handover checklist all shipped |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 
@@ -142,6 +141,13 @@ right-hand column directly — that is all the target runs.
 | `make psql` | PostgreSQL prompt | `docker compose exec db psql -U odoo -d furnishing_mes` |
 | `make ps` | Container status | `docker compose ps` |
 | `make clean` | **Destroy** containers and volumes | `docker compose down -v` |
+| `make up-prod` | Start with production overrides | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
+| `make backup` | Backup database + filestore | `./scripts/backup.sh` |
+| `make restore` | Restore a backup (`DB_DUMP=... FS_TAR=...`) | `./scripts/restore.sh <db_dump> <filestore_tar>` |
+
+`up-prod` needs `config/odoo.prod.conf` to exist first — copy it from the
+committed `config/odoo.prod.conf.example` and set a real `admin_passwd`. See
+[`docs/08-deployment-operations.md`](docs/08-deployment-operations.md).
 
 **Always use `docker compose run`, never `exec`, to run Odoo commands.** `exec`
 bypasses the image entrypoint (so the database arguments are never built) and
@@ -170,11 +176,15 @@ furnishing_mes/
 │   ├── demo/                   # mock ERP dataset
 │   ├── static/src/             # OWL components, SCSS
 │   └── tests/
-├── config/odoo.conf
+├── config/
+│   ├── odoo.conf                # development config (committed)
+│   └── odoo.prod.conf.example   # production template — copy, edit, git-ignored
+├── deploy/nginx/furnishing_mes.conf  # reverse-proxy sample (Phase 15)
 ├── docs/                       # design and delivery documentation
+│   └── manuals/                # one manual per persona (Phase 15)
 ├── scripts/                    # backup, restore, load seeding (Phase 14-15)
 ├── docker-compose.yml
-├── docker-compose.prod.yml      # Phase 15
+├── docker-compose.prod.yml     # production overrides (Phase 15)
 └── Makefile
 ```
 
@@ -236,6 +246,9 @@ Enforced by ACLs and record rules, not merely hidden menus. See
 | [13 — Edition Constraints](docs/13-odoo-edition-constraints.md) | Community vs Enterprise |
 | [14 — Glossary](docs/14-glossary.md) | Terminology |
 | [15 — Open Questions & Assumptions](docs/15-open-questions-and-assumptions.md) | Questions for the customer, and the defaults we build on |
+| [16 — Administrator Guide](docs/16-administrator-guide.md) | Master data setup, user onboarding, alert tuning |
+| [17 — Handover Checklist](docs/17-handover-checklist.md) | Go-live checklist and known-limitations register |
+| [User Manuals](docs/manuals/README.md) | One per persona — Operator, Supervisor, Plant Manager, Customer |
 
 ---
 

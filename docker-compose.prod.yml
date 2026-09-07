@@ -1,0 +1,52 @@
+# Furnishing MES — production overrides
+#
+# Applied on top of docker-compose.yml, never alone:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# See docs/08-deployment-operations.md section 3 for the rationale behind
+# each setting below. This file changes *how* the same two services run;
+# it does not add a reverse proxy, which stays on the host per ADR in that
+# same document (docs/08 section 4, deploy/nginx/furnishing_mes.conf).
+
+services:
+
+  db:
+    restart: always
+
+  web:
+    restart: always
+    # Hard-pinned to loopback regardless of ODOO_BIND in .env, so a value
+    # left over from LAN tablet testing (ODOO_BIND=0.0.0.0) can never expose
+    # Odoo directly in production — only the host reverse proxy is public.
+    ports:
+      - "127.0.0.1:${ODOO_PORT:-8069}:8069"
+      - "127.0.0.1:${ODOO_LONGPOLL_PORT:-8072}:8072"
+    volumes:
+      # Overrides the dev odoo.conf mount with the production config.
+      # config/odoo.prod.conf is git-ignored (real admin_passwd lives only
+      # there) — generate it from config/odoo.prod.conf.example before
+      # first deploy. Read-only: list_db=False disables the database
+      # manager in production, so Odoo never needs to rewrite this file
+      # the way it does in development.
+      - fmes-web-data:/var/lib/odoo
+      - ./addons:/mnt/extra-addons:ro
+      - ./config/odoo.prod.conf:/etc/odoo/odoo.conf:ro
+    # Applied by Docker Compose v2 directly (no Swarm required) — caps the
+    # container under cgroups so one runaway report or import cannot starve
+    # the host. Sized for the "recommended" server in docs/08 section 1
+    # (8 cores / 16 GB) with workers=4; raise both in step with `workers`
+    # if the box is bigger.
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4g
+        reservations:
+          cpus: "2"
+          memory: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

@@ -5,3 +5,4 @@ from . import backlog_service
 from . import dashboard_service
 from . import alert_engine
 from . import report_service
+from . import integration

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from . import mixins
+from . import fmes_sync_log
 from . import fmes_shift
 from . import fmes_capacity_matrix
 from . import mrp_production

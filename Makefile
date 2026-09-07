@@ -26,8 +26,13 @@ DB := $(if $(DB),$(DB),furnishing_mes)
 # stack is down.
 ODOO_RUN := $(COMPOSE) run --rm web odoo
 
+# Production overlay (docs/08-deployment-operations.md section 3). Needs
+# config/odoo.prod.conf to exist first — copy it from the committed
+# .example and set a real admin_passwd.
+COMPOSE_PROD := $(COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml
+
 .DEFAULT_GOAL := help
-.PHONY: help up down init init-prod logs restart upgrade install test shell psql bash ps clean
+.PHONY: help up down init init-prod logs restart upgrade install test shell psql bash ps clean up-prod backup restore
 
 help:  ## Show this help
 	@echo "Furnishing MES — available targets:"
@@ -89,3 +94,12 @@ clean:  ## DESTROY containers and volumes — all data is lost
 	@printf 'This deletes the database and filestore. Type "yes" to continue: ' \
 		&& read ans && [ "$$ans" = "yes" ] && $(COMPOSE) down -v \
 		|| echo "Aborted."
+
+up-prod:  ## Start the stack with production overrides (docker-compose.prod.yml)
+	$(COMPOSE_PROD) up -d
+
+backup:  ## Run a database + filestore backup (scripts/backup.sh)
+	./scripts/backup.sh
+
+restore:  ## Restore a backup: make restore DB_DUMP=path FS_TAR=path
+	./scripts/restore.sh $(DB_DUMP) $(FS_TAR)

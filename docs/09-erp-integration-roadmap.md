@@ -18,13 +18,26 @@ need to be matched to its ERP counterpart by hand. Reserving the columns and the
 adapter interface up front costs one mixin and a log model, and eliminates that
 migration entirely.
 
-Three things are therefore built during Phase 1 and left dormant:
+Three things make up the seam, built and left dormant:
 
-1. `fmes.erp.sync.mixin` — external id and sync state fields
+1. `fmes.erp.sync.mixin` — external id and sync state fields (Phase 1)
 2. `fmes.sync.log` — an audit trail model, unused until a connector writes to it
 3. The `services/integration/` package with an abstract adapter and no implementations
 
-Nothing else in the codebase knows or cares that ERP 10.8 exists.
+Items 2 and 3 were specified here from Phase 1 onward but, in fact, not
+actually created until Phase 15's own readiness review checked this
+document's claim against the codebase and found the gap — recorded
+honestly rather than silently backfilled: **verify a document's own claim
+about what exists against the source before relying on it**, the same
+discipline this project has applied to every other phase. All three are
+real, present, and dormant as of Phase 15.
+
+Nothing else in the codebase knows or cares that ERP 10.8 exists — the
+mixin is defined but deliberately not yet inherited into `res.partner`,
+`product.template`, `mrp.bom`, `sale.order` or `mrp.production`
+(section 3.2 explains why: adding five unused columns to core,
+widely-used tables ahead of an actual connector would be premature
+schema, not a completed seam).
 
 ---
 
@@ -127,15 +140,23 @@ class IntegrationAdapter(models.AbstractModel):
         raise NotImplementedError
 ```
 
-### 3.2 Sync mixin — built in Phase 1
+### 3.2 Sync mixin — built in Phase 1, not yet inherited anywhere
 
 Fields per [`03-data-model.md`](03-data-model.md) section 10.1:
 `erp_external_id`, `erp_source_system`, `erp_last_sync`, `erp_sync_state`,
 `erp_sync_message`.
 
-Mixed into `res.partner`, `product.template`, `mrp.bom`, `sale.order`,
-`mrp.production`. `erp_external_id` is indexed and unique per
-`(erp_source_system, model)`.
+**Intended** to be mixed into `res.partner`, `product.template`, `mrp.bom`,
+`sale.order`, `mrp.production` — but deliberately NOT mixed in yet. Adding
+five unused columns (`erp_external_id` etc.) to core, heavily-used tables
+ahead of an actual connector would be premature schema with no reader or
+writer, not a completed seam; `models/mixins.py`'s own docstring records
+this explicitly. Wiring it in (`_inherit = ['fmes.erp.sync.mixin', ...]`
+on each of the five models, one line each) is stage I2's own first task
+in the delivery plan below, not something to anticipate now. When it is
+wired in, `erp_external_id` should be indexed and unique per
+`(erp_source_system, model)` — not yet a live constraint, since the
+field carries no data to constrain.
 
 ---
 

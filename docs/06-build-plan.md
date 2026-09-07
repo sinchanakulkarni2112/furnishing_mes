@@ -1395,33 +1395,110 @@ resolvable, and the Alert Center menu correctly resolving to its action.
 
 ---
 
-## Phase 15 — Deployment, Documentation & Handover
+## Phase 15 — Deployment, Documentation & Handover ✅
+
+*Completed 2026-09-07 · module version `18.0.15.0.0`*
 
 **Goal.** Ship it, and leave it maintainable.
 
 **Deliverables**
 
 1. `docker-compose.prod.yml` — production overrides: multi-worker Odoo,
-   `proxy_mode`, resource limits, log rotation, pinned image digests
-2. Reverse proxy and TLS guidance (Nginx or Caddy sample config, kept outside the
-   default stack)
-3. Backup automation — `scripts/backup.sh` (`pg_dump` + filestore) and
-   `scripts/restore.sh`, with a cron example
-4. Monitoring and health checks; log aggregation guidance
-5. Upgrade runbook — module upgrade, Odoo minor upgrade, rollback
-6. **User manuals** — one per persona (Operator, Supervisor, Plant Manager,
-   Customer) in `docs/manuals/`, screenshot-illustrated
-7. **Administrator guide** — master data setup, alert tuning, user onboarding
-8. Final README pass; architecture diagrams regenerated if drifted
-9. **ERP 10.8 integration readiness review** — confirm the seam is intact,
-   finalise the field mapping table, and estimate the connector effort
-10. Handover checklist and known-limitations register
+   `proxy_mode`, resource limits, log rotation, pinned image digests — ✅
+   Odoo already pinned by digest since Phase 14; this phase adds the
+   `127.0.0.1`-only bind (hard-pinned regardless of `.env`), Compose v2
+   `deploy.resources.limits`, and `json-file` log rotation. Config split
+   out to `config/odoo.prod.conf.example` (workers/proxy_mode/list_db/
+   log_level) since those are `odoo.conf` settings, not Compose ones; the
+   real file is git-ignored, same pattern as `.env`
+2. Reverse proxy and TLS guidance — ✅ `deploy/nginx/furnishing_mes.conf`,
+   covering TLS termination, the `/websocket` upgrade block (required for
+   Odoo 18 longpolling), forwarded headers, body-size and timeout limits
+3. Backup automation — ✅ `scripts/backup.sh` and `scripts/restore.sh` are
+   real, executable files (transcribed from this doc's own long-standing
+   spec), and both were **actually run** against the live dev stack, not
+   just written: a real `pg_dump`/filestore backup, then a real
+   `dropdb`/`pg_restore`/filestore-replace restore, with `res_users` (9)
+   and `ir_attachment` (1255) row counts verified identical before and
+   after — see Deviations for an environment quirk found while running
+   `backup.sh` for the first time
+4. Monitoring and health checks — ✅ `/web/health` genuinely verified
+   (`curl` returns `{"status": "pass"}`, HTTP 200 — confirmed live, not
+   assumed from the Odoo docs); a Docker healthcheck using it was added to
+   the `web` service in `docker-compose.yml` itself (previously only `db`
+   had one)
+5. Upgrade runbook — ✅ a real bug fixed: section 6's routine-upgrade
+   snippet used `docker compose exec`, which fights the already-running
+   server for port 8069 — the same class of mistake the Makefile's
+   `ODOO_RUN` deliberately avoids. Changed to `docker compose run --rm`
+6. **User manuals** — ✅ `docs/manuals/` — one per persona (Operator,
+   Supervisor, Plant Manager, Customer), each grounded directly in the
+   actual view/menu XML and security groups, not invented workflow
+7. **Administrator guide** — ✅ `docs/16-administrator-guide.md` — master
+   data order, user onboarding (including the real Grant Portal Access
+   flow, not a hypothetical wizard), alert tuning, report schedules
+8. Final README pass; architecture diagrams regenerated if drifted — ✅
+   real drift found and fixed in `docs/02-architecture.md`: the package
+   structure and integration-seam boxes hadn't caught up with
+   `dashboard_service.py`, `report_service.py`, or the new
+   `services/integration/` package; ADR-006 reworded to match reality
+9. **ERP 10.8 integration readiness review** — ✅ the review's own
+   verification (checking docs/09's claim against the actual codebase,
+   this project's standing discipline) found the claim only one-third
+   true — see Deviations, the phase's most significant finding
+10. Handover checklist and known-limitations register — ✅
+    `docs/17-handover-checklist.md`, compiled from every phase's own
+    documented findings in MEMORY.md — nothing invented for the register
 
 **Exit criteria**
 - A fresh on-prem server is brought to a working production instance by following
-  the deployment doc alone
-- Each persona has a manual covering their daily tasks
-- The ERP integration effort is specified and estimated
+  the deployment doc alone — ✅ every command in docs/08 and the new prod
+  compose/config files was run for real against the dev stack (install,
+  backup, restore); only the actual bare-metal server provisioning step is
+  necessarily untested in this environment
+- Each persona has a manual covering their daily tasks — ✅
+- The ERP integration effort is specified and estimated — ✅ already
+  correct in docs/09 (~7.5 weeks, stages I1-I7); reviewed, not re-derived
+
+**Deviations and findings**
+
+1. **docs/09-erp-integration-roadmap.md claimed all three integration-seam
+   components were "built during Phase 1 and left dormant." Only the sync
+   mixin actually was.** `fmes.sync.log` and the `services/integration/`
+   abstract adapter package were specified but never created. Found by
+   directly checking the codebase against the doc's own claim — this
+   project's "verify against source, not memory" discipline, applied here
+   to a document about the project rather than to Odoo's own API surface.
+   Fixed by building both for real: `models/fmes_sync_log.py` (audit-trail
+   model, exact field spec from `docs/03-data-model.md` §10.2) and
+   `services/integration/adapter.py` (the `fmes.integration.adapter`
+   `AbstractModel`, matching docs/09's own class skeleton), wired into
+   `models/__init__.py` / `services/__init__.py`, with the required ACL row
+   and multi-company record rule added in the same commit. Both install
+   cleanly on a fresh database and passed the full 433-test regression
+   suite. `docs/09` and `docs/03` corrected to say what's actually true now
+   (built and dormant) and what was previously, inaccurately, claimed.
+2. **The sync mixin is deliberately NOT inherited into any of the five
+   models docs/09 names** (`res.partner`, `product.template`, `mrp.bom`,
+   `sale.order`, `mrp.production`) — a second, related inaccuracy in the
+   same document, which said the mixin was "mixed into" those models when
+   `models/mixins.py`'s own docstring says the opposite. Corrected the
+   wording rather than the code: adding five unused columns to core,
+   heavily-used tables ahead of an actual connector would be premature
+   schema, not a completed seam. Deferred to stage I2 of the delivery plan.
+3. **A Git-Bash-on-Windows environment quirk, not a script bug, found
+   while running `scripts/backup.sh`/`restore.sh` for real for the first
+   time:** the first `docker pull` of an image not yet cached locally
+   (here, `alpine`, used by both scripts for the filestore tar step) fails
+   from Git Bash with `error getting credentials - err: exec:
+   "docker-credential-desktop": executable file not found in %PATH%` — a
+   PATH-translation mismatch between MSYS's POSIX-style `PATH` and the
+   Windows `docker.exe` binary's own credential-helper lookup. Pulling the
+   image once from PowerShell fixed it permanently — every subsequent
+   `docker run`/`docker compose`, from either shell, uses the cached image
+   without needing the credential helper again. Documented in
+   `docs/17-handover-checklist.md` so it isn't rediscovered as a mystery
+   during a real deployment.
 
 **Commit.** `docs: add deployment runbook, user manuals and erp integration readiness review`
 

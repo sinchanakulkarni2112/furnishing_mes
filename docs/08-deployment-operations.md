@@ -171,9 +171,15 @@ report renders, and one attachment opens.
 ```bash
 ./scripts/backup.sh
 git pull origin main
-docker compose exec web odoo -d furnishing_mes -u furnishing_mes --stop-after-init
+docker compose run --rm web odoo -d furnishing_mes -u furnishing_mes --stop-after-init
 docker compose restart web
 ```
+
+`run --rm`, not `exec` — `exec` reaches into the already-running server process
+and fights it for the same port; `run --rm` starts a short-lived one-off
+container for the upgrade and exits cleanly, then `restart` picks the schema
+change up in the long-running one. Same pattern as the Makefile's own
+`ODOO_RUN` target and `scripts/restore.sh`.
 
 Always take the backup first. Always test the same upgrade on a copy of
 production data before running it on production.

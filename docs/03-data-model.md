@@ -408,7 +408,7 @@ Inherits `mail.thread` + `portal.mixin` so customers can follow and reply.
 
 ---
 
-## 10. Integration Seam *(stubbed Phase 1, built post-project)*
+## 10. Integration Seam *(the seam is built and dormant; the connector itself is built post-project, when authorised)*
 
 ### 10.1 `fmes.erp.sync.mixin` — AbstractModel
 
