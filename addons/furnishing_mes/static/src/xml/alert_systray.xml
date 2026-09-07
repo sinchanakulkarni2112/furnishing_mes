@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="furnishing_mes.AlertSystray">
+        <div class="o_fmes_alert_systray">
+            <button class="btn o_fmes_alert_systray_btn" title="Alerts" t-on-click="onClick">
+                <i class="fa fa-bell" role="img" aria-label="Alerts"/>
+                <span t-if="state.count" class="badge rounded-pill bg-danger o_fmes_alert_badge">
+                    <t t-esc="state.count"/>
+                </span>
+            </button>
+        </div>
+    </t>
+
+</templates>

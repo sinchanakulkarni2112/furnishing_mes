@@ -845,29 +845,118 @@ rather than silently dropped.
 
 ---
 
-## Phase 11 — Alerts & Notifications
+## Phase 11 — Alerts & Notifications ✅
+
+*Completed 2026-09-07 · module version `18.0.11.0.0`*
 
 **Goal.** Requirement 10.
 
 **Deliverables**
 
-1. `fmes.alert.rule` and `fmes.alert` models
+1. `fmes.alert.rule` and `fmes.alert` models — ✅
 2. `services/alert_engine.py` — evaluates rules, applies scope and cooldown,
-   raises alerts, dispatches to activity / Discuss / email
+   raises alerts, dispatches to activity / Discuss / email — ✅
 3. Cron `fmes_evaluate_alerts` (every 15 minutes) for threshold-based rules;
-   `base_automation` triggers for event-based rules (breakdown, block)
+   `base_automation` triggers for event-based rules (breakdown, block) — ✅
 4. Default rules seeded in `data/alert_rules.xml` for all seven required types
-5. `mail.template` per alert type, with a clean HTML layout
+   — ✅ (nine rules: two types are each seeded as a pair of rules sharing one
+   `alert_type`, which is how a single rule's one threshold+operator pair
+   expresses an "or" condition — see Decisions)
+5. `mail.template` per alert type, with a clean HTML layout — ✅, as one
+   reusable, dynamically-styled template rather than nine near-identical
+   files (see Decisions)
 6. **Alert Center** — list and kanban by severity, acknowledge and resolve
-   actions, unread counter in the systray
+   actions, unread counter in the systray — ✅
 7. Escalation — a critical alert unacknowledged past its window notifies the
-   Plant Manager
+   Plant Manager — ✅ (assumption `A55`, 30 minutes)
 8. Tests: threshold boundaries, cooldown suppression, scope filtering, recipient
-   resolution, no duplicate alerts for one condition
+   resolution, no duplicate alerts for one condition — ✅ 27 new tests
 
-**Exit criteria**
-- Each of the seven alert types fires correctly on a seeded trigger condition
-- No alert storm: repeated conditions respect cooldown
+**Exit criteria — met**
+
+| Criterion | Result |
+|---|---|
+| Each of the seven alert types fires correctly on a seeded trigger condition | ✅ verified per type: threshold types via direct `_eval_*` evaluation tests against real production entries / downtime events / maintenance schedules; the two event-based types (`machine_breakdown`, `material_shortage`) and the block-driven `critical_backlog` path via the actual `base.automation` records firing on a real `create()`/`write()`, not by calling the engine directly |
+| No alert storm: repeated conditions respect cooldown | ✅ an alert already `new`/`acknowledged` is never re-raised regardless of cooldown timing; once resolved, a re-raise is still suppressed until `cooldown_minutes` has elapsed |
+| Tests pass | ✅ 374 tests module-wide, 0 failed, 0 errors (27 new for this phase) |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+End-to-end via `odoo shell` against the seeded dev database: all 9 default
+rules present across all 7 types, the cron active on its 15-minute interval,
+all 3 `base.automation` records wired, the mail template and both UI actions
+resolvable, and the Alert Center menu correctly resolving to its action.
+
+**Deviations and findings**
+
+1. **A real QWeb compiler bug, caught only by an actual test run, not by XML
+   well-formedness checking.** The mail template's severity-coloured header
+   band originally computed its background colour inline, inside a
+   `t-attf-style` attribute: `background:#{{ 'dc3545' if object.severity ==
+   'critical' else (...) }}`. This is syntactically valid XML and valid
+   Python, but Odoo 18's `t-attf-*` attribute-interpolation compiler failed
+   to compile the embedded ternary at render time
+   (`ValueError: Can not compile expression: ...`) — invisible to `py_compile`
+   or `xml.dom.minidom` well-formedness checks, and invisible even to a plain
+   module install, since a `mail.template`'s `body_html` is only compiled the
+   first time an email actually renders. It surfaced the moment a real test
+   (`TestEventTriggers`) triggered a critical alert's immediate dispatch.
+   Fixed by moving the ternary out of the attribute interpolation entirely,
+   into a `t-set`/`t-value` (full Python expression evaluation, the
+   officially supported place for this), then referencing the pre-computed
+   variable from `t-attf-style` as a plain name — `{{fmes_alert_color}}` —
+   which is only ever a name substitution, never a re-parsed expression.
+   Logged here specifically because it demonstrates why deliverable 8's test
+   suite intentionally drives the real `base.automation` → engine → dispatch
+   → `mail.template.send_mail` path for at least the critical-severity
+   types, rather than stopping at unit-testing the engine's own Python.
+2. **Two test-fixture bugs, not engine bugs, both caught by the same real
+   test run.** `fmes.maintenance.schedule`'s own `_compute_next_due_date`
+   treats `interval_number=0` as falsy and substitutes `1`
+   (`schedule.interval_number or 1`) — an existing, correct guard against a
+   schedule with no interval configured, not a Phase 11 defect — but it
+   meant a first test-helper attempt to express "due today" via
+   `interval_number=0` silently produced a schedule due *tomorrow* instead.
+   Fixed by having the test fixture vary `last_done_date` instead of
+   `interval_number` (always `1`), which cannot hit the falsy-zero case.
+   Separately, two tests asserted an exact recipient set/count from
+   `group_fmes_supervisor`, which is real, shared group state — the demo
+   dataset adds its own members to it, so the assertion was implicitly (and
+   wrongly) assuming a demo-data-free group membership, the exact coupling
+   `tests/common.py`'s own docstring says this test suite must not have.
+   Fixed by asserting membership/coverage of the specific users under test
+   rather than the group's total size.
+3. **`docker compose exec` cannot run a second `odoo` process against the
+   already-running `web` service** — it shares the same container as the
+   long-running server, which already holds port 8069, so `exec ... odoo ...`
+   fails with `Address already in use` even with `--no-http`. The
+   `Makefile`'s own `ODOO_RUN := docker compose run --rm web odoo` already
+   documents exactly this and why (`run` does not publish ports; a fresh,
+   throwaway container has no conflict) — this phase's verification followed
+   that pattern throughout rather than `exec`.
+4. **A `noupdate="1"` data file does not pick up a fix on `-u` (upgrade).**
+   The QWeb bug above (finding 1) was fixed in `data/fmes_alert_mail_
+   template.xml`, but that file is `noupdate="1"` by design (so a plant that
+   tunes the template keeps its own edit across upgrades) — an `-u` against
+   the dev database that already had the broken record left the old, broken
+   template untouched. Verification for this phase therefore used a
+   dropped-and-recreated dev database for the final, authoritative test run,
+   the same way a genuinely new deployment would first see the fixed data.
+5. **Git Bash mangles a bare `/module_name` argument into a Windows path**
+   (`/furnishing_mes` became `C:/Program Files/Git/furnishing_mes`), silently
+   producing an `Invalid tag` warning and a false "0 tests" pass rather than
+   an obvious failure — worth remembering for any future `--test-tags
+   /furnishing_mes` invocation from this shell: prefix the command with
+   `MSYS_NO_PATHCONV=1`.
+6. **No browser was available in this environment** to visually verify the
+   Alert Center kanban/list/systray render, matching the same documented gap
+   from Phase 10's Executive Dashboard. Verified instead: XML well-formedness,
+   JS syntax (`node --check`), the exact kanban `t-name="card"` and systray
+   `registry.category("systray")` patterns matched against this module's own
+   existing components (`fmes_live_status_views.xml`, `mrp_workcenter_views.xml`)
+   and Odoo's own conventions, and the full backend chain end-to-end via
+   `odoo shell` and the real test suite (including the actual
+   `base.automation` firing path). The visual render itself remains the one
+   thing about this phase not independently confirmed.
 
 **Commit.** `feat(alerts): add rule-driven alert engine, notifications and alert center`
 

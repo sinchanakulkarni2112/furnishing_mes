@@ -1254,6 +1254,127 @@ same as every other business-judgment number in this codebase.
 
 ---
 
+## Phase 11 — Alerts & Notifications
+*Completed 2026-09-07 - module version `18.0.11.0.0`*
+
+### Delivered
+
+`fmes.alert.rule` (the one rule engine covering all seven alert types) and
+`fmes.alert` (a raised alert — the same "photograph, not a live view"
+pattern as `fmes.backlog.snapshot`, plain fields set once at creation rather
+than `@api.depends`, so an old alert never silently reinterprets itself
+against a moving "today"); `services/alert_engine.py`, evaluating threshold
+rules on a 15-minute cron and event rules (breakdown, material shortage,
+blocked order) via three `base.automation` records that hand off to the
+SAME engine method (`_on_event`) the cron path never touches directly;
+scope filtering (global / department / machine), a cooldown-plus-open-alert
+dedup so one condition cannot storm, severity-gated dispatch (critical
+sends immediately, everything else queues for the 08:00 flush), and a
+30-minute unacknowledged-critical escalation to the Plant Manager
+(assumption `A55`). Nine default rules across all seven types (two types
+each get a pair of rules sharing one `alert_type`, since a single rule has
+only one threshold+operator pair — that pair is how the design expresses an
+"or" condition). One reusable, severity-styled `mail.template` rather than
+seven near-identical files. Alert Center (list/kanban by severity,
+acknowledge/resolve, systray unread counter) and Alert Rules (Plant Manager
+only) — both native Odoo views, no separate frontend, matching every
+earlier phase's UI approach.
+
+### Verified, not assumed
+
+- Clean install and upgrade, with and without demo data, on a genuinely
+  fresh database each time (not just `-u` against a database that already
+  had this phase's own, once-broken data — see D11.1)
+- 374 tests module-wide (27 new for this phase), 0 failed, 0 errors
+- The two event-based alert types, and the block-driven `critical_backlog`
+  path, verified through the REAL `base.automation` firing path — a test
+  writes the exact field a plant user would (`fmes_maintenance_request_id`,
+  `fmes_category`, `fmes_block_reason`) and lets `base_automation` itself
+  decide to call the engine, rather than calling `_on_event` directly. A
+  wrong `model_id` or `filter_domain` in the XML would fail these tests.
+- `odoo shell` end-to-end against the seeded dev database: all 9 rules
+  present across all 7 types, the cron active on its 15-minute interval, all
+  3 automations wired, the mail template and both UI actions resolvable,
+  the Alert Center menu resolving to its action, `get_unread_count()`
+  callable
+
+### Decisions
+
+**D11.1 - A real QWeb compiler bug, invisible to every syntax check that
+ran before the actual test suite.** The mail template's severity-coloured
+header band originally computed its background colour inline inside a
+`t-attf-style` attribute — `background:#{{ 'dc3545' if object.severity ==
+'critical' else (...) }}` — syntactically valid XML, valid Python, and it
+passed `py_compile`, `xml.dom.minidom` well-formedness, and even a plain
+module install without complaint. Odoo 18's `t-attf-*` attribute
+interpolation compiler failed to compile the embedded ternary only at
+RENDER time (`ValueError: Can not compile expression: ...`), because a
+`mail.template`'s `body_html` is compiled lazily, the first time an email
+actually renders — which did not happen until a real test
+(`TestEventTriggers`) triggered a critical alert's immediate dispatch.
+Fixed by moving the ternary into a `t-set`/`t-value` (full Python
+expression evaluation, the officially correct place for conditional logic)
+and referencing the pre-computed variable from `t-attf-style` as a bare
+name, which is only ever a substitution, never a re-parsed expression.
+*Generalisable:* a `mail.template`'s `body_html` is NOT verified by
+`--stop-after-init`, XML well-formedness, or even a successful install —
+only an actual send (or, in tests, a real critical-severity alert) compiles
+it. Any future template with attribute-level conditional logic should
+prefer `t-set`/`t-value` over an inline `t-attf-*` ternary from the start.
+
+**D11.2 - `noupdate="1"` blocks a bug fix from reaching an already-seeded
+database, by design, and that is a genuine verification hazard, not just a
+production concern.** `data/alert_rules.xml` and `data/fmes_alert_mail_
+template.xml` are correctly `noupdate="1"` (so a plant that tunes a
+threshold or a template keeps its own edit across upgrades), but that also
+means `docker compose run --rm web odoo -u furnishing_mes` against a dev
+database that already had D11.1's broken template left the OLD, broken
+record untouched — a second test run against the "fixed" codebase still
+failed against the stale data. The authoritative verification for this
+phase used a dropped-and-recreated dev database for the final test run,
+matching what a genuinely fresh deployment would see. *Generalisable:*
+after editing a `noupdate="1"` data file mid-phase, `-u` is not sufficient
+to re-verify against it — drop and recreate, or `-i` fresh.
+
+**D11.3 - Two test-fixture bugs, not engine bugs, both surfaced by the same
+real test run.** `fmes.maintenance.schedule._compute_next_due_date` treats
+`interval_number=0` as falsy and substitutes `1`
+(`schedule.interval_number or 1`, an existing and CORRECT guard, not a
+Phase 11 defect) — a first test-helper attempt at "a schedule due today"
+via `interval_number=0` silently produced a schedule due tomorrow instead.
+Fixed by varying `last_done_date` in the test fixture rather than
+`interval_number` (always `1`), which cannot hit the falsy-zero branch.
+Separately, two tests asserted an exact recipient set/count reachable
+through `group_fmes_supervisor` — real, shared group state that the demo
+dataset also adds its own members to, the exact demo-data coupling
+`tests/common.py`'s own docstring says this suite must never have. Fixed by
+asserting membership/coverage of the specific users under test rather than
+the group's total size. *Generalisable:* a group's `.users` is live,
+shared, demo-data-affected state — never assert its exact membership or
+count in a test, only that specific users under test are (or are not) in
+it.
+
+**D11.4 - `docker compose exec` cannot run a one-off `odoo` command
+alongside the already-running `web` service.** `exec` runs inside the SAME
+container as the long-running server, which already holds port 8069, so
+even `--no-http` still fails with `Address already in use` — the
+Makefile's own `ODOO_RUN := docker compose run --rm web odoo` already
+documents exactly why (`run` publishes no ports, so a fresh, throwaway
+container never conflicts). Re-confirmed here after initially reaching for
+`exec` out of habit; every verification command for this phase used `run
+--rm` afterward.
+
+**D11.5 - Git Bash's MSYS layer silently rewrites a bare `--test-tags
+/furnishing_mes` into a Windows path**, producing `Invalid tag C:/Program
+Files/Git/furnishing_mes` and a false "0 tests, 0 failed" pass rather than
+an obvious error — worth remembering specifically because a 0-test run
+LOOKS like a clean pass in the log's final summary line unless the
+`Invalid tag` warning earlier in the same log is also read. Fixed by
+prefixing the command with `MSYS_NO_PATHCONV=1`; documented in
+`docs/07-development-setup.md`'s Windows troubleshooting table.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |

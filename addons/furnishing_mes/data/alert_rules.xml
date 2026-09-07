@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Default rules for all seven required alert types (Requirement
+            10, deliverable 4). Two types are seeded as a pair of rules
+            sharing one type — that is how an "or" threshold (assumptions
+            A31, A33) is expressed; see fmes.alert.rule's own docstring.
+
+            noupdate="1" so a plant that retunes a threshold keeps its
+            change across upgrades.
+        -->
+
+        <record id="alert_rule_machine_breakdown" model="fmes.alert.rule">
+            <field name="name">Machine Breakdown</field>
+            <field name="alert_type">machine_breakdown</field>
+            <field name="operator">gt</field>
+            <field name="threshold">0</field>
+            <field name="severity">critical</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="notify_email" eval="True"/>
+            <field name="mail_template_id" ref="mail_template_fmes_alert"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">60</field>
+        </record>
+
+        <record id="alert_rule_excess_downtime_hours" model="fmes.alert.rule">
+            <field name="name">Excess Downtime (Hours)</field>
+            <field name="alert_type">excess_downtime</field>
+            <field name="operator">gt</field>
+            <field name="threshold">1.0</field>
+            <field name="threshold_uom">hours</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">60</field>
+        </record>
+
+        <record id="alert_rule_excess_downtime_pct" model="fmes.alert.rule">
+            <field name="name">Excess Downtime (% of Shift)</field>
+            <field name="alert_type">excess_downtime</field>
+            <field name="operator">gt</field>
+            <field name="threshold">10.0</field>
+            <field name="threshold_uom">percent</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">60</field>
+        </record>
+
+        <record id="alert_rule_target_not_achieved" model="fmes.alert.rule">
+            <field name="name">Target Not Achieved</field>
+            <field name="alert_type">target_not_achieved</field>
+            <field name="operator">lt</field>
+            <field name="threshold">95.0</field>
+            <field name="threshold_uom">percent</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">60</field>
+        </record>
+
+        <record id="alert_rule_maintenance_due_soon" model="fmes.alert.rule">
+            <field name="name">Maintenance Due Soon</field>
+            <field name="alert_type">maintenance_due</field>
+            <field name="operator">lte</field>
+            <field name="threshold">7</field>
+            <field name="threshold_uom">days</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">1440</field>
+        </record>
+
+        <record id="alert_rule_maintenance_overdue" model="fmes.alert.rule">
+            <field name="name">Maintenance Overdue</field>
+            <field name="alert_type">maintenance_due</field>
+            <field name="operator">lte</field>
+            <field name="threshold">0</field>
+            <field name="threshold_uom">days</field>
+            <field name="severity">critical</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="notify_email" eval="True"/>
+            <field name="mail_template_id" ref="mail_template_fmes_alert"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="cooldown_minutes">1440</field>
+        </record>
+
+        <record id="alert_rule_material_shortage" model="fmes.alert.rule">
+            <field name="name">Material Shortage</field>
+            <field name="alert_type">material_shortage</field>
+            <field name="operator">gt</field>
+            <field name="threshold">0</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">60</field>
+        </record>
+
+        <record id="alert_rule_critical_backlog" model="fmes.alert.rule">
+            <field name="name">Critical Backlog</field>
+            <field name="alert_type">critical_backlog</field>
+            <field name="operator">gt</field>
+            <field name="threshold">0</field>
+            <field name="severity">critical</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="notify_email" eval="True"/>
+            <field name="mail_template_id" ref="mail_template_fmes_alert"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="cooldown_minutes">1440</field>
+        </record>
+
+        <record id="alert_rule_delayed_order" model="fmes.alert.rule">
+            <field name="name">Delayed Order</field>
+            <field name="alert_type">delayed_order</field>
+            <field name="operator">gt</field>
+            <field name="threshold">0</field>
+            <field name="threshold_uom">days</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">1440</field>
+        </record>
+
+    </data>
+</odoo>

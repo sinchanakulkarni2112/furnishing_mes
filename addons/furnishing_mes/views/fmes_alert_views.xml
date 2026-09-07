@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Alert Center (Requirement 10, deliverable 6)                -->
+        <!-- ============================================================ -->
+        <record id="fmes_alert_view_list" model="ir.ui.view">
+            <field name="name">fmes.alert.list</field>
+            <field name="model">fmes.alert</field>
+            <field name="arch" type="xml">
+                <list string="Alerts" create="0"
+                      decoration-danger="severity == 'critical' and state == 'new'"
+                      decoration-warning="severity == 'warning' and state == 'new'"
+                      decoration-muted="state in ('resolved', 'dismissed')">
+                    <field name="triggered_on"/>
+                    <field name="alert_type"/>
+                    <field name="severity" widget="badge"
+                           decoration-danger="severity == 'critical'"
+                           decoration-warning="severity == 'warning'"
+                           decoration-info="severity == 'info'"/>
+                    <field name="subject"/>
+                    <field name="measured_value" optional="show"/>
+                    <field name="threshold_value" optional="show"/>
+                    <field name="state" widget="badge"
+                           decoration-success="state == 'resolved'"
+                           decoration-danger="state == 'new'"
+                           decoration-info="state == 'acknowledged'"
+                           decoration-muted="state == 'dismissed'"/>
+                    <field name="acknowledged_by" optional="hide"/>
+                    <field name="escalated" optional="hide"/>
+                    <button name="action_acknowledge" type="object"
+                            string="Acknowledge" invisible="state != 'new'"/>
+                    <button name="action_resolve" type="object"
+                            string="Resolve"
+                            invisible="state not in ('new', 'acknowledged')"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_alert_view_kanban" model="ir.ui.view">
+            <field name="name">fmes.alert.kanban</field>
+            <field name="model">fmes.alert</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="severity" class="o_kanban_small_column">
+                    <field name="state"/>
+                    <field name="severity"/>
+                    <templates>
+                        <t t-name="card">
+                            <div t-attf-class="fmes-alert-card fmes-alert-#{record.severity.raw_value}">
+                                <div class="fw-bold"><field name="subject"/></div>
+                                <div class="text-muted small">
+                                    <field name="alert_type"/> · <field name="triggered_on"/>
+                                </div>
+                                <div class="mt-1">
+                                    <span class="badge text-bg-secondary">
+                                        <field name="state"/>
+                                    </span>
+                                </div>
+                                <footer>
+                                    <button name="action_acknowledge" type="object"
+                                            string="Acknowledge" class="btn btn-sm btn-link"
+                                            invisible="state != 'new'"/>
+                                    <button name="action_resolve" type="object"
+                                            string="Resolve" class="btn btn-sm btn-link"
+                                            invisible="state not in ('new', 'acknowledged')"/>
+                                </footer>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="fmes_alert_view_form" model="ir.ui.view">
+            <field name="name">fmes.alert.form</field>
+            <field name="model">fmes.alert</field>
+            <field name="arch" type="xml">
+                <form string="Alert">
+                    <header>
+                        <button name="action_acknowledge" type="object"
+                                string="Acknowledge" class="oe_highlight"
+                                invisible="state != 'new'"/>
+                        <button name="action_resolve" type="object"
+                                string="Resolve" class="oe_highlight"
+                                invisible="state not in ('new', 'acknowledged')"/>
+                        <button name="action_dismiss" type="object"
+                                string="Dismiss"
+                                invisible="state in ('resolved', 'dismissed')"/>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="new,acknowledged,resolved"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_open_record" type="object"
+                                    class="oe_stat_button" icon="fa-external-link"
+                                    invisible="not res_model"
+                                    string="Open Record"/>
+                        </div>
+                        <div class="oe_title">
+                            <h1><field name="subject"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="rule_id" readonly="1"/>
+                                <field name="alert_type" readonly="1"/>
+                                <field name="severity" readonly="1"/>
+                                <field name="triggered_on" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="measured_value" readonly="1"/>
+                                <field name="threshold_value" readonly="1"/>
+                                <field name="acknowledged_by" readonly="1"/>
+                                <field name="acknowledged_on" readonly="1"/>
+                                <field name="escalated" readonly="1"/>
+                            </group>
+                        </group>
+                        <field name="body" readonly="1"/>
+                        <group>
+                            <field name="resolution_note"/>
+                        </group>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_alert_view_search" model="ir.ui.view">
+            <field name="name">fmes.alert.search</field>
+            <field name="model">fmes.alert</field>
+            <field name="arch" type="xml">
+                <search string="Alerts">
+                    <field name="subject"/>
+                    <field name="rule_id"/>
+                    <field name="alert_type"/>
+                    <filter name="filter_new" string="New"
+                            domain="[('state', '=', 'new')]"/>
+                    <filter name="filter_critical" string="Critical"
+                            domain="[('severity', '=', 'critical')]"/>
+                    <filter name="filter_escalated" string="Escalated"
+                            domain="[('escalated', '=', True)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_severity" string="Severity"
+                                context="{'group_by': 'severity'}"/>
+                        <filter name="group_type" string="Alert Type"
+                                context="{'group_by': 'alert_type'}"/>
+                        <filter name="group_state" string="Status"
+                                context="{'group_by': 'state'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_alert" model="ir.actions.act_window">
+            <field name="name">Alert Center</field>
+            <field name="res_model">fmes.alert</field>
+            <field name="view_mode">list,kanban,form</field>
+            <field name="search_view_id" ref="fmes_alert_view_search"/>
+            <field name="context">{'search_default_filter_new': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No alerts — nothing needs attention right now
+                </p>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Alert Rules (Plant Manager only)                            -->
+        <!-- ============================================================ -->
+        <record id="fmes_alert_rule_view_list" model="ir.ui.view">
+            <field name="name">fmes.alert.rule.list</field>
+            <field name="model">fmes.alert.rule</field>
+            <field name="arch" type="xml">
+                <list string="Alert Rules" decoration-muted="not active">
+                    <field name="name"/>
+                    <field name="alert_type"/>
+                    <field name="scope"/>
+                    <field name="operator"/>
+                    <field name="threshold"/>
+                    <field name="threshold_uom" optional="show"/>
+                    <field name="severity" widget="badge"
+                           decoration-danger="severity == 'critical'"
+                           decoration-warning="severity == 'warning'"/>
+                    <field name="cooldown_minutes" optional="show"/>
+                    <field name="active" optional="hide" widget="boolean_toggle"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_alert_rule_view_form" model="ir.ui.view">
+            <field name="name">fmes.alert.rule.form</field>
+            <field name="model">fmes.alert.rule</field>
+            <field name="arch" type="xml">
+                <form string="Alert Rule">
+                    <sheet>
+                        <widget name="web_ribbon" title="Archived"
+                                bg_color="text-bg-danger" invisible="active"/>
+                        <div class="oe_title">
+                            <h1><field name="name"/></h1>
+                        </div>
+                        <group>
+                            <group string="Condition">
+                                <field name="alert_type"/>
+                                <field name="operator"/>
+                                <field name="threshold"/>
+                                <field name="threshold_uom"/>
+                                <field name="severity"/>
+                                <field name="active"/>
+                            </group>
+                            <group string="Scope">
+                                <field name="scope"/>
+                                <field name="department_ids" widget="many2many_tags"
+                                       invisible="scope != 'department'"/>
+                                <field name="workcenter_ids" widget="many2many_tags"
+                                       invisible="scope != 'workcenter'"/>
+                                <field name="cooldown_minutes"/>
+                            </group>
+                        </group>
+                        <group string="Notification">
+                            <group>
+                                <field name="recipient_group_ids" widget="many2many_tags"/>
+                                <field name="recipient_user_ids" widget="many2many_tags"/>
+                            </group>
+                            <group>
+                                <field name="notify_activity"/>
+                                <field name="notify_discuss"/>
+                                <field name="notify_email"/>
+                                <field name="mail_template_id"
+                                       invisible="not notify_email"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_alert_rule" model="ir.actions.act_window">
+            <field name="name">Alert Rules</field>
+            <field name="res_model">fmes.alert.rule</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Configure an alert rule
+                </p>
+                <p>
+                    A Plant Manager tunes a threshold here — no code change
+                    needed to retime or rescope an alert.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

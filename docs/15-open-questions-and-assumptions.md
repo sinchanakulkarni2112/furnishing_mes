@@ -70,6 +70,8 @@ answer differs from our assumption.
 | Q24 | What **alert thresholds** are meaningful? At what point does a manager want to be told? | Industry defaults (`A28`–`A33`) | Medium — thresholds are tunable records. Wrong ones cause alert fatigue, which is the main reason alert systems get ignored |
 | Q25 | **Who should receive which alerts**, and through which channel — in-app, email, or both? | In-app for all; email for critical only (`A34`) | Low |
 | Q26 | Are there **quiet hours**, or should night-shift alerts reach managers immediately? | Critical alerts always; others queue to 08:00 (`A35`) | Low |
+| Q27 | Is the 08:00 queue boundary meant in **plant-local time**, or is a plain UTC-hour check acceptable? | Plain UTC hour (`res.company` has no timezone field configured); documented as a simplification in `services/alert_engine.py` | Low — a one-line change once the server/company timezone is confirmed |
+| Q28 | Is **30 minutes** the right window before an unacknowledged critical alert escalates to the Plant Manager? Should it vary by alert type? | Flat 30 minutes for every critical alert (`A55`) | Low — a single constant to tune |
 
 ## A.5 — Needed before Phase 12, 13, 15 (Reports, Portal, Deployment)
 
@@ -172,6 +174,7 @@ most likely to need tuning, and the easiest to tune.
 | `A34` | In-app alerts for all; **email for critical only** | Prevents alert fatigue, the main reason alert systems get switched off | `fmes.alert.rule` channels |
 | `A35` | Critical alerts sent immediately at any hour; others queue to **08:00** | Respects night shift without suppressing genuine emergencies | Alert rule |
 | `A45` | Alert **cooldown 60 minutes** per rule per subject | Prevents one stuck machine generating a hundred alerts | `fmes.alert.rule.cooldown_minutes` |
+| `A55` | A **critical** alert unacknowledged for **30 minutes** escalates directly to the Plant Manager | Long enough that a supervisor mid-task is not paged for every critical alert, short enough that a genuinely stuck one does not sit all shift | `fmes.alert.engine.ESCALATION_WINDOW_MINUTES` |
 | `A26` | An order is **delayed** when past `date_deadline`, with no internal buffer | The strictest reading; a buffer can be added but not retroactively removed | Backlog service |
 | `A27` | Blocking reasons: material · machine · manpower · quality · customer hold · other | Covers the standard causes | `fmes.backlog.snapshot.block_reason` |
 

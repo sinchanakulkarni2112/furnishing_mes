@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Event-based alert triggers (Requirement 10, deliverable 3): a
+            breakdown, a material-shortage stoppage, or a newly-blocked
+            order should not wait for the next 15-minute cron tick. Each
+            server action just hands the record(s) to fmes.alert.engine,
+            which still applies scope/cooldown/dedup exactly the same way
+            the cron-evaluated rules do — base_automation only decides WHEN
+            to call in, never whether an alert is actually warranted.
+        -->
+
+        <record id="alert_action_machine_breakdown" model="ir.actions.server">
+            <field name="name">Furnishing MES: raise machine breakdown alerts</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="state">code</field>
+            <field name="code">env['fmes.alert.engine']._on_event(records, 'machine_breakdown')</field>
+        </record>
+
+        <record id="alert_automation_machine_breakdown" model="base.automation">
+            <field name="name">Furnishing MES: machine breakdown alert</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="trigger">on_create</field>
+            <field name="filter_domain">[('fmes_maintenance_request_id', '!=', False)]</field>
+            <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_machine_breakdown')])]"/>
+        </record>
+
+        <record id="alert_action_material_shortage" model="ir.actions.server">
+            <field name="name">Furnishing MES: raise material shortage alerts</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="state">code</field>
+            <field name="code">env['fmes.alert.engine']._on_event(records, 'material_shortage')</field>
+        </record>
+
+        <record id="alert_automation_material_shortage" model="base.automation">
+            <field name="name">Furnishing MES: material shortage alert</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="trigger">on_create</field>
+            <field name="filter_domain">[('fmes_category', '=', 'material_shortage')]</field>
+            <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_material_shortage')])]"/>
+        </record>
+
+        <record id="alert_action_blocked_order" model="ir.actions.server">
+            <field name="name">Furnishing MES: raise blocked-order alerts</field>
+            <field name="model_id" ref="mrp.model_mrp_production"/>
+            <field name="state">code</field>
+            <field name="code">env['fmes.alert.engine']._on_event(records, 'critical_backlog')</field>
+        </record>
+
+        <record id="alert_automation_blocked_order" model="base.automation">
+            <field name="name">Furnishing MES: blocked order alert</field>
+            <field name="model_id" ref="mrp.model_mrp_production"/>
+            <field name="trigger">on_create_or_write</field>
+            <field name="filter_domain">[('fmes_block_reason', '!=', False)]</field>
+            <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_blocked_order')])]"/>
+        </record>
+
+    </data>
+</odoo>

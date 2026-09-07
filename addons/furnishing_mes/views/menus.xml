@@ -97,7 +97,21 @@
         <menuitem id="menu_fmes_alerts"
                   name="Alerts"
                   parent="menu_fmes_root"
-                  sequence="80"/>
+                  sequence="80"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_alert_center"
+                  name="Alert Center"
+                  parent="menu_fmes_alerts"
+                  action="action_fmes_alert"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_alert_rules"
+                  name="Alert Rules"
+                  parent="menu_fmes_alerts"
+                  action="action_fmes_alert_rule"
+                  sequence="20"
+                  groups="furnishing_mes.group_fmes_manager"/>
 
         <!-- Reports — Phase 12 -->
         <menuitem id="menu_fmes_reports"

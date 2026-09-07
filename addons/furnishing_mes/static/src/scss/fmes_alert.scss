@@ -1,0 +1,31 @@
+// Alert Center (Requirement 10): systray badge and kanban severity accents.
+
+.o_fmes_alert_systray_btn {
+    position: relative;
+
+    .o_fmes_alert_badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        font-size: 10px;
+        line-height: 1;
+        padding: 3px 5px;
+    }
+}
+
+.fmes-alert-card {
+    border-left: 3px solid transparent;
+    padding-left: 8px;
+
+    &.fmes-alert-critical {
+        border-left-color: var(--bs-danger, #dc3545);
+    }
+
+    &.fmes-alert-warning {
+        border-left-color: var(--bs-warning, #f0ad4e);
+    }
+
+    &.fmes-alert-info {
+        border-left-color: var(--bs-info, #3498db);
+    }
+}

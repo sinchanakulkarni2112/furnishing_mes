@@ -122,13 +122,25 @@ action) backed by SQL-view report models.
 | Order backlog analysis | `fmes.backlog.snapshot` |
 | Maintenance performance | `fmes.maintenance.report` |
 
-## R10 — Alerts & Notifications
+## R10 — Alerts & Notifications ✅ (Phase 11)
 
-Phase 11. A single rule engine, `fmes.alert.rule`, with these seeded types:
+A single rule engine, `fmes.alert.rule` (evaluated by
+`services/alert_engine.py`), with these seeded types:
 `machine_breakdown` · `excess_downtime` · `target_not_achieved` ·
-`maintenance_due` · `material_shortage` · `critical_backlog` · `delayed_order`.
+`maintenance_due` · `material_shortage` · `critical_backlog` · `delayed_order`
+— nine default rules total (two types are each seeded as a pair of rules
+sharing one `alert_type`, expressing an "or" threshold condition).
 
-Channels: in-app activity, Odoo Discuss message, and email via `mail.template`.
+Channels: in-app activity, Odoo Discuss message, and email via `mail.template`
+(one reusable, severity-styled template — email fires for critical severity
+only, per assumption `A34`). Threshold types are evaluated by the
+`fmes_evaluate_alerts` cron every 15 minutes; the breakdown, material-shortage
+and blocked-order conditions fire immediately via `base_automation`. Repeated
+conditions are suppressed by an open-alert check plus a per-rule cooldown
+(`A45`); an unacknowledged critical alert escalates to the Plant Manager after
+30 minutes (`A55`). Alert Center (list/kanban by severity, acknowledge/resolve,
+systray unread counter) and Alert Rules (Plant Manager only) are both native
+Odoo views, no separate frontend.
 
 ## R11 — ERP 10.8 Integration
 

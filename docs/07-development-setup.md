@@ -301,5 +301,6 @@ docker compose run --rm web odoo -d furnishing_mes -i furnishing_mes --stop-afte
 | `Address already in use: 8069` when running odoo | Used `docker compose exec`, which shares the running server's port | Use `docker compose run --rm web odoo ...` — this is what the Makefile does |
 | `connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed` | `exec` bypasses the image entrypoint, so the `--db_*` arguments are never built | Use `run --rm`. The `PG*` variables in `docker-compose.yml` also cover the `exec` case |
 | `docker-credential-desktop: executable file not found` | Docker Desktop's bin directory is not on Git Bash's PATH | Run docker commands from PowerShell, or add `C:\Program Files\Docker\Docker\resources\bin` to PATH |
+| `--test-tags /furnishing_mes` silently runs 0 tests, or logs `Invalid tag C:/Program Files/Git/furnishing_mes` | Git Bash's MSYS layer rewrites a bare leading `/` into a Windows path | Prefix the command with `MSYS_NO_PATHCONV=1`, e.g. `MSYS_NO_PATHCONV=1 make test` |
 esources\bin` to PATH |
 | `Cannot connect to the Docker daemon` | Docker Desktop is not running | Start Docker Desktop and wait for the whale icon to settle |

@@ -57,5 +57,17 @@
                    eval="(DateTime.now().replace(hour=23, minute=30, second=0) + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
         </record>
 
+        <record id="cron_fmes_evaluate_alerts" model="ir.cron">
+            <field name="name">Furnishing MES: evaluate alert rules</field>
+            <field name="model_id" ref="model_fmes_alert_engine"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_evaluate_alerts()</field>
+            <field name="interval_number">15</field>
+            <field name="interval_type">minutes</field>
+            <field name="active" eval="True"/>
+            <field name="nextcall"
+                   eval="(DateTime.now() + timedelta(minutes=15)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        </record>
+
     </data>
 </odoo>

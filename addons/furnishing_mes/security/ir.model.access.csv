@@ -46,3 +46,7 @@ access_fmes_backlog_snapshot_supervisor,fmes.backlog.snapshot.supervisor,model_f
 access_fmes_backlog_snapshot_manager,fmes.backlog.snapshot.manager,model_fmes_backlog_snapshot,furnishing_mes.group_fmes_manager,1,0,0,0
 access_fmes_production_report_supervisor,fmes.production.report.supervisor,model_fmes_production_report,furnishing_mes.group_fmes_supervisor,1,0,0,0
 access_fmes_production_report_manager,fmes.production.report.manager,model_fmes_production_report,furnishing_mes.group_fmes_manager,1,0,0,0
+access_fmes_alert_rule_supervisor,fmes.alert.rule.supervisor,model_fmes_alert_rule,furnishing_mes.group_fmes_supervisor,1,0,0,0
+access_fmes_alert_rule_manager,fmes.alert.rule.manager,model_fmes_alert_rule,furnishing_mes.group_fmes_manager,1,1,1,1
+access_fmes_alert_supervisor,fmes.alert.supervisor,model_fmes_alert,furnishing_mes.group_fmes_supervisor,1,1,0,0
+access_fmes_alert_manager,fmes.alert.manager,model_fmes_alert,furnishing_mes.group_fmes_manager,1,1,1,1

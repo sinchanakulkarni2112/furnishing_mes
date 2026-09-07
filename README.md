@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 10 of 15 — Analytics & dashboards ✅ |
-| **Next** | Phase 11 — Alerts & notifications |
-| **Module version** | `18.0.10.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 347 tests passing · no install warnings · Executive Dashboard server-side aggregation measured at 1.83s against a 100k-row dataset |
+| **Phase** | 11 of 15 — Alerts & notifications ✅ |
+| **Next** | Phase 12 — Reporting suite |
+| **Module version** | `18.0.11.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 374 tests passing · no install warnings · rule-driven alert engine covering all 7 required alert types, with cooldown, escalation and event-based (`base_automation`) triggers verified end-to-end |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

@@ -352,5 +352,23 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
 
+        <record id="fmes_alert_rule_company_rule" model="ir.rule">
+            <field name="name">Alert Rule: multi-company</field>
+            <field name="model_id" ref="model_fmes_alert_rule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_alert_company_rule" model="ir.rule">
+            <field name="name">Alert: multi-company</field>
+            <field name="model_id" ref="model_fmes_alert"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
     </data>
 </odoo>
