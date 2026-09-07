@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 8 of 15 — Manpower & resource management ✅ |
-| **Next** | Phase 9 — Backlog & carry-forward |
-| **Module version** | `18.0.8.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 297 tests passing · no install warnings |
+| **Phase** | 9 of 15 — Backlog & carry-forward ✅ |
+| **Next** | Phase 10 — Analytics & dashboards |
+| **Module version** | `18.0.9.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 327 tests passing · no install warnings |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

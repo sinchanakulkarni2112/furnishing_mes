@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Order blocking (Requirement 4.4). -->
+        <record id="mrp_production_form_view_fmes" model="ir.ui.view">
+            <field name="name">mrp.production.form.fmes</field>
+            <field name="model">mrp.production</field>
+            <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[hasclass('oe_button_box')]" position="after">
+                    <widget name="web_ribbon" title="Blocked" bg_color="text-bg-danger"
+                            invisible="not fmes_is_blocked"/>
+                    <group string="Blocking" name="fmes_blocking"
+                           groups="furnishing_mes.group_fmes_supervisor">
+                        <field name="fmes_is_blocked" invisible="1"/>
+                        <field name="fmes_block_reason"/>
+                        <field name="fmes_block_note"
+                               invisible="not fmes_block_reason"/>
+                        <field name="fmes_blocked_by" readonly="1"
+                               invisible="not fmes_block_reason"/>
+                        <field name="fmes_blocked_on" readonly="1"
+                               invisible="not fmes_block_reason"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="mrp_production_tree_view_fmes" model="ir.ui.view">
+            <field name="name">mrp.production.list.fmes</field>
+            <field name="model">mrp.production</field>
+            <field name="inherit_id" ref="mrp.mrp_production_tree_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//list" position="attributes">
+                    <attribute name="decoration-danger">fmes_is_blocked</attribute>
+                </xpath>
+                <xpath expr="//field[@name='state']" position="before">
+                    <field name="fmes_is_blocked" optional="show"/>
+                    <field name="fmes_block_reason" optional="show"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="mrp_production_search_view_fmes" model="ir.ui.view">
+            <field name="name">mrp.production.search.fmes</field>
+            <field name="model">mrp.production</field>
+            <field name="inherit_id" ref="mrp.view_mrp_production_filter"/>
+            <field name="arch" type="xml">
+                <xpath expr="//filter[@name='activities_exception']" position="after">
+                    <separator/>
+                    <filter name="fmes_filter_blocked" string="Blocked"
+                            domain="[('fmes_is_blocked', '=', True)]"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="action_fmes_blocked_orders" model="ir.actions.act_window">
+            <field name="name">Blocked Orders</field>
+            <field name="res_model">mrp.production</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('fmes_is_blocked', '=', True)]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No orders are currently blocked
+                </p>
+                <p>
+                    A blocked order is excluded from the planning engine's
+                    auto-scheduling until the block is cleared.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

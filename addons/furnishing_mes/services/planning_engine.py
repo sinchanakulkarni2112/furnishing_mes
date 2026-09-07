@@ -90,6 +90,32 @@ class FmesPlanningEngine(models.AbstractModel):
         return plan
 
     # ==================================================================
+    # Carry-forward cron (Requirement 4.3, deliverable 5)
+    # ==================================================================
+    @api.model
+    def _cron_generate_carry_forward_plan(self):
+        """Nightly: generate tomorrow's plan automatically.
+
+        `generate()` already rolls unfinished released plan lines into
+        whatever plan it builds (`_collect_carry_forward`, `source=
+        'carry_forward'`) — that has been true since Phase 3. What was
+        missing was something to CALL it every day; until now a supervisor
+        had to click "Generate Plan" for yesterday's shortfall to reappear
+        at all. Idempotent: skips if an auto-generated plan already covers
+        tomorrow, so a supervisor who already generated it by hand is not
+        given a second, overlapping one.
+        """
+        tomorrow = fields.Date.context_today(self) + timedelta(days=1)
+        existing = self.env['fmes.production.plan'].search([
+            ('date_from', '=', tomorrow), ('date_to', '=', tomorrow),
+            ('generated_by', '=', 'auto'),
+            ('state', '!=', 'cancelled'),
+        ], limit=1)
+        if existing:
+            return existing
+        return self.generate(tomorrow, tomorrow, plan_type='daily')
+
+    # ==================================================================
     # Step 1 — demand
     # ==================================================================
     @api.model
@@ -140,6 +166,12 @@ class FmesPlanningEngine(models.AbstractModel):
         means. Without operations there is nothing to say which machine should
         run the order, so the engine picks from the capacity matrix.
         """
+        if production.fmes_is_blocked:
+            # Requirement 4.2: a blocked order has no capacity to plan
+            # against yet — offering it a slot would just produce a plan
+            # the plant cannot act on until the block is cleared.
+            return []
+
         remaining = production.product_qty - production.qty_produced
         if remaining <= 0:
             return []

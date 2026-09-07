@@ -302,5 +302,30 @@
             </field>
         </record>
 
+        <record id="fmes_backlog_snapshot_company_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: multi-company</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_manager_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
     </data>
 </odoo>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.8.0.0',
+    'version': '18.0.9.0.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -85,6 +85,8 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'views/fmes_manpower_log_views.xml',
         'views/fmes_operator_allocation_views.xml',
         'views/fmes_manpower_impact_report_views.xml',
+        'views/mrp_production_views.xml',
+        'views/fmes_backlog_snapshot_views.xml',
         'views/menus.xml',
     ],
 

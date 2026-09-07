@@ -49,12 +49,12 @@ completeness at handover.
 
 | # | Requirement | Approach | Artefact | Phase |
 |---|---|---|---|---|
-| 4.1 | Track pending production orders | NEW | `fmes.backlog.snapshot` (status `pending`) | 9 |
-| 4.2 | Track blocked orders | NEW | `block_reason` + status `blocked` | 9 |
-| 4.3 | Carry-forward order reports | NEW | Carry-forward cron + `source='carry_forward'` plan lines | 9, 12 |
-| 4.4 | Identify delayed orders | NEW | `days_delayed` computed against `date_deadline` | 9 |
-| 4.5 | Monitor order completion status | REUSE | `mrp.production.state` + progress % | 9 |
-| 4.6 | Backlog quantity and trends | NEW | Nightly snapshots to time-series graph view | 9, 10 |
+| 4.1 | Track pending production orders | NEW | `fmes.backlog.snapshot` (status `pending`) | 9 ✅ |
+| 4.2 | Track blocked orders | NEW | `block_reason` + status `blocked` | 9 ✅ |
+| 4.3 | Carry-forward order reports | NEW | Carry-forward cron + `source='carry_forward'` plan lines | 9 ✅, 12 |
+| 4.4 | Identify delayed orders | NEW | `days_delayed` computed against `date_deadline` | 9 ✅ |
+| 4.5 | Monitor order completion status | REUSE | `mrp.production.state` + progress % | 9 ✅ |
+| 4.6 | Backlog quantity and trends | NEW | Nightly snapshots to time-series graph view | 9 ✅, 10 |
 
 ## R5 — Machine Utilisation Monitoring
 

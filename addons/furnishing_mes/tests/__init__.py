@@ -8,3 +8,4 @@ from . import test_downtime
 from . import test_utilization
 from . import test_maintenance
 from . import test_manpower
+from . import test_backlog

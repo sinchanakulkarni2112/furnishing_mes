@@ -870,90 +870,7 @@ join strategy does not automatically respect.
 
 ### Next
 
-Phase 9 - Backlog & Carry-Forward.
-
----
-
-## Phase 8 — Manpower & Resource Management
-*Completed 2026-09-07 - module version `18.0.8.0.0`*
-
-### Delivered
-
-`fmes.manpower.log` (standard vs actual headcount, absence, overtime,
-shortage/shortage_pct/utilization_pct — the same sum-then-divide standard-
-vs-actual maths as everywhere else, D0.7) and `fmes.operator.allocation`
-(the daily roster, unique per employee/shift/day, with a "Copy to Next Week"
-bulk action); `res.users.fmes_allowed_workcenter_ids` now reads today's
-roster FIRST, falling back to the permanent assignment and then the
-department-wide default in that order; `fmes.planning.engine.
-_get_manpower_factor` replaced its Phase-3 placeholder with a real
-roster-vs-standard derating, floored the same way `_get_availability_factor`
-already is; and `fmes.manpower.impact.report`, the date x shift x department
-view putting shortage % and achievement % side by side.
-
-### Verified, not assumed
-
-- **297 tests, 0 failed, 0 errors**
-- Clean install on the dev database and a fresh `--without-demo=all`
-  database, both zero warnings; module version confirmed `18.0.8.0.0` in
-  `ir_module_module` on both
-- End-to-end on the demo plant: Panel Saw 01 fully staffed today (2 of its
-  standard 2) read a manpower factor of `1.0`; rostering only one of the two
-  for tomorrow dropped it to `0.5` — and generating tomorrow's plan actually
-  used it, landing the saw's line at `3.75` planned hours, exactly half its
-  normal 7.5-hour capacity, not just an isolated factor calculation. An
-  operator linked to that roster read zero allowed machines before being
-  rostered and exactly the rostered machine once added.
-
-### Decisions
-
-**D8.1 - Assumption `A49` had already been used once, and Phase 6 silently
-duplicated it.** `A49` originally named the exact placeholder this phase
-resolves (`_get_manpower_factor` returning a flat `1.0` "until Phase 8").
-Phase 6 assigned `A49` a SECOND time, to the unrelated bottleneck-suggestion
-threshold, without the collision being noticed — the check at the time was a
-`grep` for the ID pattern piped through `sort -u`, which DOES dedupe
-identical strings but does not flag two DIFFERENT rows that happen to share
-an ID; the two entries sat far enough apart in an eighty-plus-row document
-that a visual scan of the sorted list missed it too. Found only because this
-phase needed to read the ORIGINAL `A49` and discovered a second row under
-the same heading. Fixed by renumbering the Phase 6 entry to `A52` (the next
-free id) and leaving the original in place, since resolving it is literally
-what this phase does.
-
-*Generalisable:* **grep the exact assumption ID string before assigning a
-new one** (`grep -n 'A49' docs/15-...md`), not just a sorted listing of all
-IDs — a sorted list surfaces gaps, not collisions, and a collision is the
-more dangerous of the two (two DIFFERENT things silently sharing one
-citation, rather than a missing one).
-
-**D8.2 - Department-scoped supervisor rules, promised since Phase 1, needed
-a genuine Python conditional in `domain_force`, not a domain clause.**
-`res.users.fmes_department_ids`'s own help text has always said "leave empty
-for all" — so the rule cannot be a static domain; it has to read as "if this
-user's own department list is empty, see everything, else restrict to it."
-Written as `[(...)] if user.fmes_department_ids else [(1,'=',1)]` — a full
-Python conditional EXPRESSION evaluating to one of two domain lists, which
-`ir.rule.domain_force`'s own `safe_eval` supports and is a more readable
-answer than trying to fold the same logic into a single OR'd domain. The
-same D5.3 cumulative-hierarchy pattern applies one level up here too: without
-an explicit unrestricted rule for `group_fmes_manager` on both new models, a
-Plant Manager with no personal `fmes_department_ids` set would be caught by
-the supervisor's own department-scoped rule, exactly the way an unscoped
-Supervisor rule once caught Operators. Scoped to this phase's own two new
-models only — retrofitting the same pattern onto `fmes.production.entry`,
-`mrp.workcenter.productivity` and the plan/plan-line pair is real, useful
-work, but a separate exercise, not something to fold into this commit
-unannounced.
-
-**D8.3 - Two Odoo-18-specific view/field validation errors, both caught by
-the install itself.** `tracking=True` is not a valid parameter on a
-`Selection` field on a model that does not inherit `mail.thread` — Odoo
-warns rather than fails, but it is dead configuration, so it was removed
-rather than left as noise (`fmes.operator.allocation` has no chatter).
-`quick_add` is not a valid attribute on `<calendar>` in Odoo 18's view
-schema — this one DOES fail the install (a RelaxNG validation error), caught
-immediately on the first `-u` run.
+Phase 8 - Manpower & Resource Management.
 
 ---
 
@@ -1048,6 +965,190 @@ entry's own frozen figures — a snapshot taken once, at generation, never
 touched again. `fmes.maintenance.report` also needed its own `has_pm_due`
 boolean, the same null-handling pattern `has_target` established in Phase 4:
 a month with no PM due for a machine reads as "—", not a misleading 0%.
+
+### Next
+
+Phase 8 - Manpower & Resource Management.
+
+---
+
+## Phase 8 — Manpower & Resource Management
+*Completed 2026-09-07 - module version `18.0.8.0.0`*
+
+### Delivered
+
+`fmes.manpower.log` (standard vs actual headcount, absence, overtime,
+shortage/shortage_pct/utilization_pct — the same sum-then-divide standard-
+vs-actual maths as everywhere else, D0.7) and `fmes.operator.allocation`
+(the daily roster, unique per employee/shift/day, with a "Copy to Next Week"
+bulk action); `res.users.fmes_allowed_workcenter_ids` now reads today's
+roster FIRST, falling back to the permanent assignment and then the
+department-wide default in that order; `fmes.planning.engine.
+_get_manpower_factor` replaced its Phase-3 placeholder with a real
+roster-vs-standard derating, floored the same way `_get_availability_factor`
+already is; and `fmes.manpower.impact.report`, the date x shift x department
+view putting shortage % and achievement % side by side.
+
+### Verified, not assumed
+
+- **297 tests, 0 failed, 0 errors**
+- Clean install on the dev database and a fresh `--without-demo=all`
+  database, both zero warnings; module version confirmed `18.0.8.0.0` in
+  `ir_module_module` on both
+- End-to-end on the demo plant: Panel Saw 01 fully staffed today (2 of its
+  standard 2) read a manpower factor of `1.0`; rostering only one of the two
+  for tomorrow dropped it to `0.5` — and generating tomorrow's plan actually
+  used it, landing the saw's line at `3.75` planned hours, exactly half its
+  normal 7.5-hour capacity, not just an isolated factor calculation. An
+  operator linked to that roster read zero allowed machines before being
+  rostered and exactly the rostered machine once added.
+
+### Decisions
+
+**D8.1 - Assumption `A49` had already been used once, and Phase 6 silently
+duplicated it.** `A49` originally named the exact placeholder this phase
+resolves (`_get_manpower_factor` returning a flat `1.0` "until Phase 8").
+Phase 6 assigned `A49` a SECOND time, to the unrelated bottleneck-suggestion
+threshold, without the collision being noticed — the check at the time was a
+`grep` for the ID pattern piped through `sort -u`, which DOES dedupe
+identical strings but does not flag two DIFFERENT rows that happen to share
+an ID; the two entries sat far enough apart in an eighty-plus-row document
+that a visual scan of the sorted list missed it too. Found only because this
+phase needed to read the ORIGINAL `A49` and discovered a second row under
+the same heading. Fixed by renumbering the Phase 6 entry to `A52` (the next
+free id) and leaving the original in place, since resolving it is literally
+what this phase does.
+
+*Generalisable:* **grep the exact assumption ID string before assigning a
+new one** (`grep -n 'A49' docs/15-...md`), not just a sorted listing of all
+IDs — a sorted list surfaces gaps, not collisions, and a collision is the
+more dangerous of the two (two DIFFERENT things silently sharing one
+citation, rather than a missing one).
+
+**D8.2 - Department-scoped supervisor rules, promised since Phase 1, needed
+a genuine Python conditional in `domain_force`, not a domain clause.**
+`res.users.fmes_department_ids`'s own help text has always said "leave empty
+for all" — so the rule cannot be a static domain; it has to read as "if this
+user's own department list is empty, see everything, else restrict to it."
+Written as `[(...)] if user.fmes_department_ids else [(1,'=',1)]` — a full
+Python conditional EXPRESSION evaluating to one of two domain lists, which
+`ir.rule.domain_force`'s own `safe_eval` supports and is a more readable
+answer than trying to fold the same logic into a single OR'd domain. The
+same D5.3 cumulative-hierarchy pattern applies one level up here too: without
+an explicit unrestricted rule for `group_fmes_manager` on both new models, a
+Plant Manager with no personal `fmes_department_ids` set would be caught by
+the supervisor's own department-scoped rule, exactly the way an unscoped
+Supervisor rule once caught Operators. Scoped to this phase's own two new
+models only — retrofitting the same pattern onto `fmes.production.entry`,
+`mrp.workcenter.productivity` and the plan/plan-line pair is real, useful
+work, but a separate exercise, not something to fold into this commit
+unannounced.
+
+**D8.3 - Two Odoo-18-specific view/field validation errors, both caught by
+the install itself.** `tracking=True` is not a valid parameter on a
+`Selection` field on a model that does not inherit `mail.thread` — Odoo
+warns rather than fails, but it is dead configuration, so it was removed
+rather than left as noise (`fmes.operator.allocation` has no chatter).
+`quick_add` is not a valid attribute on `<calendar>` in Odoo 18's view
+schema — this one DOES fail the install (a RelaxNG validation error), caught
+immediately on the first `-u` run.
+
+### Next
+
+Phase 10 - Analytics & Dashboards.
+
+---
+
+## Phase 9 — Backlog & Carry-Forward
+*Completed 2026-09-07 - module version `18.0.9.0.0`*
+
+### Delivered
+
+`mrp.production` extended with `fmes_block_reason`/`fmes_block_note` (a
+supervisor-only, field-level-gated pair) and a computed `fmes_is_blocked`,
+which `_demands_for_production` now checks first and excludes entirely;
+`fmes.backlog.snapshot`, a plain (non-computed) stored model written once a
+night by `fmes.backlog.service` from two sources — every open `mrp.
+production` and any confirmed sale-order line not yet covered by one,
+mirroring the exact same "covered" dedup `_collect_sale_order_demand`
+already used; and `fmes.planning.engine._cron_generate_carry_forward_plan`,
+a thin, idempotent nightly wrapper around the carry-forward `generate()`
+already built in Phase 3.
+
+### Verified, not assumed
+
+- **327 tests, 0 failed, 0 errors**
+- Clean install on the dev database and a fresh `--without-demo=all`
+  database, both zero warnings; module version confirmed `18.0.9.0.0` in
+  `ir_module_module` on both
+- End-to-end on the demo plant: three fresh orders (on-track, two days late,
+  and one marked blocked) each produced exactly one snapshot row on the
+  first cron run, and re-running it immediately after left the row count
+  unchanged. The blocked order's own demand came back genuinely empty from
+  the planning engine, not just labelled blocked in a report. The
+  carry-forward cron created tomorrow's plan on first call and returned the
+  *same* plan object on a second call rather than a duplicate.
+
+### Decisions
+
+**D9.1 - Carry-forward itself was not new work here — only something to
+call it automatically was missing.** `generate()` has rolled unfinished
+released plan lines into whatever plan it builds since Phase 3
+(`_collect_carry_forward`, `source='carry_forward'`), already tested there.
+Phase 9's own cron is a thin wrapper: skip if an auto-generated plan already
+covers tomorrow, else call `generate()` for it. Worth stating plainly
+because it would be easy to mistake this phase for having reimplemented
+carry-forward, when the actual gap being closed was purely "nobody was
+calling this automatically yet."
+
+**D9.2 - Assumption A32's two criticality clauses ("> 15 days aged, or an
+order > 7 days past deadline") are genuinely two different measures, not
+one restated twice, and only one of them is a live field.** Read against a
+single "age" concept the two clauses collapse into one (deadline-lateness
+would always fire the tighter 7-day threshold first, making 15 days
+unreachable). Implemented as intended: "aged in the backlog" is tracked
+independently of the order's own deadline, by looking up each production
+order's OWN earliest snapshot_date across all its prior nightly rows — a
+large order sitting unstarted for weeks now flags as critical even while its
+deadline is still comfortably in the future, which is the entire point of a
+SECOND criterion existing at all. Only meaningful for production-order-backed
+rows, which carry a stable `production_id` to key the lookup on; a
+sale-order-line row with no manufacturing order yet has no such key, so its
+own criticality is judged on lateness alone — a documented, deliberate
+narrowing, not an oversight.
+
+**D9.3 - Every derived field on `fmes.backlog.snapshot` is a plain field,
+never `@api.depends`, and this needed saying explicitly in the model's own
+docstring.** Every other read model in this project (utilization, downtime,
+maintenance, manpower-impact reports) computes its figures live, by design —
+they are windows onto CURRENT data. A backlog snapshot is the opposite: its
+entire purpose is being a trustworthy PAST record. A live compute reading
+`fields.Date.context_today()` would silently rewrite a two-week-old row's own
+`days_delayed` every time anyone opened it after today moved on, which would
+make the word "history" in this model's own description a lie. Written up
+explicitly because "this compute should obviously be live" is the reflex
+this whole codebase has trained, correctly, in every OTHER report — this is
+the one deliberate exception, not a rule ready to imitate elsewhere.
+
+**D9.4 - `__count` is not a declarable field in a pivot/graph view.** Odoo
+adds it as an available measure automatically; writing `<field name=
+"__count" type="measure"/>` in the arch fails view validation outright
+("Field `__count` does not exist in model..."), caught on the very first
+install attempt rather than by inspection.
+
+**D9.5 - A structural bug in this file, found and fixed while writing this
+entry: Phase 8's own section had been spliced in BEFORE Phase 7's, not
+after, breaking the chronological order every earlier phase relied on.**
+Traced to the Phase 8 session locating its insertion point by matching the
+literal text of the `### Next` stub rather than confirming which phase's
+content it actually followed — the stub it found still read "Phase 8" but
+was sitting after Phase 6, not after Phase 7, because Phase 7's OWN
+`### Next` stub had been consumed without a fresh one being left in its
+place. Fixed here by moving Phase 8's entire section to after Phase 7's and
+restoring a proper stub chain. *Generalisable: when replacing a `### Next`
+stub, verify by section HEADER what precedes it, not just that the stub
+text names the expected next phase — a stub can be textually correct and
+still be sitting in the wrong place.*
 
 ---
 
@@ -1190,3 +1291,10 @@ a month with no PM due for a machine reads as "—", not a misleading 0%.
   `shreyassridhar44`, which has no write access and returns 403. The
   `github-sinchan` alias uses `~/.ssh/github-sinchan` and authenticates as the
   repository owner.
+- **When replacing a `### Next` stub in this file, verify by section HEADER
+  what precedes it, not just that the stub's own text names the right next
+  phase.** A stub can be textually correct ("Phase 8...") while sitting in
+  the wrong place, if an earlier phase's own trailing stub was consumed
+  without a fresh one left behind — this happened once (Phase 8 spliced in
+  before Phase 7, silently, for exactly this reason) and was only caught
+  while writing up Phase 9.

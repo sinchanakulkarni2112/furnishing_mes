@@ -446,6 +446,10 @@ class FmesProductionPlanLine(models.Model):
     production_id = fields.Many2one(
         'mrp.production', string='Manufacturing Order', index=True,
         ondelete='set null')
+    fmes_is_blocked = fields.Boolean(
+        related='production_id.fmes_is_blocked', store=True, readonly=True,
+        help="True when the source order is blocked (Requirement 4.2). "
+             "False, not unknown, for a line with no source order.")
     workorder_id = fields.Many2one(
         'mrp.workorder', string='Work Order', index=True,
         ondelete='set null')

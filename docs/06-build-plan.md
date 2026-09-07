@@ -660,7 +660,9 @@ plant that has not started rostering a given day yet.
 
 ---
 
-## Phase 9 — Backlog & Carry-Forward
+## Phase 9 — Backlog & Carry-Forward ✅
+
+*Completed 2026-09-07 · module version `18.0.9.0.0`*
 
 **Goal.** Requirement 4.
 
@@ -680,9 +682,58 @@ plant that has not started rostering a given day yet.
 8. Tests: snapshot idempotency, classification boundaries, carry-forward
    quantity conservation (nothing lost or duplicated)
 
-**Exit criteria**
-- Backlog quantity and trend for the last 30 days is available without manual work
-- Yesterday's shortfall appears in today's plan automatically
+**Exit criteria — all met**
+
+| Criterion | Result |
+|---|---|
+| Backlog quantity and trend for the last 30 days is available without manual work | ✅ `fmes.backlog.snapshot` written nightly by `fmes.backlog.service`, pivot/graph over `snapshot_date`, ageing-bucket search filters |
+| Yesterday's shortfall appears in today's plan automatically | ✅ `fmes.planning.engine._cron_generate_carry_forward_plan` — a nightly wrapper around the carry-forward `generate()` already built in Phase 3, so a supervisor no longer has to click Generate Plan for it to happen |
+| Tests pass | ✅ 327 tests, 0 failed, 0 errors |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+End-to-end: three fresh orders (on-track, two days late, and one marked
+blocked for a material reason) all produced exactly one snapshot row each on
+the first run, and re-running the cron immediately after left the row count
+unchanged. The blocked order's own demand came back empty from the planning
+engine — genuinely excluded, not just labelled. The carry-forward cron
+created tomorrow's plan on its first run and returned the *same* plan object
+on a second run rather than a duplicate.
+
+**Deviations and findings**
+
+1. **Carry-forward itself already existed, from Phase 3.** `generate()` has
+   rolled unfinished released plan lines into whatever plan it builds since
+   the planning engine was first written (`_collect_carry_forward`, `source=
+   'carry_forward'`) — nothing about the mechanism was new here. What Phase 9
+   actually adds is the missing piece: something to call it automatically,
+   every night, instead of a supervisor needing to open "Generate Plan" for
+   yesterday's shortfall to reappear at all. The cron is a thin, idempotent
+   wrapper (skips if an auto plan already covers tomorrow) around a mechanism
+   that was already correct and already tested.
+2. **`is_critical`'s two conditions in assumption A32 ("> 15 days aged, or
+   an order > 7 days past deadline") are genuinely two different measures,
+   not one restated twice.** Read naively they overlap (a deadline-derived
+   "age" would make the tighter 7-day clause always fire first). Implemented
+   as intended by tracking each production order's own first-seen snapshot
+   date and measuring backlog age independently of its deadline — a large
+   order sitting unstarted for weeks is flagged even while its own deadline
+   is still comfortably in the future, which is the whole point of a
+   *second*, distinct criterion. Only tracked for production-order-backed
+   rows, which carry a stable `production_id` to look up prior nights by; a
+   sale-order-line row with no manufacturing order yet has no such key, so
+   its criticality is judged on lateness alone.
+3. **Every derived field on the snapshot model is a plain, non-computed
+   field, set once by the service at write time — deliberately, not an
+   oversight.** An `@api.depends` compute reading `fields.Date.context_today
+   ()` would silently rewrite a two-week-old row's own `days_delayed` every
+   time anyone opened it, defeating the entire point of keeping dated
+   history. Documented directly on the model, since it is the kind of
+   "obviously a compute" pattern every other report in this module uses,
+   made deliberately different here for a specific reason.
+4. `__count` is not a real, declarable field in a pivot/graph view's XML —
+   Odoo offers it as a measure automatically; declaring `<field name=
+   "__count" type="measure"/>` fails view validation outright (caught on
+   install, not by inspection).
 
 **Commit.** `feat(backlog): add backlog snapshots, blocking workflow and carry-forward automation`
 

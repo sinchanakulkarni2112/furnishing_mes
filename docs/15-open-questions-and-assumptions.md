@@ -166,6 +166,7 @@ most likely to need tuning, and the easiest to tune.
 | `A50` | Equipment **health score** (0-100) = 100 minus an MTBF-shortfall penalty (weight 30) minus overdue-PM penalty (10/PM, capped 30) minus 90-day breakdown-frequency penalty (8/event, capped 40) | A defensible, capped composite so no single factor can sink the score alone; matches the plant's own 90-day historical window used elsewhere (`A10`) | `maintenance.equipment.fmes_health_score` |
 | `A31` | **Excess downtime** alert at > 60 min unplanned in one shift, or > 10 % of shift time | Roughly one-eighth of a shift — material enough to warrant a look | Alert rule |
 | `A32` | **Critical backlog** at > 15 days aged, or an order > 7 days past deadline | Conventional ageing buckets | Alert rule |
+| `A53` | An order is **at risk** when not yet past its deadline but due within **3 days** and still incomplete | Flags a tightening order before it actually goes late, not after | `fmes.backlog.service.AT_RISK_LOOKAHEAD_DAYS` |
 | `A33` | **Maintenance due** alert 7 days ahead; overdue alert on the due date | Gives a week to schedule around production | Alert rule |
 | `A34` | In-app alerts for all; **email for critical only** | Prevents alert fatigue, the main reason alert systems get switched off | `fmes.alert.rule` channels |
 | `A35` | Critical alerts sent immediately at any hour; others queue to **08:00** | Respects night shift without suppressing genuine emergencies | Alert rule |

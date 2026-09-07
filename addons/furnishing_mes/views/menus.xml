@@ -262,6 +262,28 @@
                   sequence="30"/>
 
         <!-- ============================================================ -->
+        <!--  Backlog                                                     -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_backlog_overview"
+                  name="Backlog Overview"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_backlog_overview"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_backlog_blocked"
+                  name="Blocked Orders"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_blocked_orders"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_backlog_delayed"
+                  name="Delayed Orders"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_delayed_orders"
+                  sequence="30"/>
+
+        <!-- ============================================================ -->
         <!--  Configuration                                               -->
         <!-- ============================================================ -->
 
