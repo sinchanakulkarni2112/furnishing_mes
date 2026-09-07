@@ -12,3 +12,4 @@ from . import test_backlog
 from . import test_dashboard
 from . import test_alerts
 from . import test_reports
+from . import test_portal

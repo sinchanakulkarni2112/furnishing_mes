@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Demo portal users and tickets (Phase 13, docs/06 deliverable 1).
+
+            Only ever loaded with demo data (never in a production install,
+            same as every other file in demo/). A real deployment provisions
+            portal access the native way — Contacts > a partner > Action >
+            "Grant Portal Access" (base's own invitation wizard, `auth_signup`
+            invite-only per docs/04-security-model.md section 5.5) — never by
+            hand-writing a res.users record with a plaintext password the way
+            this file does for convenience. The password here exists purely
+            so a demo reviewer can log in and click through `/my` without
+            first running the invite flow themselves.
+        -->
+
+        <record id="partner_contact_archline" model="res.partner">
+            <field name="name">Priya Sharma</field>
+            <field name="parent_id" ref="partner_archline"/>
+            <field name="email">priya.sharma@archline.example.com</field>
+            <field name="function">Procurement Manager</field>
+        </record>
+
+        <record id="portal_user_archline" model="res.users">
+            <field name="name">Priya Sharma</field>
+            <field name="login">priya.sharma@archline.example.com</field>
+            <field name="email">priya.sharma@archline.example.com</field>
+            <field name="password">demo1234</field>
+            <field name="partner_id" ref="partner_contact_archline"/>
+            <field name="groups_id" eval="[(6, 0, [ref('base.group_portal')])]"/>
+        </record>
+
+        <record id="partner_contact_urbanest" model="res.partner">
+            <field name="name">Rahul Menon</field>
+            <field name="parent_id" ref="partner_urbanest"/>
+            <field name="email">rahul.menon@urbanest.example.com</field>
+            <field name="function">Purchasing</field>
+        </record>
+
+        <record id="portal_user_urbanest" model="res.users">
+            <field name="name">Rahul Menon</field>
+            <field name="login">rahul.menon@urbanest.example.com</field>
+            <field name="email">rahul.menon@urbanest.example.com</field>
+            <field name="password">demo1234</field>
+            <field name="partner_id" ref="partner_contact_urbanest"/>
+            <field name="groups_id" eval="[(6, 0, [ref('base.group_portal')])]"/>
+        </record>
+
+        <!-- A couple of tickets so /my/tickets is never empty in a demo. -->
+        <record id="support_ticket_demo_1" model="fmes.support.ticket">
+            <field name="partner_id" ref="partner_archline"/>
+            <field name="subject">When will order SO0001 be ready?</field>
+            <field name="description">Our site team is asking for an updated completion date.</field>
+            <field name="category">order_status</field>
+            <field name="state">in_progress</field>
+        </record>
+
+        <record id="support_ticket_demo_2" model="fmes.support.ticket">
+            <field name="partner_id" ref="partner_urbanest"/>
+            <field name="subject">Two panels arrived with a chipped edge</field>
+            <field name="description">Batch received yesterday — two panels have visible edge damage.</field>
+            <field name="category">quality</field>
+            <field name="priority">high</field>
+            <field name="state">new</field>
+        </record>
+
+    </data>
+</odoo>

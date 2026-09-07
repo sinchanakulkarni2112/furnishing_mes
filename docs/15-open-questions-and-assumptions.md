@@ -191,6 +191,7 @@ most likely to need tuning, and the easiest to tune.
 | `A42` | Nightly backup; **30 daily / 12 monthly / 3 yearly** retention, copied off-server | Conventional and defensible | `scripts/backup.sh` |
 | `A46` | **3 years** of online data retention | Matches the trend-analysis requirement | No purge cron |
 | `A56` | The **Backlog Report** for a date range shows the plant's backlog as it stood at the **latest snapshot on or before the range's end date** — not a range of snapshots | A backlog snapshot is a nightly point-in-time photograph (Phase 9), not a period-aggregated figure; "as of the end of the period" is the reading that matches how every other backlog view in the module already works | `fmes.report.service._data_backlog` |
+| `A57` | Support ticket priority: **Low / Normal / High**, three levels | Matches the ticket category list's own plainness (docs/03 section 9.1); a Community-only ticketing model does not need a five-level SLA scheme nobody asked for | `fmes.support.ticket.priority` |
 
 ## B.7 Language & Locale
 

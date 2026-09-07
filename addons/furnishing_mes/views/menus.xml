@@ -168,6 +168,14 @@
                   action="action_fmes_report_monthly_mis"
                   sequence="80"/>
 
+        <!-- Support Tickets — Phase 13 -->
+        <menuitem id="menu_fmes_support_tickets"
+                  name="Support Tickets"
+                  parent="menu_fmes_root"
+                  action="action_fmes_support_ticket"
+                  sequence="95"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
         <!-- Configuration — Plant Manager only -->
         <menuitem id="menu_fmes_configuration"
                   name="Configuration"

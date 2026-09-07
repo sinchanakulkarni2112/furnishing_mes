@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.12.0.0',
+    'version': '18.0.13.0.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -48,6 +48,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'maintenance',             # equipment, requests, MTBF / MTTR
         'hr',                      # employees and departments
         'sale_management',         # mock sales orders standing in for ERP 10.8
+        'sale_mrp',                # sale.order.line <-> mrp.production link (Phase 13 portal)
         'portal',                  # customer self-service
         'base_automation',         # rule-driven triggers for alerts
         'base_import',             # CSV / XLSX import
@@ -97,6 +98,8 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'views/fmes_report_templates.xml',
         'views/fmes_report_wizard_views.xml',
         'views/fmes_report_schedule_views.xml',
+        'views/fmes_support_ticket_views.xml',
+        'views/portal_templates.xml',
         'views/menus.xml',
     ],
 
@@ -110,6 +113,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'demo/fmes_demo_orders.xml',
         'demo/fmes_demo_maintenance.xml',
         'demo/fmes_demo_manpower.xml',
+        'demo/fmes_demo_portal.xml',
     ],
 
     'assets': {
@@ -118,6 +122,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
             'furnishing_mes/static/src/scss/fmes_terminal.scss',
             'furnishing_mes/static/src/scss/fmes_dashboard.scss',
             'furnishing_mes/static/src/scss/fmes_alert.scss',
+            'furnishing_mes/static/src/scss/fmes_ticket.scss',
             'furnishing_mes/static/src/js/scheduling_board.js',
             'furnishing_mes/static/src/js/shopfloor_terminal.js',
             'furnishing_mes/static/src/js/executive_dashboard.js',
@@ -126,6 +131,9 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
             'furnishing_mes/static/src/xml/shopfloor_terminal.xml',
             'furnishing_mes/static/src/xml/executive_dashboard.xml',
             'furnishing_mes/static/src/xml/alert_systray.xml',
+        ],
+        'web.assets_frontend': [
+            'furnishing_mes/static/src/scss/fmes_portal.scss',
         ],
     },
 

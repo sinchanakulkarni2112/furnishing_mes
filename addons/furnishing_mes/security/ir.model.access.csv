@@ -54,3 +54,7 @@ access_fmes_report_wizard_supervisor,fmes.report.wizard.supervisor,model_fmes_re
 access_fmes_report_wizard_manager,fmes.report.wizard.manager,model_fmes_report_wizard,furnishing_mes.group_fmes_manager,1,1,1,1
 access_fmes_report_schedule_supervisor,fmes.report.schedule.supervisor,model_fmes_report_schedule,furnishing_mes.group_fmes_supervisor,1,0,0,0
 access_fmes_report_schedule_manager,fmes.report.schedule.manager,model_fmes_report_schedule,furnishing_mes.group_fmes_manager,1,1,1,1
+access_fmes_support_ticket_supervisor,fmes.support.ticket.supervisor,model_fmes_support_ticket,furnishing_mes.group_fmes_supervisor,1,1,0,0
+access_fmes_support_ticket_manager,fmes.support.ticket.manager,model_fmes_support_ticket,furnishing_mes.group_fmes_manager,1,1,1,1
+access_fmes_support_ticket_portal,fmes.support.ticket.portal,model_fmes_support_ticket,base.group_portal,1,0,1,0
+access_mrp_production_portal,mrp.production.portal,mrp.model_mrp_production,base.group_portal,1,0,0,0

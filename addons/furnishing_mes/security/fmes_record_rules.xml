@@ -379,5 +379,32 @@
             </field>
         </record>
 
+        <!--
+            Phase 13 — Customer Portal. Both rules below are non-global,
+            attached only to base.group_portal: internal users (operator /
+            supervisor / manager) are never members of that group — a
+            completely separate branch of Odoo's own group tree from
+            group_fmes_* — so neither rule narrows what an internal user
+            can see (the D5.3 cumulative-hierarchy gotcha does not apply
+            here, unlike every other department-scoping rule in this file).
+        -->
+        <record id="fmes_support_ticket_portal_rule" model="ir.rule">
+            <field name="name">Support Ticket: portal customer sees own tickets only</field>
+            <field name="model_id" ref="model_fmes_support_ticket"/>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="domain_force">
+                [('partner_id', 'child_of', [user.commercial_partner_id.id])]
+            </field>
+        </record>
+
+        <record id="fmes_mrp_production_portal_rule" model="ir.rule">
+            <field name="name">Manufacturing Order: portal customer sees own orders only</field>
+            <field name="model_id" ref="mrp.model_mrp_production"/>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="domain_force">
+                [('sale_line_id.order_id.partner_id', 'child_of', [user.commercial_partner_id.id])]
+            </field>
+        </record>
+
     </data>
 </odoo>

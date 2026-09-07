@@ -14,10 +14,10 @@ and a full automated reporting suite.
 
 | | |
 |---|---|
-| **Phase** | 12 of 15 — Reporting suite ✅ |
-| **Next** | Phase 13 — Customer portal |
-| **Module version** | `18.0.12.0.0` |
-| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 400 tests passing · no install warnings · all ten reports (PDF + XLSX) and scheduled email delivery verified against fixture data, with a real generated PDF confirmed by hand |
+| **Phase** | 13 of 15 — Customer portal ✅ |
+| **Next** | Phase 14 — Security hardening, testing & QA |
+| **Module version** | `18.0.13.0.0` |
+| **Verified** | Installs clean on Odoo 18.0 Community (with and without demo data) · 416 tests passing · no install warnings · customer portal (orders, tickets) verified end-to-end via real HTTP requests, including cross-customer access denial |
 
 See [`docs/06-build-plan.md`](docs/06-build-plan.md) for the full phase plan.
 

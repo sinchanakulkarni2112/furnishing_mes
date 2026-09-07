@@ -1088,28 +1088,127 @@ resolvable, and the Alert Center menu correctly resolving to its action.
 
 ---
 
-## Phase 13 — Customer Portal
+## Phase 13 — Customer Portal ✅
+
+*Completed 2026-09-07 · module version `18.0.13.0.0`*
 
 **Goal.** The Customer persona.
 
 **Deliverables**
 
-1. Portal user provisioning documented and demo portal users seeded
-2. `/my/home` extension — order count and open ticket tiles
-3. `/my/orders` — the customer's own orders with production progress %, expected
-   completion, and status; strictly `partner_id`-filtered
-4. Order detail page — line-level progress derived from linked manufacturing
-   orders, without exposing internal machine, cost or downtime data
-5. `fmes.support.ticket` — model, portal create form, thread, status tracking
-6. `/my/tickets` — list and detail with reply
-7. Internal ticket handling views for supervisors and managers
-8. Branded, responsive portal templates consistent with the backoffice design
-9. Tests: cross-customer access denial, portal user cannot reach `/web`, ticket
-   ownership
+1. Portal user provisioning documented and demo portal users seeded — ✅
+   two demo contacts (one per demo customer), each a portal `res.users`
+   with a demo-only password; real provisioning documented as native
+   Odoo's own invite wizard (see Decisions)
+2. `/my/home` extension — order count and open ticket tiles — ✅ order
+   count is native (`sale`'s own `order_count` tile, already present);
+   this phase adds only the ticket tile, same `portal_docs_entry` pattern
+3. `/my/orders` — the customer's own orders with production progress %,
+   expected completion, and status; strictly `partner_id`-filtered — ✅,
+   reusing `sale`'s own native, already-partner-filtered `/my/orders` and
+   order detail page rather than rebuilding it (see Decisions)
+4. Order detail page — line-level progress derived from linked
+   manufacturing orders, without exposing internal machine, cost or
+   downtime data — ✅ a "Production Progress" table injected into
+   `sale.sale_order_portal_content`, reading only three new computed
+   fields on `sale.order.line` (produced qty, progress %, expected date)
+5. `fmes.support.ticket` — model, portal create form, thread, status
+   tracking — ✅, per docs/03-data-model.md section 9.1 exactly
+6. `/my/tickets` — list and detail with reply — ✅, reply via native
+   `portal.message_thread` (not `portal.chatter`, which does not exist in
+   Odoo 18 — see Decisions)
+7. Internal ticket handling views for supervisors and managers — ✅
+   list/kanban/form + a dedicated "Support Tickets" root menu
+8. Branded, responsive portal templates consistent with the backoffice
+   design — ✅ within Odoo's own portal Bootstrap grid (docs/05 section 6);
+   visual rendering itself not independently verified (see Decisions,
+   same "no browser available" limitation as Phases 10-12)
+9. Tests: cross-customer access denial, portal user cannot reach `/web`,
+   ticket ownership — ✅ 16 new tests, both ORM-level (`check_access`) and
+   real HTTP requests (`HttpCase`) for the controller-level checks an
+   ORM-only test cannot catch
 
-**Exit criteria**
-- A portal customer logs in, sees only their orders, and raises a ticket
-- No internal data (cost, machine, downtime, other customers) is reachable
+**Exit criteria — met**
+
+| Criterion | Result |
+|---|---|
+| A portal customer logs in, sees only their orders, and raises a ticket | ✅ verified via `HttpCase`: own ticket detail loads (200, correct content), ticket list shows only that customer's own tickets, the new-ticket form creates a ticket owned by the submitter |
+| No internal data (cost, machine, downtime, other customers) is reachable | ✅ another customer's ticket 303-redirects to `/my` rather than rendering; the order Production Progress table reads only `fmes_produced_qty`/`fmes_progress_pct`/`fmes_expected_date` — never `mrp.production`'s own machine, cost or downtime fields; a portal login hitting `/odoo` (backend root) redirects to `/my`, never the webclient |
+| Tests pass | ✅ 416 tests module-wide, 0 failed, 0 errors (16 new for this phase) |
+| No warnings on install, with or without demo data | ✅ verified on the dev database and a fresh `--without-demo=all` database |
+
+**Deviations and findings**
+
+1. **Extended `sale`'s native portal, rather than building a parallel
+   `/my/orders`.** `sale` (a dependency since Phase 2) already ships a
+   fully partner-filtered `/my/orders` list and order detail page —
+   rebuilding it would have duplicated already-correct, already-tested
+   Odoo code (ADR-001). This phase's only order-facing work is the
+   Production Progress table injected into `sale.sale_order_portal_content`
+   via a QWeb `inherit_id`, and the three computed fields on
+   `sale.order.line` (`fmes_produced_qty`, `fmes_progress_pct`,
+   `fmes_expected_date`) it reads — sourced from `mrp.production.
+   sale_line_id`, itself native (`sale_mrp`, see finding 3).
+2. **`portal.chatter` does not exist in Odoo 18 Community — the correct
+   template name is `portal.message_thread`.** Found only by grepping the
+   actual installed `portal` module source after an initial assumption
+   (based on the template's common informal name) turned out to reference
+   nothing. `message_thread`'s own docstring explicitly recommends driving
+   it through `_document_check_access` + `_get_page_view_values` rather
+   than setting its variables by hand — the ticket controller already did
+   exactly that, so no rework was needed once the correct name was used.
+3. **`sale_mrp` was an undeclared dependency — a real bug caught only by
+   an actual install, not by any syntax check.** `mrp.production.
+   sale_line_id` (the field the new portal record rule and `sale.order.
+   line`'s progress compute both need) is defined by `sale_mrp`, which
+   happens to auto-install whenever both `sale` and `mrp` are present —
+   true in every environment this module has ever been tested in, which
+   is exactly why the gap stayed invisible. A genuinely fresh install
+   failed immediately with `Invalid field mrp.production.sale_line_id`
+   the first time `security/fmes_record_rules.xml` was parsed, because
+   Odoo only guarantees load-order for a module's own *declared*
+   dependencies, not for another module's auto-installed side effects.
+   Fixed by adding `sale_mrp` to `depends` explicitly — a module this
+   phase actually uses should never be present only by accident of what
+   else happens to be installed. *Generalisable:* never rely on an
+   auto-installed bridge module's fields without declaring it.
+4. **A first version of both new portal record rules used a literal
+   `partner_id = user.partner_id.id` match — wrong the moment a ticket or
+   order belongs to the company rather than the exact contact who is
+   logged in.** Caught immediately by an `odoo shell` check: the demo
+   ticket was raised under the company partner, but the demo portal
+   login's own `partner_id` was a child contact — the literal match
+   denied the customer read access to their OWN company's ticket. Fixed
+   by matching `sale.order`'s own native portal rule exactly:
+   `('partner_id', 'child_of', [user.commercial_partner_id.id])`, applied
+   to both the `fmes.support.ticket` rule and the new `mrp.production`
+   portal rule, and to the portal controller's own ticket-list/count
+   domain (which would otherwise have disagreed with the record rule).
+   *Generalisable:* portal ownership is a company-wide concept in Odoo,
+   never a literal `partner_id` field match — check what `sale.order`'s
+   own rule actually does before writing a new one.
+5. **A portal customer creating their own ticket has no access to
+   `ir.sequence`** (an internal-only concept), so `next_by_code` inside
+   `create()` raised `AccessError` the moment a real portal user (not an
+   admin/test superuser) tried it — invisible until an actual HTTP POST
+   through the new-ticket form was tested, since every earlier check in
+   this phase ran as an internal/admin user. Fixed with a narrowly scoped
+   `.sudo()` on the sequence lookup only, with a comment explaining why
+   assigning the next ticket number should never depend on who is
+   creating the ticket.
+6. **No browser was available in this environment** to visually verify
+   the portal pages' actual render (the ticket list/detail/new-ticket
+   forms, the order page's injected Production Progress table). Verified
+   instead: XML well-formedness, the exact native template IDs and xpath
+   anchors (`portal.portal_my_home`, `sale.sale_order_portal_content`,
+   `portal.message_thread`) confirmed against the actual installed Odoo
+   18 source rather than assumed, and the full request/response cycle
+   end-to-end via real `HttpCase` HTTP requests (status codes, redirect
+   targets, and byte-content checks on the rendered page) — the same "no
+   browser, verified by other means" pattern as Phases 10-12, but this
+   phase's own HTTP-level tests go further than any earlier phase's
+   verification toward confirming the pages actually work, short of a
+   pixel-level visual check.
 
 **Commit.** `feat(portal): add customer order tracking and support ticket portal`
 

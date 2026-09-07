@@ -1,0 +1,19 @@
+// Support Tickets (Phase 13): kanban priority accents, same pattern as
+// the Alert Center's own severity accents (fmes_alert.scss).
+
+.fmes-ticket-card {
+    border-left: 3px solid transparent;
+    padding-left: 8px;
+
+    &.fmes-ticket-high {
+        border-left-color: var(--bs-danger, #dc3545);
+    }
+
+    &.fmes-ticket-normal {
+        border-left-color: var(--bs-info, #3498db);
+    }
+
+    &.fmes-ticket-low {
+        border-left-color: var(--bs-secondary, #6c757d);
+    }
+}

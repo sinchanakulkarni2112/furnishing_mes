@@ -173,6 +173,24 @@ activity for the Plant Manager rather than failing silently.
 | Exception Reports | alert and variance thresholds |
 | Monthly Management MIS | composite pack of the above |
 
+## R13 — Customer Portal ✅ (Phase 13)
+
+The Customer persona (docs/00-project-overview.md section 4): track own
+orders, view progress, raise support tickets — nothing else. `/my/orders`
+and its order detail page are native `sale` portal pages, extended (not
+rebuilt, ADR-001) with a "Production Progress" table driven by three new
+computed fields on `sale.order.line` (produced qty, progress %, expected
+date), sourced from `mrp.production.sale_line_id` (native `sale_mrp`).
+`fmes.support.ticket` (docs/03-data-model.md section 9.1) is the
+lightweight ticket model Community's lack of Helpdesk requires, with a new
+`/my/tickets` portal surface (list, detail, reply via native
+`portal.message_thread`) and internal handling views for Supervisors and
+Plant Managers. Every portal query is ownership-checked against the
+customer's `commercial_partner_id` via `child_of` — the same rule
+`sale.order`'s own native portal access already uses — so a ticket or
+order raised under the company itself is visible to any contact logged in
+at that company, not only the exact contact who raised it.
+
 ---
 
 ## Note on the Customer's Solution Approach

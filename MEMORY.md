@@ -1493,6 +1493,114 @@ available to verify visually.
 
 ---
 
+## Phase 13 — Customer Portal
+*Completed 2026-09-07 - module version `18.0.13.0.0`*
+
+### Delivered
+
+The Customer persona, built almost entirely as an EXTENSION of native
+Odoo portal pages rather than a parallel one (ADR-001, taken further this
+phase than any earlier one): `/my/orders` and its order detail page are
+`sale`'s own, already fully partner-filtered — the only order-facing work
+here is a "Production Progress" table QWeb-inherited into
+`sale.sale_order_portal_content`, reading three new computed fields on
+`sale.order.line` (produced qty, progress %, expected date) sourced from
+`mrp.production.sale_line_id` (native `sale_mrp`). `fmes.support.ticket`
+(docs/03 section 9.1 — Helpdesk is Enterprise-only) is the one genuinely
+new model, with a `/my/tickets` portal surface (list, detail, reply via
+native `portal.message_thread`) and internal handling views for
+Supervisors/Plant Managers. Two demo portal users (child contacts of two
+demo customers) and two demo tickets seed the customer experience;
+`docs/04-security-model.md`'s own documented provisioning path (native
+"Grant Portal Access" invite wizard) is the real, production way — the
+demo users exist only so a reviewer can log in without running that flow.
+
+### Verified, not assumed
+
+- Clean install and upgrade, with and without demo data, on genuinely
+  fresh databases
+- 416 tests module-wide (16 new for this phase), 0 failed, 0 errors
+- Both ORM-level (`check_access`) AND real HTTP (`HttpCase`) coverage for
+  every ownership boundary — the HTTP layer is what actually caught D13.2
+  (below), which an ORM-only test would have missed entirely, since the
+  bug was in the SEQUENCE lookup a real portal-user request triggers, not
+  in anything a superuser-run ORM test ever exercises
+- A portal customer's own company ticket (raised under the company
+  partner, not their own exact contact) is readable; another customer's
+  ticket 303-redirects to `/my` rather than rendering; a portal login
+  hitting `/odoo` never reaches the backend, only `/my`
+
+### Decisions
+
+**D13.1 - `sale_mrp` was an undeclared dependency, and only a genuinely
+fresh install ever surfaces that.** `mrp.production.sale_line_id` (needed
+by this phase's own portal record rule and by `sale.order.line`'s new
+progress compute) is defined by `sale_mrp`, which auto-installs whenever
+both `sale` and `mrp` are present — true in every database this module
+had ever been tested against up to this point, so the gap stayed
+completely invisible until a fresh `-i furnishing_mes` failed immediately
+with `Invalid field mrp.production.sale_line_id` while parsing
+`fmes_record_rules.xml`. Odoo only guarantees load-order for a module's
+own DECLARED dependencies, never for another module's auto-install side
+effects — `furnishing_mes` depended on `sale_management` and `mrp`, but
+never declared `sale_mrp` itself, so nothing pinned it to load first.
+Fixed by adding `sale_mrp` to `depends` explicitly. *Generalisable:*
+depend explicitly on every module whose fields you read, even ones that
+"always happen to be there" via another module's auto_install.
+
+**D13.2 - Portal ownership is a company-wide concept in Odoo
+(`commercial_partner_id` + `child_of`), never a literal `partner_id`
+field match — found by the demo data itself, immediately.** A first
+version of both new portal record rules (support ticket, manufacturing
+order) used `[('partner_id', '=', user.partner_id.id)]`. The demo ticket
+was seeded under the COMPANY partner; the demo portal login's own
+`partner_id` is a CHILD CONTACT of that company — the literal match
+denied the customer read access to their own company's own ticket, caught
+on the very first `odoo shell` check after install, before any automated
+test even ran. Fixed by copying `sale.order`'s own native portal rule
+exactly: `[('partner_id', 'child_of', [user.commercial_partner_id.id])]`
+— applied to both new `ir.rule` records AND to the portal controller's
+own ticket-list/count domain, which would otherwise have quietly
+disagreed with the record rule (same list of tickets must come back from
+both, or the home-page tile count and the actual list would drift apart).
+*Generalisable:* before writing a new portal ownership rule, read what
+`sale.order`'s own native rule actually does — do not assume a plain
+`partner_id` match is the right shape.
+
+**D13.3 - A portal customer creating their own ticket has no access to
+`ir.sequence`, and this only shows up under a REAL portal-user HTTP
+request, never under an ORM test run as the test superuser.** `next_by_
+code()` inside `fmes.support.ticket.create()` raised `AccessError` the
+first time an actual `HttpCase` test authenticated as a genuine portal
+user and POSTed to the new-ticket form — every earlier ORM-level check in
+this phase (including `create()` called via `.with_user(portal_user)`
+directly) had NOT caught it for a subtler reason: `with_user()` still ran
+inside the SAME already-superuser-derived environment chain in a way that
+happened to mask it in one earlier manual check, while the two automated
+test failures (one ORM `.with_user()`, one real HTTP POST) both correctly
+caught the real gap once actually run. Fixed with a narrowly-scoped
+`.sudo()` on the sequence lookup alone, commented with why: assigning the
+next ticket number is bookkeeping, not something that should depend on
+who is creating the ticket. *Generalisable:* a portal-facing `create()`
+that touches ANY internal-only infrastructure (sequences, but the same
+would apply to internal-only config models) needs that specific call
+sudo'd, deliberately and narrowly — never the whole method.
+
+**D13.4 - `portal.chatter` does not exist in Odoo 18 Community; the
+correct template is `portal.message_thread`.** Caught by grepping the
+actual installed `portal` module source after an initial assumption
+(based on the template's common informal name in community discussion)
+turned out to reference a template that simply is not there. `message_
+thread`'s own docstring explicitly says to drive it through
+`_document_check_access` + `_get_page_view_values` rather than setting
+its variables by hand — the ticket controller already did exactly that
+for other reasons, so no rework was needed once the right template name
+was used. *Generalisable:* verify a template id against the actual
+installed source before writing an `inherit_id`/`t-call` against it,
+never against a remembered or commonly-used name.
+
+---
+
 ## Conventions Established
 
 | Convention | Where documented |
