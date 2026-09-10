@@ -18,9 +18,25 @@
         <!-- ============================================================ -->
         <!--  Root                                                        -->
         <!-- ============================================================ -->
+        <!--
+            action= here matters beyond "what happens if you click the app
+            icon itself": Odoo's webclient picks a user's default app on
+            login by calling menuService.selectMenu() on their FIRST root
+            app menu, and that method is a silent no-op if the root menu
+            has no actionID of its own — every native Odoo app (Discuss,
+            Settings, ...) sets one for exactly this reason. Without it, a
+            user whose ONLY visible app is Furnishing MES (an Operator)
+            landed on a permanently blank, silently-stuck home screen: the
+            default-app resolution had nothing to load and never told
+            anyone. Supervisors/Managers are unaffected in practice since
+            Discuss (sequence 5) sorts before this app (sequence 10) and
+            becomes their default instead — but the app icon itself should
+            still do something sensible for them too if clicked directly.
+        -->
         <menuitem id="menu_fmes_root"
                   name="Furnishing MES"
                   web_icon="furnishing_mes,static/description/icon.png"
+                  action="action_fmes_shopfloor_terminal"
                   sequence="10"/>
 
         <!-- ============================================================ -->

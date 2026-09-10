@@ -23,15 +23,26 @@ export class FmesAlertSystray extends Component {
         this.orm = useService("orm");
         this.action = useService("action");
         this.state = useState({ count: 0 });
+        this.isDestroyed = false;
 
         onWillStart(() => this._refreshCount());
 
         this.pollId = setInterval(() => this._refreshCount(), POLL_INTERVAL_MS);
-        onWillUnmount(() => clearInterval(this.pollId));
+        onWillUnmount(() => {
+            this.isDestroyed = true;
+            clearInterval(this.pollId);
+        });
     }
 
     async _refreshCount() {
-        this.state.count = await this.orm.call("fmes.alert", "get_unread_count", []);
+        // The navbar (and this systray item with it) can be torn down while
+        // this call is still in flight — e.g. the webclient re-rendering
+        // during initial boot. Writing to `state` on a destroyed component
+        // throws and, left unhandled here, can abort the whole app's mount.
+        const count = await this.orm.call("fmes.alert", "get_unread_count", []);
+        if (!this.isDestroyed) {
+            this.state.count = count;
+        }
     }
 
     onClick() {

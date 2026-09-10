@@ -116,22 +116,22 @@
                             </th>
 
                             <t t-foreach="columns" t-as="column" t-key="column.key">
-                                <t t-set="cell"
+                                <t t-set="cellData"
                                    t-value="cell(machine.id, column.date, column.shift.id)"/>
-                                <td t-att-class="cellClass(cell)"
-                                    t-att-title="cellTitle(machine, column, cell)"
-                                    t-att-draggable="cell and cell.lines ? 'true' : 'false'"
-                                    t-on-click="() => this.openCell(machine, column, cell)"
-                                    t-on-dragstart="(ev) => this.onDragStart(machine, column, cell, ev)"
+                                <td t-att-class="cellClass(cellData)"
+                                    t-att-title="cellTitle(machine, column, cellData)"
+                                    t-att-draggable="cellData and cellData.lines ? 'true' : 'false'"
+                                    t-on-click="() => this.openCell(machine, column, cellData)"
+                                    t-on-dragstart="(ev) => this.onDragStart(machine, column, cellData, ev)"
                                     t-on-dragover="(ev) => this.onDragOver(ev)"
                                     t-on-drop="(ev) => this.onDrop(machine, column, ev)"
                                     t-on-dragend="() => this.onDragEnd()">
-                                    <t t-if="cell and cell.lines">
+                                    <t t-if="cellData and cellData.lines">
                                         <span class="fmes-cell-pct">
-                                            <t t-esc="cell.pct.toFixed(0)"/>%
+                                            <t t-esc="cellData.pct.toFixed(0)"/>%
                                         </span>
                                         <span class="fmes-cell-detail">
-                                            <t t-esc="cell.hours.toFixed(1)"/>h
+                                            <t t-esc="cellData.hours.toFixed(1)"/>h
                                         </span>
                                     </t>
                                 </td>
