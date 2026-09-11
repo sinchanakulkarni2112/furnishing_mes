@@ -34,12 +34,48 @@
             login by calling menuService.selectMenu() on their FIRST root
             app menu, and that method is a silent no-op if the root menu
             has no actionID of its own — every native Odoo app (Discuss,
-            Settings, ...) sets one for exactly this reason.
+            Settings, ...) sets one for exactly this reason. A single
+            hardcoded client action here does not work, though: it would
+            apply to EVERYONE who clicks the app icon directly, not just
+            an Operator landing for the first time — a Supervisor or Plant
+            Manager clicking the app tile itself (not a specific tab) would
+            also get dropped straight into the Shop Floor Terminal, which
+            is wrong for them. A server action picks the right one per
+            role instead: Operator gets the Terminal (their only screen
+            anyway), Supervisor and Plant Manager get the Executive
+            Dashboard. sudo() on the lookups is deliberate and safe — this
+            only reads which ACTION record to hand back, never any
+            business data, and an Operator has no read access to
+            ir.actions.client themselves to even look this up unsudo'd.
         -->
+        <!--
+            model_id below is not about what the action operates on: this
+            code touches no records at all, but Odoo's own run() still
+            gates a server action on write access to that model, so it has
+            to be something every one of our three roles can genuinely
+            write to. res.users (the obvious "no real model" choice) was
+            tried first and failed for all three roles with an AccessError
+            (only Administration/Access Rights can write res.users);
+            fmes.production.entry is a model every role already has write
+            access to for real, unrelated reasons, so it costs nothing
+            extra to reuse here as the gate.
+        -->
+        <record id="action_fmes_root_landing" model="ir.actions.server">
+            <field name="name">Furnishing MES Landing</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="state">code</field>
+            <field name="code">
+if env.user.has_group('furnishing_mes.group_fmes_supervisor'):
+    action = env.ref('furnishing_mes.action_fmes_executive_dashboard').sudo().read()[0]
+else:
+    action = env.ref('furnishing_mes.action_fmes_shopfloor_terminal').sudo().read()[0]
+            </field>
+        </record>
+
         <menuitem id="menu_fmes_root"
                   name="Furnishing MES"
                   web_icon="furnishing_mes,static/description/icon.png"
-                  action="action_fmes_shopfloor_terminal"
+                  action="action_fmes_root_landing"
                   sequence="10"/>
 
         <!-- ============================================================ -->
