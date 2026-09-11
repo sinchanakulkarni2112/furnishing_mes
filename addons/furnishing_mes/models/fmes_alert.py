@@ -102,5 +102,19 @@ class FmesAlert(models.Model):
 
     @api.model
     def get_unread_count(self):
-        """Read by the Alert Center systray icon."""
-        return self.search_count([('state', '=', 'new')])
+        """Read by the Alert Center systray icon, shown to every internal
+        user (it's a global systray item, not scoped to a menu an ACL could
+        hide). `fmes.alert` itself has no Operator-level ACL row at all —
+        only Supervisor and Plant Manager can read alert records — so an
+        unscoped search_count() here raises AccessError for an Operator on
+        every single page load, during the systray's own onWillStart. That
+        is not merely a bad badge count: an error thrown that early, before
+        the webclient's first render has committed anything to the DOM,
+        aborts the ENTIRE initial mount for that user, not just this one
+        systray icon (Odoo's per-item ErrorHandler protects re-renders of an
+        already-mounted tree, not the first one) — an Operator got a
+        permanently blank home screen from this, with no error surfaced
+        anywhere. sudo() is safe here: the return value is a bare count,
+        never the alert records themselves, so no data an Operator
+        shouldn't see is exposed by it."""
+        return self.sudo().search_count([('state', '=', 'new')])
