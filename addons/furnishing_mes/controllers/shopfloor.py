@@ -265,6 +265,51 @@ class FmesShopFloor(http.Controller):
                     limit=40)
         return [{'id': p.id, 'name': p.display_name} for p in products[:60]]
 
+    @http.route('/fmes/terminal/material_check', type='json', auth='user')
+    def material_check(self, product_id, qty=1, **kwargs):
+        """Is there enough of each BOM component on hand for `qty` units?
+
+        Informational, not a hard gate — an operator can still start
+        production even if a component reads short (the plant may know a
+        delivery is on its way, or count what the terminal cannot see). A
+        product with no BOM at all reports `no_bom: True` rather than a
+        false "all clear": nothing to check is different from everything
+        being in stock.
+        """
+        product = request.env['product.product'].sudo().browse(
+            int(product_id)).exists()
+        if not product:
+            return {'no_bom': True, 'components': [], 'all_available': True}
+
+        qty = float(qty) or 1.0
+        bom = request.env['mrp.bom'].sudo()._bom_find(
+            product, company_id=request.env.company.id).get(product)
+        if not bom:
+            return {'no_bom': True, 'components': [], 'all_available': True}
+
+        # BOM quantities are per `bom.product_qty` units of finished good;
+        # scale each line to what producing `qty` actually needs.
+        factor = qty / bom.product_qty if bom.product_qty else 0.0
+        components = []
+        all_available = True
+        for line in bom.bom_line_ids:
+            required = line.product_qty * factor
+            available = line.product_id.qty_available
+            ok = available >= required
+            all_available = all_available and ok
+            components.append({
+                'name': line.product_id.display_name,
+                'required': required,
+                'available': available,
+                'uom': line.product_uom_id.name,
+                'ok': ok,
+            })
+        return {
+            'no_bom': False,
+            'components': components,
+            'all_available': all_available,
+        }
+
     # ------------------------------------------------------------------
     # Downtime — reason picker, running timer (Requirement 6)
     # ------------------------------------------------------------------

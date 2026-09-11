@@ -123,9 +123,18 @@
                     <p class="fmes-t-sub">
                         Targets appear here once a plan has been released.
                     </p>
+                    <button class="fmes-t-add-product" t-on-click="openProductPicker">
+                        + Add a product
+                    </button>
                 </div>
 
-                <div t-else="" class="fmes-t-entries">
+                <t t-else="">
+                <div class="fmes-t-entries-toolbar">
+                    <button class="fmes-t-add-product" t-on-click="openProductPicker">
+                        + Add a product
+                    </button>
+                </div>
+                <div class="fmes-t-entries">
                     <div t-foreach="state.entries" t-as="entry" t-key="entry.id"
                          t-attf-class="fmes-t-entry {{entry.editable ? '' : 'locked'}}">
                         <div class="fmes-t-entry-head">
@@ -196,9 +205,16 @@
                                 </span>
                                 <span t-else="" class="fmes-t-field-value fmes-t-neutral">—</span>
                             </div>
+
+                            <button class="fmes-t-field fmes-t-field-materials"
+                                    t-on-click="() => this.checkEntryMaterials(entry)">
+                                <span class="fmes-t-field-label">Materials</span>
+                                <span class="fmes-t-field-value fmes-t-neutral">check</span>
+                            </button>
                         </div>
                     </div>
                 </div>
+                </t>
 
                 <!-- footer -->
                 <div class="fmes-t-footer">
@@ -310,6 +326,163 @@
                         </div>
                     </t>
 
+                </div>
+            </div>
+
+            <!-- ================= add-product picker ================= -->
+            <div t-if="state.productPicker" class="fmes-t-keypad-backdrop"
+                 t-on-click="closeProductPicker">
+                <div class="fmes-t-product-modal" t-on-click.stop="() => {}">
+                    <div class="fmes-t-keypad-head">
+                        <div class="fmes-t-keypad-label">Add a Product</div>
+                    </div>
+
+                    <div t-if="state.productPicker.loading" class="fmes-t-loading">
+                        Loading…
+                    </div>
+                    <div t-elif="!state.productPicker.products.length" class="fmes-t-empty">
+                        <p>No products are set up for this machine.</p>
+                    </div>
+                    <div t-else="" class="fmes-t-product-list">
+                        <button t-foreach="state.productPicker.products" t-as="product"
+                                t-key="product.id"
+                                t-attf-class="fmes-t-product-row {{state.productPicker.selected and state.productPicker.selected.id === product.id ? 'active' : ''}}"
+                                t-on-click="() => this.pickProduct(product)">
+                            <t t-esc="product.name"/>
+                        </button>
+                    </div>
+
+                    <div t-if="state.productPicker.selected" class="fmes-t-material-check">
+                        <div t-if="!state.productPicker.materialCheck" class="fmes-t-loading">
+                            Checking materials…
+                        </div>
+                        <t t-elif="state.productPicker.materialCheck.no_bom">
+                            <div class="fmes-t-material-line fmes-t-material-neutral">
+                                No bill of materials on file for this product —
+                                nothing to check.
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div t-attf-class="fmes-t-material-summary {{state.productPicker.materialCheck.all_available ? 'fmes-t-material-ok' : 'fmes-t-material-short'}}">
+                                <t t-esc="state.productPicker.materialCheck.all_available ? '✓ Materials available' : '⚠ Some materials are short'"/>
+                            </div>
+                            <div t-foreach="state.productPicker.materialCheck.components"
+                                 t-as="comp" t-key="comp.name"
+                                 t-attf-class="fmes-t-material-line {{comp.ok ? 'fmes-t-material-ok' : 'fmes-t-material-short'}}">
+                                <span t-esc="comp.ok ? '✓' : '✗'"/>
+                                <span t-esc="comp.name"/>
+                                <span class="fmes-t-sub">
+                                    <t t-esc="formatNumber(comp.available)"/> /
+                                    <t t-esc="formatNumber(comp.required)"/>
+                                    <t t-esc="comp.uom"/>
+                                </span>
+                            </div>
+                        </t>
+                    </div>
+
+                    <div class="fmes-t-keypad-actions">
+                        <button class="fmes-t-key-cancel"
+                                t-on-click="closeProductPicker">Cancel</button>
+                        <button class="fmes-t-key-ok" style="grid-column: span 2"
+                                t-att-disabled="!state.productPicker.selected"
+                                t-on-click="confirmAddProduct">
+                            Add to shift
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= material check (existing entry) ================= -->
+            <div t-if="state.materialModal" class="fmes-t-keypad-backdrop"
+                 t-on-click="closeMaterialModal">
+                <div class="fmes-t-product-modal" t-on-click.stop="() => {}">
+                    <div class="fmes-t-keypad-head">
+                        <div class="fmes-t-keypad-label">Materials</div>
+                        <div class="fmes-t-keypad-product"
+                             t-esc="state.materialModal.product"/>
+                    </div>
+
+                    <div t-if="!state.materialModal.result" class="fmes-t-loading">
+                        Checking materials…
+                    </div>
+                    <t t-elif="state.materialModal.result.no_bom">
+                        <div class="fmes-t-material-line fmes-t-material-neutral">
+                            No bill of materials on file for this product —
+                            nothing to check.
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div t-attf-class="fmes-t-material-summary {{state.materialModal.result.all_available ? 'fmes-t-material-ok' : 'fmes-t-material-short'}}">
+                            <t t-esc="state.materialModal.result.all_available ? '✓ Materials available' : '⚠ Some materials are short'"/>
+                        </div>
+                        <div t-foreach="state.materialModal.result.components"
+                             t-as="comp" t-key="comp.name"
+                             t-attf-class="fmes-t-material-line {{comp.ok ? 'fmes-t-material-ok' : 'fmes-t-material-short'}}">
+                            <span t-esc="comp.ok ? '✓' : '✗'"/>
+                            <span t-esc="comp.name"/>
+                            <span class="fmes-t-sub">
+                                <t t-esc="formatNumber(comp.available)"/> /
+                                <t t-esc="formatNumber(comp.required)"/>
+                                <t t-esc="comp.uom"/>
+                            </span>
+                        </div>
+                    </t>
+
+                    <div class="fmes-t-keypad-actions">
+                        <button class="fmes-t-key-ok" style="grid-column: span 3"
+                                t-on-click="closeMaterialModal">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= submit: downtime question ================= -->
+            <div t-if="state.submitConfirm" class="fmes-t-keypad-backdrop"
+                 t-on-click="cancelSubmit">
+                <div class="fmes-t-product-modal" t-on-click.stop="() => {}">
+                    <div class="fmes-t-keypad-head">
+                        <div class="fmes-t-keypad-label">
+                            Did you face any downtime this shift?
+                        </div>
+                        <div class="fmes-t-keypad-product">
+                            Submitting <t t-esc="state.submitConfirm.editableCount"/> entr<t
+                                t-esc="state.submitConfirm.editableCount === 1 ? 'y' : 'ies'"/>
+                            for approval
+                        </div>
+                    </div>
+                    <div class="fmes-t-keypad-actions">
+                        <button class="fmes-t-key-cancel"
+                                t-on-click="() => this.answerSubmit(false)">
+                            No
+                        </button>
+                        <button class="fmes-t-key-ok" style="grid-column: span 2"
+                                t-on-click="() => this.answerSubmit(true)">
+                            Yes — log it after submitting
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= post-submit: which product? ================= -->
+            <div t-if="state.postSubmitPicker" class="fmes-t-keypad-backdrop"
+                 t-on-click="closePostSubmitPicker">
+                <div class="fmes-t-product-modal" t-on-click.stop="() => {}">
+                    <div class="fmes-t-keypad-head">
+                        <div class="fmes-t-keypad-label">Which product had downtime?</div>
+                    </div>
+                    <div class="fmes-t-product-list">
+                        <button t-foreach="state.postSubmitPicker.entries" t-as="entry"
+                                t-key="entry.id"
+                                class="fmes-t-product-row"
+                                t-on-click="() => this.choosePostSubmitEntry(entry)">
+                            <t t-esc="entry.product"/>
+                        </button>
+                    </div>
+                    <div class="fmes-t-keypad-actions">
+                        <button class="fmes-t-key-cancel" style="grid-column: span 3"
+                                t-on-click="closePostSubmitPicker">
+                            Skip
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

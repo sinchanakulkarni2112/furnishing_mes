@@ -46,6 +46,10 @@ export class FmesShopFloorTerminal extends Component {
             downtimeReasons: [],   // grouped by category, loaded once
             downtimeModal: null,   // { entry, step: 'reasons'|'remark', reason }
             now: Date.now(),       // ticks every second, drives the running timer
+            productPicker: null,   // { products, loading, selected, materialCheck }
+            materialModal: null,   // { product, result } — on-demand check for a planned entry
+            submitConfirm: null,   // { editableCount } — asks about downtime before submitting
+            postSubmitPicker: null, // { entries } — "which product had downtime?" when more than one
         });
 
         onWillStart(async () => {
@@ -138,6 +142,81 @@ export class FmesShopFloorTerminal extends Component {
         this.state.machine = null;
         this.state.entries = [];
         this.loadMachines();
+    }
+
+    // ------------------------------------------------------------------
+    // Add product — manual entry creation, with a live material check
+    // ------------------------------------------------------------------
+    async openProductPicker() {
+        this.state.productPicker = { products: [], loading: true,
+                                      selected: null, materialCheck: null };
+        try {
+            const products = await rpc("/fmes/terminal/products", {
+                workcenter_id: this.state.machine.id,
+            });
+            this.state.productPicker.products = products;
+        } finally {
+            this.state.productPicker.loading = false;
+        }
+    }
+
+    closeProductPicker() {
+        this.state.productPicker = null;
+    }
+
+    async pickProduct(product) {
+        const picker = this.state.productPicker;
+        if (!picker) {
+            return;
+        }
+        picker.selected = product;
+        picker.materialCheck = null;
+        // Checked against one unit at pick time — the entry does not exist
+        // yet to have a real target quantity. It is a directional signal
+        // ("is there anything of this in stock at all"), not a promise;
+        // the entry's own material check (once created) is the precise one.
+        picker.materialCheck = await rpc("/fmes/terminal/material_check", {
+            product_id: product.id,
+            qty: 1,
+        });
+    }
+
+    async confirmAddProduct() {
+        const picker = this.state.productPicker;
+        if (!picker || !picker.selected) {
+            return;
+        }
+        try {
+            const result = await rpc("/fmes/terminal/create_entry", {
+                workcenter_id: this.state.machine.id,
+                shift_id: this.state.shiftId,
+                product_id: picker.selected.id,
+            });
+            if (!result.ok) {
+                this.notification.add(result.error, { type: "warning" });
+                return;
+            }
+            this.state.entries.push(result.entry);
+            this.state.productPicker = null;
+        } catch {
+            this.notification.add(
+                _t("Could not reach the server. The product was not added — try again."),
+                { type: "danger", sticky: true });
+        }
+    }
+
+    /** On-demand check for an already-planned entry, against its real target. */
+    async checkEntryMaterials(entry) {
+        this.state.materialModal = { product: entry.product, result: null };
+        this.state.materialModal.result = await rpc(
+            "/fmes/terminal/material_check", {
+                product_id: entry.product_id,
+                qty: entry.planned_qty || 1,
+            });
+    }
+
+    closeMaterialModal() {
+        this.state.materialModal = null;
     }
 
     // ------------------------------------------------------------------
@@ -341,7 +420,7 @@ export class FmesShopFloorTerminal extends Component {
         }
     }
 
-    async submitShift() {
+    submitShift() {
         const editable = this.state.entries.filter((e) => e.editable);
         if (!editable.length) {
             this.notification.add(_t("Nothing left to submit."), {
@@ -349,6 +428,48 @@ export class FmesShopFloorTerminal extends Component {
             });
             return;
         }
+        // Ask before submitting, not after: the answer decides what happens
+        // right after the submit call resolves (straight back to the
+        // machine list, or into the downtime reason picker), so it has to
+        // be known first.
+        this.state.submitConfirm = { editableCount: editable.length };
+    }
+
+    cancelSubmit() {
+        this.state.submitConfirm = null;
+    }
+
+    async answerSubmit(hadDowntime) {
+        const editable = this.state.entries.filter((e) => e.editable);
+        this.state.submitConfirm = null;
+
+        if (hadDowntime) {
+            // The server refuses to submit an entry that reports neither
+            // production nor downtime (fmes_production_entry.action_submit)
+            // — and a downtime timer only counts toward downtime_hours once
+            // it is STOPPED, not the moment it starts (see
+            // _fmes_recompute_downtime_hours). So if nothing has been
+            // recorded on ANY entry yet, submitting now would just bounce
+            // off that rule. Log the downtime first in that case, and let
+            // the operator tap Submit again once it is stopped — output
+            // already on the entries (a partial shift with SOME downtime)
+            // submits immediately as normal, then opens the logger after,
+            // matching the usual order.
+            const nothingRecordedYet = editable.every(
+                (e) => e.actual_qty <= 0 && e.downtime_hours <= 0);
+            if (nothingRecordedYet) {
+                this.notification.add(
+                    _t("Log the downtime, then tap Submit shift again once it's stopped."),
+                    { type: "info" });
+                if (editable.length === 1) {
+                    this.openDowntimeReasons(editable[0]);
+                } else {
+                    this.state.postSubmitPicker = { entries: editable };
+                }
+                return;
+            }
+        }
+
         try {
             const result = await rpc("/fmes/terminal/submit", {
                 entry_ids: editable.map((e) => e.id),
@@ -367,7 +488,29 @@ export class FmesShopFloorTerminal extends Component {
                 _t("Could not reach the server. Nothing was submitted."),
                 { type: "danger", sticky: true }
             );
+            return;
         }
+        if (hadDowntime) {
+            // Submitted entries are locked but downtime logging is not
+            // gated on entry.editable (see openDowntimeReasons) — an
+            // operator can still log what happened on an already-submitted
+            // shift. One entry: go straight to the reason grid. More than
+            // one: ask which product it was on first.
+            if (this.state.entries.length === 1) {
+                this.openDowntimeReasons(this.state.entries[0]);
+            } else if (this.state.entries.length > 1) {
+                this.state.postSubmitPicker = { entries: this.state.entries };
+            }
+        }
+    }
+
+    choosePostSubmitEntry(entry) {
+        this.state.postSubmitPicker = null;
+        this.openDowntimeReasons(entry);
+    }
+
+    closePostSubmitPicker() {
+        this.state.postSubmitPicker = null;
     }
 
     // ------------------------------------------------------------------
