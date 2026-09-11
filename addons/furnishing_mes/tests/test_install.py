@@ -157,10 +157,13 @@ class TestMenuStructure(TransactionCase):
         self.assertFalse(root.parent_id, "The root menu must be top level")
 
     def test_all_sections_are_declared(self):
+        # Post-launch reorganisation (workflow-grouped nav, not build-phase
+        # order): Production/Manpower folded as sub-folders under Planning,
+        # Inventory added as a new root section of read-only shortcuts.
         sections = [
-            'menu_fmes_dashboard', 'menu_fmes_planning', 'menu_fmes_production',
-            'menu_fmes_downtime', 'menu_fmes_maintenance', 'menu_fmes_manpower',
-            'menu_fmes_backlog', 'menu_fmes_alerts', 'menu_fmes_reports',
+            'menu_fmes_planning', 'menu_fmes_dashboard', 'menu_fmes_backlog',
+            'menu_fmes_downtime', 'menu_fmes_maintenance', 'menu_fmes_inventory',
+            'menu_fmes_reports', 'menu_fmes_alerts', 'menu_fmes_support_tickets',
             'menu_fmes_configuration',
         ]
         root = self.env.ref('furnishing_mes.menu_fmes_root')

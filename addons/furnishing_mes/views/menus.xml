@@ -3,15 +3,25 @@
     <data>
 
         <!--
-            Furnishing MES menu structure, per docs/05-ui-ux-design.md section 2.
+            Furnishing MES menu structure — reorganised to match the
+            customer's own navigation sketch (workflow-first: Production
+            Planning / Monitoring / Orders / WorkCentre Downtimes /
+            Maintenance / Inventory / Analytics / Notifications) instead of
+            the original phase-by-phase grouping. No new screens, models or
+            security behaviour here — every action= below already existed
+            before this reorganisation; only parents, labels and sequences
+            moved. Two exceptions, both pure read-only lookups into data
+            Odoo already tracks natively: the four Inventory shortcuts.
 
-            The section menus are declared here so the information architecture
-            is fixed from the start and later phases only add leaf items. Odoo
-            hides a parent menu that has no visible children, so the sections
-            that are still empty simply do not render yet.
-
-            Operators see only Production > Shop Floor Terminal (Phase 4).
-            The `groups` attribute is a usability filter; actual access control
+            Operators still see only Production Planning > Shift Logs >
+            Shop Floor Terminal. That path is deliberately left without a
+            `groups` restriction at every level from the root down to the
+            Terminal leaf — Production Planning itself carries none, so an
+            Operator can descend into it at all; Production Schedule,
+            Output Tracking and Manpower (the other three Planning
+            sub-folders) each carry their own `groups="...supervisor"` so
+            an Operator sees only the one sub-folder meant for them. The
+            `groups` attribute is a usability filter; actual access control
             lives in ir.model.access.csv and ir.rule.
         -->
 
@@ -24,14 +34,7 @@
             login by calling menuService.selectMenu() on their FIRST root
             app menu, and that method is a silent no-op if the root menu
             has no actionID of its own — every native Odoo app (Discuss,
-            Settings, ...) sets one for exactly this reason. Without it, a
-            user whose ONLY visible app is Furnishing MES (an Operator)
-            landed on a permanently blank, silently-stuck home screen: the
-            default-app resolution had nothing to load and never told
-            anyone. Supervisors/Managers are unaffected in practice since
-            Discuss (sequence 5) sorts before this app (sequence 10) and
-            becomes their default instead — but the app icon itself should
-            still do something sensible for them too if clicked directly.
+            Settings, ...) sets one for exactly this reason.
         -->
         <menuitem id="menu_fmes_root"
                   name="Furnishing MES"
@@ -43,31 +46,66 @@
         <!--  Sections                                                    -->
         <!-- ============================================================ -->
 
-        <!-- Dashboard — Phase 10 -->
-        <menuitem id="menu_fmes_dashboard"
-                  name="Dashboard"
-                  parent="menu_fmes_root"
+        <!-- 1. Production Planning — deliberately NO group restriction;
+             Shift Logs > Shop Floor Terminal, one level below, is how an
+             Operator reaches the terminal. Full <record> form, not the
+             <menuitem> shortcut: this menu previously carried
+             groups="...supervisor" (from when it was named "Planning"),
+             and removing an attribute from a <menuitem> tag does NOT
+             clear an already-set field on upgrade — Odoo's XML loader
+             only applies fields present in the tag, it never resets ones
+             that are merely absent. groups_id must be cleared explicitly
+             or an Operator silently loses this menu (and the Terminal
+             beneath it) again. -->
+        <record id="menu_fmes_planning" model="ir.ui.menu">
+            <field name="name">Production Planning</field>
+            <field name="parent_id" ref="menu_fmes_root"/>
+            <field name="sequence">20</field>
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+
+        <menuitem id="menu_fmes_planning_schedule"
+                  name="Production Schedule"
+                  parent="menu_fmes_planning"
                   sequence="10"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
-        <!-- Planning — Phase 3 -->
-        <menuitem id="menu_fmes_planning"
-                  name="Planning"
-                  parent="menu_fmes_root"
+        <menuitem id="menu_fmes_planning_output"
+                  name="Output Tracking"
+                  parent="menu_fmes_planning"
                   sequence="20"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
-        <!-- Production — Phase 4 (operators enter here) -->
-        <menuitem id="menu_fmes_production"
-                  name="Production"
-                  parent="menu_fmes_root"
+        <menuitem id="menu_fmes_planning_shiftlogs"
+                  name="Shift Logs"
+                  parent="menu_fmes_planning"
                   sequence="30"/>
 
-        <!-- Downtime — Phase 5 -->
-        <menuitem id="menu_fmes_downtime"
-                  name="Downtime"
+        <menuitem id="menu_fmes_planning_manpower"
+                  name="Manpower"
+                  parent="menu_fmes_planning"
+                  sequence="40"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- 2. Monitoring (renamed from "Dashboard") -->
+        <menuitem id="menu_fmes_dashboard"
+                  name="Monitoring"
+                  parent="menu_fmes_root"
+                  sequence="30"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- 3. Orders (renamed from "Backlog") -->
+        <menuitem id="menu_fmes_backlog"
+                  name="Orders"
                   parent="menu_fmes_root"
                   sequence="40"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- 4. WorkCentre Downtimes (renamed from "Downtime") -->
+        <menuitem id="menu_fmes_downtime"
+                  name="WorkCentre Downtimes"
+                  parent="menu_fmes_root"
+                  sequence="50"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
         <menuitem id="menu_fmes_downtime_events"
@@ -88,32 +126,122 @@
                   action="action_fmes_downtime_report"
                   sequence="30"/>
 
-        <!-- Maintenance — Phase 7 -->
+        <menuitem id="menu_fmes_report_downtime"
+                  name="Downtime Reports"
+                  parent="menu_fmes_downtime"
+                  action="action_fmes_report_downtime"
+                  sequence="40"/>
+
+        <!-- 5. Maintenance -->
         <menuitem id="menu_fmes_maintenance"
                   name="Maintenance"
-                  parent="menu_fmes_root"
-                  sequence="50"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
-
-        <!-- Manpower — Phase 8 -->
-        <menuitem id="menu_fmes_manpower"
-                  name="Manpower"
                   parent="menu_fmes_root"
                   sequence="60"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
-        <!-- Backlog — Phase 9 -->
-        <menuitem id="menu_fmes_backlog"
-                  name="Backlog"
+        <!-- 6. Inventory — new tab, but every action below already existed
+             in Odoo core; these are read-only reference lookups, not new
+             data entry. Visible to Supervisor and above, same as the
+             other operational tabs (Operators work through the Terminal,
+             not general inventory browsing). -->
+        <menuitem id="menu_fmes_inventory"
+                  name="Inventory"
                   parent="menu_fmes_root"
                   sequence="70"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
-        <!-- Alerts — Phase 11 -->
-        <menuitem id="menu_fmes_alerts"
-                  name="Alerts"
+        <menuitem id="menu_fmes_inventory_materials"
+                  name="Materials"
+                  parent="menu_fmes_inventory"
+                  action="stock.product_template_action_product"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_inventory_machines"
+                  name="Machines / Work Centres"
+                  parent="menu_fmes_inventory"
+                  action="action_fmes_machine_master"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_inventory_employees"
+                  name="Employees"
+                  parent="menu_fmes_inventory"
+                  action="hr.hr_employee_public_action"
+                  sequence="30"/>
+
+        <menuitem id="menu_fmes_inventory_products"
+                  name="Products Catalogue"
+                  parent="menu_fmes_inventory"
+                  action="product.product_template_action_all"
+                  sequence="40"/>
+
+        <!-- 7. Analytics (renamed from "Reports") -->
+        <menuitem id="menu_fmes_reports"
+                  name="Analytics"
                   parent="menu_fmes_root"
                   sequence="80"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_analytics_production"
+                  name="Production"
+                  parent="menu_fmes_reports"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_analytics_machine"
+                  name="Machine"
+                  parent="menu_fmes_reports"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_analytics_manpower"
+                  name="Manpower"
+                  parent="menu_fmes_reports"
+                  sequence="30"/>
+
+        <menuitem id="menu_fmes_analytics_mis"
+                  name="MIS Report"
+                  parent="menu_fmes_reports"
+                  sequence="40"/>
+
+        <menuitem id="menu_fmes_report_daily_production"
+                  name="Daily Production"
+                  parent="menu_fmes_analytics_production"
+                  action="action_fmes_report_daily_production"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_report_productivity"
+                  name="Productivity"
+                  parent="menu_fmes_analytics_production"
+                  action="action_fmes_report_productivity"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_report_exception"
+                  name="Exceptions"
+                  parent="menu_fmes_analytics_production"
+                  action="action_fmes_report_exception"
+                  sequence="30"/>
+
+        <menuitem id="menu_fmes_report_machine_utilisation"
+                  name="Machine Utilisation"
+                  parent="menu_fmes_analytics_machine"
+                  action="action_fmes_report_machine_utilisation"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_manpower_impact_report"
+                  name="Manpower Impact"
+                  parent="menu_fmes_analytics_manpower"
+                  action="action_fmes_manpower_impact_report"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_report_monthly_mis"
+                  name="Monthly MIS"
+                  parent="menu_fmes_analytics_mis"
+                  action="action_fmes_report_monthly_mis"
+                  sequence="10"/>
+
+        <!-- 8. Notifications (renamed from "Alerts") -->
+        <menuitem id="menu_fmes_alerts"
+                  name="Notifications"
+                  parent="menu_fmes_root"
+                  sequence="90"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
         <menuitem id="menu_fmes_alert_center"
@@ -129,62 +257,9 @@
                   sequence="20"
                   groups="furnishing_mes.group_fmes_manager"/>
 
-        <!-- Reports — Phase 12 -->
-        <menuitem id="menu_fmes_reports"
-                  name="Reports"
-                  parent="menu_fmes_root"
-                  sequence="90"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
-
-        <menuitem id="menu_fmes_report_daily_production"
-                  name="Daily Production"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_daily_production"
-                  sequence="10"/>
-
-        <menuitem id="menu_fmes_report_machine_utilisation"
-                  name="Machine Utilisation"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_machine_utilisation"
-                  sequence="20"/>
-
-        <menuitem id="menu_fmes_report_downtime"
-                  name="Downtime"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_downtime"
-                  sequence="30"/>
-
-        <menuitem id="menu_fmes_report_backlog"
-                  name="Backlog &amp; Carry Forward"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_backlog"
-                  sequence="40"/>
-
-        <menuitem id="menu_fmes_report_maintenance"
-                  name="Maintenance"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_maintenance"
-                  sequence="50"/>
-
-        <menuitem id="menu_fmes_report_productivity"
-                  name="Productivity"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_productivity"
-                  sequence="60"/>
-
-        <menuitem id="menu_fmes_report_exception"
-                  name="Exceptions"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_exception"
-                  sequence="70"/>
-
-        <menuitem id="menu_fmes_report_monthly_mis"
-                  name="Monthly MIS"
-                  parent="menu_fmes_reports"
-                  action="action_fmes_report_monthly_mis"
-                  sequence="80"/>
-
-        <!-- Support Tickets — Phase 13 -->
+        <!-- Support Tickets — outside the customer's navigation sketch
+             (that doc covers it under the separate Customer Dashboard);
+             left exactly where it was. -->
         <menuitem id="menu_fmes_support_tickets"
                   name="Support Tickets"
                   parent="menu_fmes_root"
@@ -192,7 +267,7 @@
                   sequence="95"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
-        <!-- Configuration — Plant Manager only -->
+        <!-- Configuration — Plant Manager only, unchanged -->
         <menuitem id="menu_fmes_configuration"
                   name="Configuration"
                   parent="menu_fmes_root"
@@ -200,41 +275,109 @@
                   groups="furnishing_mes.group_fmes_manager"/>
 
         <!-- ============================================================ -->
-        <!--  Planning                                                    -->
+        <!--  Production Planning > Production Schedule                  -->
         <!-- ============================================================ -->
 
         <menuitem id="menu_fmes_plans"
                   name="Production Plans"
-                  parent="menu_fmes_planning"
+                  parent="menu_fmes_planning_schedule"
                   action="action_fmes_production_plan"
                   sequence="10"/>
 
         <menuitem id="menu_fmes_generate_plan"
                   name="Generate Plan"
-                  parent="menu_fmes_planning"
+                  parent="menu_fmes_planning_schedule"
                   action="action_fmes_plan_generator"
                   sequence="20"/>
 
         <menuitem id="menu_fmes_scheduling_board"
                   name="Scheduling Board"
-                  parent="menu_fmes_planning"
+                  parent="menu_fmes_planning_schedule"
                   action="action_fmes_scheduling_board"
                   sequence="30"/>
 
         <menuitem id="menu_fmes_plan_lines"
                   name="Plan Lines"
-                  parent="menu_fmes_planning"
+                  parent="menu_fmes_planning_schedule"
                   action="action_fmes_plan_line"
                   sequence="40"/>
 
-        <menuitem id="menu_fmes_carry_forward"
-                  name="Carry Forward"
-                  parent="menu_fmes_planning"
-                  action="action_fmes_carry_forward"
-                  sequence="50"/>
+        <!-- ============================================================ -->
+        <!--  Production Planning > Output Tracking                      -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_planned_vs_actual"
+                  name="Planned vs Actual"
+                  parent="menu_fmes_planning_output"
+                  action="action_fmes_planned_vs_actual"
+                  sequence="10"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_production_report"
+                  name="Production Output"
+                  parent="menu_fmes_planning_output"
+                  action="action_fmes_production_report"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_import_output"
+                  name="Import Daily Output"
+                  parent="menu_fmes_planning_output"
+                  action="action_fmes_production_import"
+                  sequence="30"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_import_batches"
+                  name="Import Batches"
+                  parent="menu_fmes_planning_output"
+                  action="action_fmes_import_batch"
+                  sequence="40"
+                  groups="furnishing_mes.group_fmes_manager"/>
 
         <!-- ============================================================ -->
-        <!--  Dashboard                                                   -->
+        <!--  Production Planning > Shift Logs                            -->
+        <!--                                                              -->
+        <!--  The terminal is the only item an operator sees; everything  -->
+        <!--  else here is supervisor and above.                          -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_terminal"
+                  name="Shop Floor Terminal"
+                  parent="menu_fmes_planning_shiftlogs"
+                  action="action_fmes_shopfloor_terminal"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_entries"
+                  name="Production Entries"
+                  parent="menu_fmes_planning_shiftlogs"
+                  action="action_fmes_production_entry"
+                  sequence="20"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_approval_queue"
+                  name="Approval Queue"
+                  parent="menu_fmes_planning_shiftlogs"
+                  action="action_fmes_approval_queue"
+                  sequence="30"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <!-- ============================================================ -->
+        <!--  Production Planning > Manpower                              -->
+        <!-- ============================================================ -->
+
+        <menuitem id="menu_fmes_operator_roster"
+                  name="Operator Roster"
+                  parent="menu_fmes_planning_manpower"
+                  action="action_fmes_operator_allocation"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_manpower_logs"
+                  name="Manpower Logs"
+                  parent="menu_fmes_planning_manpower"
+                  action="action_fmes_manpower_log"
+                  sequence="20"/>
+
+        <!-- ============================================================ -->
+        <!--  Monitoring                                                  -->
         <!-- ============================================================ -->
 
         <menuitem id="menu_fmes_executive_dashboard"
@@ -249,71 +392,11 @@
                   action="action_fmes_live_status"
                   sequence="20"/>
 
-        <menuitem id="menu_fmes_production_report"
-                  name="Production Output"
-                  parent="menu_fmes_dashboard"
-                  action="action_fmes_production_report"
-                  sequence="25"/>
-
         <menuitem id="menu_fmes_utilization_report"
-                  name="Machine Utilisation"
+                  name="Machine-wise Monitoring"
                   parent="menu_fmes_dashboard"
                   action="action_fmes_utilization_report"
                   sequence="30"/>
-
-        <menuitem id="menu_fmes_manpower_impact_report"
-                  name="Manpower Impact"
-                  parent="menu_fmes_dashboard"
-                  action="action_fmes_manpower_impact_report"
-                  sequence="40"/>
-
-        <!-- ============================================================ -->
-        <!--  Production                                                  -->
-        <!--                                                              -->
-        <!--  The terminal is the only item an operator sees; everything  -->
-        <!--  else here is supervisor and above.                          -->
-        <!-- ============================================================ -->
-
-        <menuitem id="menu_fmes_terminal"
-                  name="Shop Floor Terminal"
-                  parent="menu_fmes_production"
-                  action="action_fmes_shopfloor_terminal"
-                  sequence="10"/>
-
-        <menuitem id="menu_fmes_entries"
-                  name="Production Entries"
-                  parent="menu_fmes_production"
-                  action="action_fmes_production_entry"
-                  sequence="20"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
-
-        <menuitem id="menu_fmes_approval_queue"
-                  name="Approval Queue"
-                  parent="menu_fmes_production"
-                  action="action_fmes_approval_queue"
-                  sequence="30"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
-
-        <menuitem id="menu_fmes_planned_vs_actual"
-                  name="Planned vs Actual"
-                  parent="menu_fmes_production"
-                  action="action_fmes_planned_vs_actual"
-                  sequence="40"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
-
-        <menuitem id="menu_fmes_import_output"
-                  name="Import Daily Output"
-                  parent="menu_fmes_production"
-                  action="action_fmes_production_import"
-                  sequence="50"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
-
-        <menuitem id="menu_fmes_import_batches"
-                  name="Import Batches"
-                  parent="menu_fmes_production"
-                  action="action_fmes_import_batch"
-                  sequence="60"
-                  groups="furnishing_mes.group_fmes_manager"/>
 
         <!-- ============================================================ -->
         <!--  Maintenance                                                 -->
@@ -337,30 +420,14 @@
                   action="action_fmes_maintenance_report"
                   sequence="30"/>
 
-        <!-- ============================================================ -->
-        <!--  Manpower                                                    -->
-        <!-- ============================================================ -->
-
-        <menuitem id="menu_fmes_operator_roster"
-                  name="Operator Roster"
-                  parent="menu_fmes_manpower"
-                  action="action_fmes_operator_allocation"
-                  sequence="10"/>
-
-        <menuitem id="menu_fmes_manpower_logs"
-                  name="Manpower Logs"
-                  parent="menu_fmes_manpower"
-                  action="action_fmes_manpower_log"
-                  sequence="20"/>
-
-        <menuitem id="menu_fmes_manpower_impact"
-                  name="Manpower Impact"
-                  parent="menu_fmes_manpower"
-                  action="action_fmes_manpower_impact_report"
-                  sequence="30"/>
+        <menuitem id="menu_fmes_report_maintenance"
+                  name="Maintenance Report"
+                  parent="menu_fmes_maintenance"
+                  action="action_fmes_report_maintenance"
+                  sequence="40"/>
 
         <!-- ============================================================ -->
-        <!--  Backlog                                                     -->
+        <!--  Orders                                                      -->
         <!-- ============================================================ -->
 
         <menuitem id="menu_fmes_backlog_overview"
@@ -380,6 +447,18 @@
                   parent="menu_fmes_backlog"
                   action="action_fmes_delayed_orders"
                   sequence="30"/>
+
+        <menuitem id="menu_fmes_carry_forward"
+                  name="Carry Forward Orders"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_carry_forward"
+                  sequence="40"/>
+
+        <menuitem id="menu_fmes_report_backlog"
+                  name="Backlog &amp; Carry Forward Report"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_report_backlog"
+                  sequence="50"/>
 
         <!-- ============================================================ -->
         <!--  Configuration                                               -->

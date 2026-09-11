@@ -25,64 +25,88 @@ be the wrong tool.
 
 Root application menu: **Furnishing MES** (custom icon, `sequence=10`).
 
+Reorganised post-launch (still Phase 4-15 functionality; no new screens) to
+group by workflow rather than by the phase that built it, matching the
+customer's own navigation sketch:
+
 ```
 Furnishing MES
-├── Dashboard                       (Supervisor+)
+├── Production Planning             (Operator sees only Shift Logs > Shop Floor Terminal)
+│   ├── Production Schedule         (Supervisor+)
+│   │   ├── Production Plans
+│   │   ├── Generate Plan           (wizard)
+│   │   ├── Scheduling Board
+│   │   └── Plan Lines
+│   ├── Output Tracking             (Supervisor+)
+│   │   ├── Planned vs Actual
+│   │   ├── Production Output
+│   │   ├── Import Daily Output     (wizard)
+│   │   └── Import Batches          (Manager only)
+│   ├── Shift Logs
+│   │   ├── Shop Floor Terminal
+│   │   ├── Production Entries      (Supervisor+)
+│   │   └── Approval Queue          (Supervisor+)
+│   └── Manpower                    (Supervisor+)
+│       ├── Operator Roster
+│       └── Manpower Logs
+├── Monitoring                      (Supervisor+)
 │   ├── Executive Dashboard
-│   └── Live Production Status
-├── Planning                        (Supervisor+)
-│   ├── Production Plans
-│   ├── Scheduling Board
-│   ├── Generate Plan               (wizard)
-│   └── Carry Forward Lines
-├── Production                      (Operator sees only Shop Floor Terminal)
-│   ├── Shop Floor Terminal
-│   ├── Production Entries
-│   ├── Approval Queue              (Supervisor+)
-│   ├── Planned vs Actual
-│   └── Import Daily Output         (wizard, Supervisor+)
-├── Downtime
-│   ├── Downtime Events
-│   ├── Approval Queue              (Supervisor+)
-│   └── Loss Analysis               (Supervisor+)
-├── Maintenance
-│   ├── Equipment
-│   ├── Preventive Schedules
-│   ├── Maintenance Requests
-│   └── Maintenance Calendar
-├── Manpower                        (Supervisor+)
-│   ├── Operator Allocation
-│   ├── Roster Planning
-│   └── Manpower Logs
-├── Backlog                         (Supervisor+)
+│   ├── Live Production Status
+│   └── Machine-wise Monitoring
+├── Orders                          (Supervisor+, renamed from "Backlog")
 │   ├── Backlog Overview
 │   ├── Blocked Orders
-│   └── Delayed Orders
-├── Alerts
+│   ├── Delayed Orders
+│   ├── Carry Forward Orders
+│   └── Backlog & Carry Forward Report
+├── WorkCentre Downtimes            (Supervisor+, renamed from "Downtime")
+│   ├── Downtime Events
+│   ├── Approval Queue
+│   ├── Loss Analysis
+│   └── Downtime Reports
+├── Maintenance                     (Supervisor+)
+│   ├── Preventive Schedules
+│   ├── Maintenance Requests
+│   ├── Maintenance KPIs
+│   └── Maintenance Report
+├── Inventory                       (Supervisor+, new — read-only lookups
+│   │                                into data Odoo already tracks, no new
+│   │                                models or data entry)
+│   ├── Materials                   (stock.product_template_action_product)
+│   ├── Machines / Work Centres     (same action as Configuration > Machines)
+│   ├── Employees                   (hr.employee.public — directory, not HR files)
+│   └── Products Catalogue          (product.product_template_action_all)
+├── Analytics                       (Supervisor+, renamed from "Reports")
+│   ├── Production
+│   │   ├── Daily Production
+│   │   ├── Productivity
+│   │   └── Exceptions
+│   ├── Machine
+│   │   └── Machine Utilisation
+│   ├── Manpower
+│   │   └── Manpower Impact
+│   └── MIS Report
+│       └── Monthly MIS
+├── Notifications                   (Supervisor+, renamed from "Alerts")
 │   ├── Alert Center
 │   └── Alert Rules                 (Manager only)
-├── Reports                         (Supervisor+)
-│   ├── Daily Production
-│   ├── Machine Utilisation
-│   ├── Downtime
-│   ├── Backlog & Carry Forward
-│   ├── Maintenance
-│   ├── Productivity
-│   ├── Exceptions
-│   └── Monthly MIS
+├── Support Tickets                 (Supervisor+)
 └── Configuration                   (Manager only)
     ├── Shifts
-    ├── Machines / Work Centers
+    ├── Machines
     ├── Capacity Matrix
+    ├── Equipment
     ├── Departments
     ├── Downtime Reasons
-    ├── Report Schedules
-    └── Settings
+    └── Report Schedules
 ```
 
-Operators see only **Production → Shop Floor Terminal**. Menu visibility uses
-`groups=`, but the real enforcement is the ACLs and record rules in
-[`04-security-model.md`](04-security-model.md).
+Operators see only **Production Planning → Shift Logs → Shop Floor
+Terminal**. The Production Planning root itself deliberately carries no
+`groups=` restriction — only its Production Schedule / Output Tracking /
+Manpower sub-folders do — so an Operator can still descend into it to reach
+Shift Logs. Menu visibility uses `groups=`, but the real enforcement is the
+ACLs and record rules in [`04-security-model.md`](04-security-model.md).
 
 ---
 
