@@ -222,6 +222,77 @@ else:
                   parent="menu_fmes_reports"
                   sequence="10"/>
 
+        <!--
+            Material — the customer's own doc lists six sub-items here
+            (Stock, Utilization, Defect, Mishandled, Raw Material Orders,
+            Used up materials per production order). Three real screens
+            below instead of six:
+              - Stock: same action as Inventory > Materials, reused as-is.
+              - Material Defects &amp; Mishandled: merges two doc items into
+                one, since Odoo's own stock.scrap models both identically
+                (a product, a quantity, a reason) — nothing distinguishes
+                a "defect" reason from a "mishandled" one at the model
+                level, so two near-identical screens would be noise, not
+                signal.
+              - Material Consumption: merges "Utilization" and "Used up
+                materials per production order" into one, for the same
+                reason — both are the same underlying data (raw-material
+                stock moves tied to a manufacturing order), just viewed by
+                product vs. by order, which the one pivot view already
+                supports via its own group-by.
+            Raw Material Orders is not built: it needs a purchasing data
+            source, and the `purchase` module is not a dependency — real
+            material ordering is part of ERP 10.8, deliberately deferred
+            (docs/09-erp-integration-roadmap.md). Faking it with no real
+            data behind it would be worse than leaving it out.
+        -->
+        <!--
+            No new model, field or view — stock.move already records every
+            raw-material consumption the moment a manufacturing order uses
+            a component (137 real rows already exist from real production
+            in this database). This action is the one genuinely new
+            record in the whole Material section: a thin domain-filtered
+            window on that existing model, scoped to raw-material
+            consumption only (raw_material_production_id set) so it does
+            not show every internal transfer and delivery alongside it.
+            list/pivot/graph is the same view_mode stock's own native
+            stock_move_action already offers; group_by defaults to
+            product_id (the "Utilization" reading), and switching the
+            pivot's row grouping to raw_material_production_id gives the
+            "used up materials per production order" reading from the
+            exact same screen.
+        -->
+        <record id="action_fmes_material_consumption" model="ir.actions.act_window">
+            <field name="name">Material Consumption</field>
+            <field name="res_model">stock.move</field>
+            <field name="view_mode">list,pivot,graph</field>
+            <field name="domain">[('raw_material_production_id', '!=', False)]</field>
+            <field name="context">{'group_by': ['product_id']}</field>
+        </record>
+
+        <menuitem id="menu_fmes_analytics_material"
+                  name="Material"
+                  parent="menu_fmes_reports"
+                  sequence="15"/>
+
+        <menuitem id="menu_fmes_analytics_material_stock"
+                  name="Stock"
+                  parent="menu_fmes_analytics_material"
+                  action="stock.product_template_action_product"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_analytics_material_consumption"
+                  name="Material Consumption"
+                  parent="menu_fmes_analytics_material"
+                  action="action_fmes_material_consumption"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_analytics_material_scrap"
+                  name="Material Defects &amp; Mishandled"
+                  parent="menu_fmes_analytics_material"
+                  action="stock.action_stock_scrap"
+                  sequence="30"/>
+
         <menuitem id="menu_fmes_analytics_machine"
                   name="Machine"
                   parent="menu_fmes_reports"
