@@ -476,6 +476,19 @@ else:
                   action="action_fmes_report_maintenance"
                   sequence="40"/>
 
+        <!-- Maintenance staff data: no new model, view or action — Odoo's
+             own maintenance.team already models exactly this (members,
+             equipment assigned, and computed request workload per team:
+             todo_request_count, todo_request_count_high_priority, etc.),
+             and its native "Teams" action (list/kanban/form) already loads
+             cleanly for Supervisor and Plant Manager (confirmed live, not
+             assumed). One menu entry reuses it as-is. -->
+        <menuitem id="menu_fmes_maintenance_staff"
+                  name="Maintenance Staff"
+                  parent="menu_fmes_maintenance"
+                  action="maintenance.maintenance_team_action_settings"
+                  sequence="50"/>
+
         <!-- ============================================================ -->
         <!--  Orders                                                      -->
         <!-- ============================================================ -->
