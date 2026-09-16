@@ -434,6 +434,20 @@ else:
                   action="action_fmes_utilization_report"
                   sequence="30"/>
 
+        <!-- Department-wise monitoring: no new model, view or action —
+             action_fmes_production_report (already used under Production
+             Planning > Output Tracking) already groups by department by
+             default (its pivot view's own row grouping, and a
+             search_default_group_department context key already set on
+             the action). Same screen, second menu entry, matching how
+             Machine-wise Monitoring above already reuses
+             action_fmes_utilization_report from elsewhere. -->
+        <menuitem id="menu_fmes_department_monitoring"
+                  name="Department-wise Monitoring"
+                  parent="menu_fmes_dashboard"
+                  action="action_fmes_production_report"
+                  sequence="35"/>
+
         <!-- ============================================================ -->
         <!--  Maintenance                                                 -->
         <!-- ============================================================ -->
