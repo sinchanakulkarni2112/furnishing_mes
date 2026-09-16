@@ -36,6 +36,16 @@ DOWNTIME_STATES = [
     ('rejected', 'Rejected'),
 ]
 
+# The customer's own requested status bar (Requirement 6): a presentation
+# view of the same underlying draft/approved/rejected + maintenance-request
+# state, not a second state machine. See _compute_fmes_stage.
+DOWNTIME_STAGES = [
+    ('report', 'Report'),
+    ('in_review', 'In Review'),
+    ('in_progress', 'In Progress'),
+    ('confirmed', 'Confirmed'),
+]
+
 # Fields that stop moving once a downtime event is approved. Remarks are
 # deliberately excluded, same reasoning as the production entry: correcting a
 # comment is not restating what happened.
@@ -86,6 +96,14 @@ class MrpWorkcenterProductivity(models.Model):
         compute='_compute_fmes_is_running', search='_search_fmes_is_running',
         string='Running',
         help="True while the stoppage has a start time but no end time yet.")
+    fmes_stage = fields.Selection(
+        DOWNTIME_STAGES, compute='_compute_fmes_stage', string='Stage',
+        help="Requirement 6's own status bar (Report / In Review / In "
+             "Progress / Confirmed), shown to the operator who logged this "
+             "so they can see whether it has been looked at yet without "
+             "asking. Derived entirely from fields that already exist — "
+             "no separate state machine to keep in sync with fmes_state or "
+             "the linked maintenance request.")
 
     # ==================================================================
     # Computes
@@ -101,6 +119,24 @@ class MrpWorkcenterProductivity(models.Model):
         if running:
             return domain
         return ['!'] + domain if domain else []
+
+    @api.depends('date_end', 'fmes_state', 'fmes_maintenance_request_id.done')
+    def _compute_fmes_stage(self):
+        for event in self:
+            if event.fmes_state == 'approved':
+                event.fmes_stage = 'confirmed'
+            elif not event.date_end:
+                # Still running: nothing to review yet.
+                event.fmes_stage = 'report'
+            elif (event.fmes_maintenance_request_id
+                    and not event.fmes_maintenance_request_id.done):
+                # Escalated to maintenance and that request is still open —
+                # only reachable for reasons that auto-raise one (Phase 7);
+                # most downtime events skip straight from in_review to
+                # confirmed, which is correct, not a gap.
+                event.fmes_stage = 'in_progress'
+            else:
+                event.fmes_stage = 'in_review'
 
     # ==================================================================
     # Constraints

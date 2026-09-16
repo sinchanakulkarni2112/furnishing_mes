@@ -258,6 +258,39 @@
         &.fmes-t-badge-rejected { background: var(--t-bad); }
     }
 
+    // Requirement 6's downtime status bar (Report / In Review / In
+    // Progress / Confirmed) — top-right of each entry card, as specified.
+    .fmes-t-stage-bar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin: -4px 0 10px;
+        font-size: 11px;
+    }
+
+    .fmes-t-stage {
+        padding: 3px 8px;
+        border-radius: 10px;
+        background: #1e3d5c;
+        color: var(--t-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+
+        &.fmes-t-stage-done { color: var(--t-good); }
+
+        &.fmes-t-stage-current {
+            background: var(--t-accent);
+            color: #2b1d00;
+        }
+    }
+
+    .fmes-t-stage-arrow {
+        color: var(--t-muted);
+        font-size: 11px;
+    }
+
     .fmes-t-fields {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

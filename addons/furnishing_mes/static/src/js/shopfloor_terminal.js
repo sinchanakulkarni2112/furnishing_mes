@@ -22,6 +22,17 @@ import { _t } from "@web/core/l10n/translation";
 
 const REFRESH_MS = 30000;
 
+// Requirement 6's own status bar, in display order. Matches
+// mrp_workcenter_productivity.py's DOWNTIME_STAGES exactly — this is the
+// one place that order is duplicated, since a template can't import a
+// Python constant.
+const DOWNTIME_STAGES = [
+    { key: "report", label: "Report" },
+    { key: "in_review", label: "In Review" },
+    { key: "in_progress", label: "In Progress" },
+    { key: "confirmed", label: "Confirmed" },
+];
+
 export class FmesShopFloorTerminal extends Component {
     static template = "furnishing_mes.ShopFloorTerminal";
     static props = ["*"];
@@ -292,6 +303,20 @@ export class FmesShopFloorTerminal extends Component {
     // ------------------------------------------------------------------
     runningEventFor(entry) {
         return entry.downtime_events.find((ev) => ev.running) || null;
+    }
+
+    /** Most recent downtime event on this entry — already sorted newest
+     *  first by the server — or null if none has been logged. */
+    latestDowntimeEvent(entry) {
+        return entry.downtime_events.length ? entry.downtime_events[0] : null;
+    }
+
+    get downtimeStages() {
+        return DOWNTIME_STAGES;
+    }
+
+    downtimeStageIndex(stageKey) {
+        return DOWNTIME_STAGES.findIndex((s) => s.key === stageKey);
     }
 
     elapsedLabel(dateStartIso) {

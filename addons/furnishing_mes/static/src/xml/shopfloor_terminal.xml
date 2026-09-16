@@ -143,6 +143,20 @@
                                   t-esc="entry.state"/>
                         </div>
 
+                        <!-- Requirement 6's status bar: only shown once
+                             something has actually been reported, and
+                             reflects that latest report — not every past
+                             one, an entry can have several. -->
+                        <div t-if="latestDowntimeEvent(entry)" class="fmes-t-stage-bar">
+                            <t t-set="stageIdx" t-value="downtimeStageIndex(latestDowntimeEvent(entry).stage)"/>
+                            <t t-foreach="downtimeStages" t-as="stage" t-key="stage.key">
+                                <span t-attf-class="fmes-t-stage {{stage_index &lt; stageIdx ? 'fmes-t-stage-done' : ''}} {{stage_index === stageIdx ? 'fmes-t-stage-current' : ''}}">
+                                    <t t-esc="stage.label"/>
+                                </span>
+                                <span t-if="!stage_last" class="fmes-t-stage-arrow">→</span>
+                            </t>
+                        </div>
+
                         <div class="fmes-t-fields">
                             <button class="fmes-t-field"
                                     t-on-click="() => this.openKeypad(entry, 'actual_qty', 'Produced')">

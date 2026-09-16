@@ -177,6 +177,7 @@ class FmesShopFloor(http.Controller):
             'duration_minutes': event.duration,
             'running': event.fmes_is_running,
             'state': event.fmes_state,
+            'stage': event.fmes_stage,
         }
 
     @http.route('/fmes/terminal/record', type='json', auth='user')
