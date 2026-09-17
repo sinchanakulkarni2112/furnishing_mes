@@ -29,6 +29,11 @@ ALERT_TYPES = [
     # new order is received (docs/`Product visualization`). Event-driven
     # like machine_breakdown/material_shortage, same engine, no new model.
     ('new_order_received', 'New Order Received'),
+    # Also not one of the original seven — the doc's WorkCentre Downtimes
+    # section says the Plant Manager must be notified of material
+    # requests raised while reviewing a downtime report, needing their
+    # own approval. Event-driven, same pattern as new_order_received.
+    ('material_request_raised', 'Material Request Raised'),
 ]
 
 SCOPES = [

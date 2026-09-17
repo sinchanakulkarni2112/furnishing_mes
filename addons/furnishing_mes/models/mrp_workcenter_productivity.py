@@ -241,7 +241,21 @@ class MrpWorkcenterProductivity(models.Model):
         records = super().create(vals_list)
         records._fmes_escalate_if_required()
         records._fmes_touch_entry_downtime()
+        records._fmes_subscribe_operator()
         return records
+
+    def _fmes_subscribe_operator(self):
+        """A supervisor's "message the operator" is the standard chatter
+        (Requirement 6: "the supervisor should be allowed to send a
+        message to the operators") — reachable with no new UI since this
+        model already inherits mail.thread. Subscribing the operator who
+        reported the event as a follower here means any message posted
+        through that chatter reaches them by default, without the
+        supervisor having to add them as a recipient by hand every time."""
+        for event in self:
+            if event.fmes_reported_by.partner_id:
+                event.message_subscribe(
+                    partner_ids=event.fmes_reported_by.partner_id.ids)
 
     def write(self, vals):
         # Approving must go through action_approve(), which stamps who and
@@ -427,4 +441,21 @@ class MrpWorkcenterProductivity(models.Model):
             'res_model': 'maintenance.request',
             'res_id': self.fmes_maintenance_request_id.id,
             'view_mode': 'form',
+        }
+
+    def action_request_material(self):
+        """Requirement 6: reviewing a downtime report, if no maintenance
+        is needed a supervisor can put in a request for more materials —
+        opens a new, blank fmes.material.request pre-linked to this
+        event, for the Plant Manager to approve."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Request More Materials'),
+            'res_model': 'fmes.material.request',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_downtime_event_id': self.id,
+            },
         }

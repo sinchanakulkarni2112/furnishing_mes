@@ -57,6 +57,20 @@
             <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_new_order_received')])]"/>
         </record>
 
+        <record id="alert_action_material_request_raised" model="ir.actions.server">
+            <field name="name">Furnishing MES: raise material-request alerts</field>
+            <field name="model_id" ref="model_fmes_material_request"/>
+            <field name="state">code</field>
+            <field name="code">env['fmes.alert.engine']._on_event(records, 'material_request_raised')</field>
+        </record>
+
+        <record id="alert_automation_material_request_raised" model="base.automation">
+            <field name="name">Furnishing MES: material request raised alert</field>
+            <field name="model_id" ref="model_fmes_material_request"/>
+            <field name="trigger">on_create</field>
+            <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_material_request_raised')])]"/>
+        </record>
+
         <record id="alert_action_blocked_order" model="ir.actions.server">
             <field name="name">Furnishing MES: raise blocked-order alerts</field>
             <field name="model_id" ref="mrp.model_mrp_production"/>

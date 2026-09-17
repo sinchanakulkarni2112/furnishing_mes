@@ -202,6 +202,12 @@ else:
                   action="action_fmes_report_dashboard_downtime"
                   sequence="40"/>
 
+        <menuitem id="menu_fmes_material_request"
+                  name="Material Requests"
+                  parent="menu_fmes_downtime"
+                  action="action_fmes_material_request"
+                  sequence="50"/>
+
         <!-- 5. Maintenance -->
         <menuitem id="menu_fmes_maintenance"
                   name="Maintenance"

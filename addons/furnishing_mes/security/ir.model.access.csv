@@ -63,3 +63,5 @@ access_fmes_support_ticket_portal,fmes.support.ticket.portal,model_fmes_support_
 access_mrp_production_portal,mrp.production.portal,mrp.model_mrp_production,base.group_portal,1,0,0,0
 access_product_product_portal,product.product.portal,product.model_product_product,base.group_portal,1,0,0,0
 access_fmes_sync_log_manager,fmes.sync.log.manager,model_fmes_sync_log,furnishing_mes.group_fmes_manager,1,0,0,0
+access_fmes_material_request_supervisor,fmes.material.request.supervisor,model_fmes_material_request,furnishing_mes.group_fmes_supervisor,1,1,1,0
+access_fmes_material_request_manager,fmes.material.request.manager,model_fmes_material_request,furnishing_mes.group_fmes_manager,1,1,1,1

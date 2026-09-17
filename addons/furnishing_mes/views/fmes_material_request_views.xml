@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_material_request_view_form" model="ir.ui.view">
+            <field name="name">fmes.material.request.form</field>
+            <field name="model">fmes.material.request</field>
+            <field name="arch" type="xml">
+                <form string="Material Request">
+                    <header>
+                        <button name="action_approve" type="object"
+                                string="Approve" class="btn-primary"
+                                invisible="state != 'new'"
+                                groups="furnishing_mes.group_fmes_manager"/>
+                        <button name="action_reject" type="object"
+                                string="Reject"
+                                invisible="state != 'new'"
+                                groups="furnishing_mes.group_fmes_manager"/>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="new,approved"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="product_id"/>
+                                <field name="qty_requested"/>
+                                <field name="workcenter_id" readonly="1"/>
+                                <field name="downtime_event_id" readonly="1"
+                                       invisible="not downtime_event_id"/>
+                            </group>
+                            <group>
+                                <field name="requested_by" readonly="1"/>
+                                <field name="approved_by"
+                                       groups="furnishing_mes.group_fmes_manager"/>
+                                <field name="approved_on"
+                                       groups="furnishing_mes.group_fmes_manager"/>
+                            </group>
+                        </group>
+                        <field name="notes" placeholder="Any details the Plant Manager should know before approving."/>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_material_request_view_list" model="ir.ui.view">
+            <field name="name">fmes.material.request.list</field>
+            <field name="model">fmes.material.request</field>
+            <field name="arch" type="xml">
+                <list string="Material Requests"
+                      decoration-success="state == 'approved'"
+                      decoration-danger="state == 'rejected'">
+                    <field name="create_date"/>
+                    <field name="product_id"/>
+                    <field name="qty_requested"/>
+                    <field name="workcenter_id"/>
+                    <field name="requested_by"/>
+                    <field name="state" widget="badge"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_material_request_view_search" model="ir.ui.view">
+            <field name="name">fmes.material.request.search</field>
+            <field name="model">fmes.material.request</field>
+            <field name="arch" type="xml">
+                <search string="Material Requests">
+                    <field name="product_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="requested_by"/>
+                    <filter name="filter_new" string="Awaiting Approval"
+                            domain="[('state', '=', 'new')]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_state" string="Status"
+                                context="{'group_by': 'state'}"/>
+                        <filter name="group_workcenter" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_material_request" model="ir.actions.act_window">
+            <field name="name">Material Requests</field>
+            <field name="res_model">fmes.material.request</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="fmes_material_request_view_search"/>
+            <field name="context">{'search_default_filter_new': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No material requests yet
+                </p>
+                <p>
+                    Raised by a Supervisor reviewing a downtime report,
+                    approved or rejected by a Plant Manager.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

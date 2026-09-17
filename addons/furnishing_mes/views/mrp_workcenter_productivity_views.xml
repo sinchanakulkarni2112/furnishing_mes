@@ -29,6 +29,9 @@
                                 string="Reopen"
                                 invisible="fmes_state == 'draft'"
                                 groups="furnishing_mes.group_fmes_supervisor"/>
+                        <button name="action_request_material" type="object"
+                                string="Request More Materials"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
                         <field name="fmes_state" widget="statusbar"
                                statusbar_visible="draft,approved"/>
                     </header>
@@ -61,6 +64,19 @@
                         <field name="fmes_approved_by"/>
                         <field name="fmes_approved_on"/>
                     </group>
+                </xpath>
+
+                <!-- The chatter is the "message the operator" surface
+                     (Requirement 6) — this model already inherits
+                     mail.thread, and the operator who reported the event
+                     is auto-subscribed on create (see
+                     _fmes_subscribe_operator), so Send Message here
+                     reaches them by default. mrp.oee_form_view has no
+                     <sheet> wrapper (a bare <form><group>...), so the
+                     chatter is appended as the form's own last child
+                     instead of the usual sheet-adjacent placement. -->
+                <xpath expr="//form" position="inside">
+                    <chatter/>
                 </xpath>
 
             </field>

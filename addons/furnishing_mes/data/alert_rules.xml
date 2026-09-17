@@ -144,6 +144,22 @@
             <field name="cooldown_minutes">1</field>
         </record>
 
+        <!-- Not one of the original seven; the doc's WorkCentre Downtimes
+             section says the Plant Manager must be notified of material
+             requests raised while reviewing a downtime report. -->
+        <record id="alert_rule_material_request_raised" model="fmes.alert.rule">
+            <field name="name">Material Request Raised</field>
+            <field name="alert_type">material_request_raised</field>
+            <field name="operator">gt</field>
+            <field name="threshold">0</field>
+            <field name="severity">warning</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="cooldown_minutes">1</field>
+        </record>
+
         <record id="alert_rule_delayed_order" model="fmes.alert.rule">
             <field name="name">Delayed Order</field>
             <field name="alert_type">delayed_order</field>
