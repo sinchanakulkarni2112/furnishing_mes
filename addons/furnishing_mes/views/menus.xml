@@ -261,29 +261,18 @@ else:
             data behind it would be worse than leaving it out.
         -->
         <!--
-            No new model, field or view — stock.move already records every
-            raw-material consumption the moment a manufacturing order uses
-            a component (137 real rows already exist from real production
-            in this database). This action is the one genuinely new
-            record in the whole Material section: a thin domain-filtered
-            window on that existing model, scoped to raw-material
-            consumption only (raw_material_production_id set) so it does
-            not show every internal transfer and delivery alongside it.
-            list/pivot/graph is the same view_mode stock's own native
-            stock_move_action already offers; group_by defaults to
-            product_id (the "Utilization" reading), and switching the
-            pivot's row grouping to raw_material_production_id gives the
-            "used up materials per production order" reading from the
-            exact same screen.
+            Material Consumption and Material Defects & Mishandled now
+            open the same chart-and-KPI Report Dashboard the original
+            eight reports use (report_dashboard.js), backed by
+            fmes.report.service's own material_consumption/material_scrap
+            data methods reading the identical stock.move/stock.scrap
+            rows the old bare act_window shortcuts showed — those
+            shortcuts are gone, fully replaced, the same way the
+            original eight replaced their own wizard-popup shortcuts.
+            Stock stays a plain list — a live snapshot of qty on hand
+            has no date range to pick, so the date-range-driven
+            dashboard pattern does not fit it.
         -->
-        <record id="action_fmes_material_consumption" model="ir.actions.act_window">
-            <field name="name">Material Consumption</field>
-            <field name="res_model">stock.move</field>
-            <field name="view_mode">list,pivot,graph</field>
-            <field name="domain">[('raw_material_production_id', '!=', False)]</field>
-            <field name="context">{'group_by': ['product_id']}</field>
-        </record>
-
         <menuitem id="menu_fmes_analytics_material"
                   name="Material"
                   parent="menu_fmes_reports"
@@ -298,13 +287,13 @@ else:
         <menuitem id="menu_fmes_analytics_material_consumption"
                   name="Material Consumption"
                   parent="menu_fmes_analytics_material"
-                  action="action_fmes_material_consumption"
+                  action="action_fmes_report_dashboard_material_consumption"
                   sequence="20"/>
 
         <menuitem id="menu_fmes_analytics_material_scrap"
                   name="Material Defects &amp; Mishandled"
                   parent="menu_fmes_analytics_material"
-                  action="stock.action_stock_scrap"
+                  action="action_fmes_report_dashboard_material_scrap"
                   sequence="30"/>
 
         <menuitem id="menu_fmes_analytics_machine"
@@ -384,7 +373,7 @@ else:
         <menuitem id="menu_fmes_manpower_impact_report"
                   name="Manpower Impact"
                   parent="menu_fmes_analytics_manpower"
-                  action="action_fmes_manpower_impact_report"
+                  action="action_fmes_report_dashboard_manpower_impact"
                   sequence="10"/>
 
         <menuitem id="menu_fmes_report_monthly_mis"

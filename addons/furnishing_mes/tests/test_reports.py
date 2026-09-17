@@ -114,13 +114,14 @@ class ReportCase(FmesTestCase):
 class TestReportsRenderWithoutError(ReportCase):
     """Deliverable 7, first half: every report type produces a result."""
 
-    def test_all_ten_report_types_return_data(self):
+    def test_all_thirteen_report_types_return_data(self):
         date_from, date_to = self._period()
         for report_type in [
                 'daily_production', 'machine_utilisation',
                 'production_output_summary', 'downtime', 'backlog',
                 'carry_forward_order', 'maintenance', 'productivity',
-                'exception', 'monthly_mis']:
+                'exception', 'monthly_mis', 'material_consumption',
+                'material_scrap', 'manpower_impact']:
             data = self.service.get_report_data(
                 report_type, date_from, date_to)
             self.assertTrue(data['title'], report_type)

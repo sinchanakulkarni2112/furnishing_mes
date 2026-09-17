@@ -42,6 +42,14 @@ REPORT_TYPES = [
     ('productivity', 'Productivity Report'),
     ('exception', 'Exception Report'),
     ('monthly_mis', 'Monthly Management MIS'),
+    # Not among the customer's original ten — the Analytics > Material and
+    # > Manpower screens these back are the same plain list/pivot screens
+    # already committed; this only adds a report_type + dashboard page in
+    # front of them, following the same pattern the original eight already
+    # established.
+    ('material_consumption', 'Material Consumption Report'),
+    ('material_scrap', 'Material Defects & Mishandled Report'),
+    ('manpower_impact', 'Manpower Impact Report'),
 ]
 REPORT_TITLES = dict(REPORT_TYPES)
 
@@ -745,6 +753,157 @@ class FmesReportService(models.AbstractModel):
             'summary': summary, 'columns': [], 'rows': [],
             'sections': sections,
         }
+
+    # ==================================================================
+    # 11. Material Consumption — Product, native grain. Same domain the
+    #     Analytics > Material > Material Consumption screen already
+    #     uses (stock.move rows tied to a manufacturing order); this
+    #     just adds the date-range/company scoping every other report
+    #     already applies and a by-product summary on top.
+    # ==================================================================
+    @api.model
+    def _data_material_consumption(self, ctx):
+        domain = self._domain(
+            ctx, dept_field=None, wc_field=None, shift_field=None)
+        domain.append(('raw_material_production_id', '!=', False))
+        data = self.env['stock.move']._read_group(
+            domain, groupby=['product_id'],
+            aggregates=['product_uom_qty:sum'])
+        rows = []
+        total_qty = 0.0
+        for product, qty in data:
+            qty = qty or 0.0
+            total_qty += qty
+            rows.append({
+                'product_id': product.display_name if product else '',
+                'qty_consumed': qty,
+            })
+        rows.sort(key=lambda r: r['qty_consumed'], reverse=True)
+        for row in rows:
+            row['pct_of_total'] = self._safe_div(
+                row['qty_consumed'], total_qty, 100.0)
+        summary = [
+            {'label': _("Total Qty Consumed"), 'value': total_qty, 'fmt': 'qty'},
+            {'label': _("Materials Consumed"), 'value': len(rows), 'fmt': 'int'},
+            {'label': _("Top Material"),
+             'value': rows[0]['product_id'] if rows else '—', 'fmt': 'text'},
+        ]
+        columns = [
+            {'key': 'product_id', 'label': _("Material"), 'fmt': 'text'},
+            {'key': 'qty_consumed', 'label': _("Qty Consumed"), 'fmt': 'qty'},
+            {'key': 'pct_of_total', 'label': _("% of Total"), 'fmt': 'pct'},
+        ]
+        if ctx['summary_only']:
+            rows = rows[:TOP_N]
+        return {'summary': summary, 'columns': columns, 'rows': rows}
+
+    # ==================================================================
+    # 12. Material Defects & Mishandled — Product, native grain
+    #     (stock.scrap). Merged the same way the Analytics > Material
+    #     screen already merges them: nothing distinguishes a "defect"
+    #     from a "mishandled" reason at the model level.
+    # ==================================================================
+    @api.model
+    def _data_material_scrap(self, ctx):
+        domain = self._domain(
+            ctx, date_field='date_done', dept_field=None, wc_field=None,
+            shift_field=None)
+        data = self.env['stock.scrap']._read_group(
+            domain, groupby=['product_id'], aggregates=['scrap_qty:sum'])
+        rows = []
+        total_qty = 0.0
+        for product, qty in data:
+            qty = qty or 0.0
+            total_qty += qty
+            rows.append({
+                'product_id': product.display_name if product else '',
+                'qty_scrapped': qty,
+            })
+        rows.sort(key=lambda r: r['qty_scrapped'], reverse=True)
+        for row in rows:
+            row['pct_of_total'] = self._safe_div(
+                row['qty_scrapped'], total_qty, 100.0)
+        summary = [
+            {'label': _("Total Qty Scrapped"), 'value': total_qty, 'fmt': 'qty'},
+            {'label': _("Products Affected"), 'value': len(rows), 'fmt': 'int'},
+            {'label': _("Top Product"),
+             'value': rows[0]['product_id'] if rows else '—', 'fmt': 'text'},
+        ]
+        columns = [
+            {'key': 'product_id', 'label': _("Product"), 'fmt': 'text'},
+            {'key': 'qty_scrapped', 'label': _("Qty Scrapped"), 'fmt': 'qty'},
+            {'key': 'pct_of_total', 'label': _("% of Total"), 'fmt': 'pct'},
+        ]
+        if ctx['summary_only']:
+            rows = rows[:TOP_N]
+        return {'summary': summary, 'columns': columns, 'rows': rows}
+
+    # ==================================================================
+    # 13. Manpower Impact — Department > Shift, native grain
+    #     (fmes.manpower.impact.report). Summed then divided (D0.7):
+    #     shortage_pct and achievement_pct here are computed from this
+    #     report's own summed std/actual/planned/actual figures, never
+    #     averaged from each row's own already-computed percentage.
+    # ==================================================================
+    @api.model
+    def _data_manpower_impact(self, ctx):
+        domain = self._domain(ctx, wc_field=None, product_field=None)
+        data = self.env['fmes.manpower.impact.report']._read_group(
+            domain, groupby=['department_id', 'shift_id'],
+            aggregates=['std_manpower:sum', 'actual_manpower:sum',
+                       'absent_count:sum', 'planned_qty:sum', 'actual_qty:sum'])
+        rows = []
+        total_std = total_actual = 0.0
+        total_absent = 0
+        total_planned = total_actual_qty = 0.0
+        for department, shift, std, actual, absent, planned, actual_qty in data:
+            std = std or 0.0
+            actual = actual or 0.0
+            absent = absent or 0
+            planned = planned or 0.0
+            actual_qty = actual_qty or 0.0
+            total_std += std
+            total_actual += actual
+            total_absent += absent
+            total_planned += planned
+            total_actual_qty += actual_qty
+            rows.append({
+                'department_id': department.name or '',
+                'shift_id': shift.name if shift else '',
+                'std_manpower': std,
+                'actual_manpower': actual,
+                'shortage': std - actual,
+                'shortage_pct': self._safe_div(std - actual, std, 100.0),
+                'absent_count': absent,
+                'achievement_pct': (
+                    self._safe_div(actual_qty, planned, 100.0)
+                    if planned else None),
+            })
+        rows.sort(key=lambda r: r['shortage'], reverse=True)
+        summary = [
+            {'label': _("Total Shortage"),
+             'value': total_std - total_actual, 'fmt': 'qty'},
+            {'label': _("Manpower Shortage %"),
+             'value': self._safe_div(total_std - total_actual, total_std, 100.0),
+             'fmt': 'pct'},
+            {'label': _("Total Absences"), 'value': total_absent, 'fmt': 'int'},
+            {'label': _("Achievement %"),
+             'value': self._safe_div(total_actual_qty, total_planned, 100.0),
+             'fmt': 'pct'},
+        ]
+        columns = [
+            {'key': 'department_id', 'label': _("Department"), 'fmt': 'text'},
+            {'key': 'shift_id', 'label': _("Shift"), 'fmt': 'text'},
+            {'key': 'std_manpower', 'label': _("Std Manpower"), 'fmt': 'qty'},
+            {'key': 'actual_manpower', 'label': _("Actual Manpower"), 'fmt': 'qty'},
+            {'key': 'shortage', 'label': _("Shortage"), 'fmt': 'qty'},
+            {'key': 'shortage_pct', 'label': _("Shortage %"), 'fmt': 'pct'},
+            {'key': 'absent_count', 'label': _("Absences"), 'fmt': 'int'},
+            {'key': 'achievement_pct', 'label': _("Achievement %"), 'fmt': 'pct'},
+        ]
+        if ctx['summary_only']:
+            rows = rows[:TOP_N]
+        return {'summary': summary, 'columns': columns, 'rows': rows}
 
     # ==================================================================
     # XLSX (deliverable 2) — same `get_report_data` dict PDF rendering

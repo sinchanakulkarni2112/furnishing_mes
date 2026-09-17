@@ -75,6 +75,9 @@ const CHART_MAP = {
     maintenance: { title: _t("Maintenance Performance"), kind: "maintenance" },
     exception: { title: _t("Exceptions by Severity"), kind: "summary_bar" },
     monthly_mis: { title: _t("Achievement: This Period vs Previous"), kind: "summary_bar" },
+    material_consumption: { title: _t("Material Consumption by Product"), kind: "table_bar" },
+    material_scrap: { title: _t("Defects & Mishandled by Product"), kind: "table_bar" },
+    manpower_impact: { title: _t("Manpower Shortage by Department"), kind: "table_bar" },
 };
 
 const NEEDS_DASHBOARD_DATA = new Set([
@@ -98,6 +101,12 @@ const REPORT_BLURBS = {
     monthly_mis: _t(
         "A consolidated view of production, machine, downtime, backlog, maintenance, " +
         "productivity and exception performance for the period."),
+    material_consumption: _t(
+        "Which raw materials were consumed by production, and how much of each."),
+    material_scrap: _t(
+        "Which products account for the most defective or mishandled stock."),
+    manpower_impact: _t(
+        "Manpower shortage and absences by department, next to production achievement."),
 };
 
 export class FmesReportDashboard extends Component {
@@ -297,6 +306,9 @@ export class FmesReportDashboard extends Component {
             case "summary_bar":
                 this._renderSummaryBar(el);
                 break;
+            case "table_bar":
+                this._renderTableBar(el);
+                break;
         }
     }
 
@@ -414,6 +426,33 @@ export class FmesReportDashboard extends Component {
                 }],
             },
             options: { responsive: true, maintainAspectRatio: false },
+        });
+    }
+
+    /** Generic — no matching dashboard_service tile exists for these
+     * report types, so the chart is built straight from the report's
+     * own already-grouped `columns`/`rows` (the same data its table and
+     * XLSX sheet already show): first text column as labels, first
+     * numeric column as the bar series, top 10 rows. */
+    _renderTableBar(el) {
+        const columns = this.state.data.columns || [];
+        const allRows = this.state.data.rows || [];
+        const labelCol = columns.find((c) => c.fmt === "text") || columns[0];
+        const valueCol = columns.find(
+            (c) => c.fmt === "qty" || c.fmt === "pct" || c.fmt === "hours");
+        if (!labelCol || !valueCol) return;
+        const rows = allRows.slice(0, 10);
+        this.chart = new Chart(el, {
+            type: "bar",
+            data: {
+                labels: rows.map((r) => r[labelCol.key]),
+                datasets: [{
+                    label: valueCol.label,
+                    data: rows.map((r) => r[valueCol.key] || 0),
+                    backgroundColor: CHART_COLORS.achievement,
+                }],
+            },
+            options: { indexAxis: "y", responsive: true, maintainAspectRatio: false },
         });
     }
 

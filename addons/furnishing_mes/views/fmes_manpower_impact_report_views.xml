@@ -80,23 +80,12 @@
             </field>
         </record>
 
-        <record id="action_fmes_manpower_impact_report" model="ir.actions.act_window">
-            <field name="name">Manpower Impact</field>
-            <field name="res_model">fmes.manpower.impact.report</field>
-            <field name="view_mode">graph,pivot,list</field>
-            <field name="search_view_id" ref="fmes_manpower_impact_report_view_search"/>
-            <field name="context">{'search_default_group_department': 1}</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-                    No manpower or production data yet
-                </p>
-                <p>
-                    Manpower shortage % next to production achievement %, per
-                    department per shift — put side by side rather than
-                    claimed to correlate.
-                </p>
-            </field>
-        </record>
+        <!-- The menu shortcut that used to open this action directly now
+             opens views/fmes_report_dashboard_actions.xml's
+             action_fmes_report_dashboard_manpower_impact instead. The
+             list/pivot/graph/search views above are kept as valid,
+             standalone view definitions on the model even though no
+             action currently points at them. -->
 
     </data>
 </odoo>
