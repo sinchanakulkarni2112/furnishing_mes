@@ -15,12 +15,40 @@
 import { Component, onWillStart, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { user } from "@web/core/user";
 import { _t } from "@web/core/l10n/translation";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function toISO(date) {
     return date.toISOString().slice(0, 10);
+}
+
+function startOfWeek(date) {
+    const day = date.getDay();
+    const diff = (day + 6) % 7; // Monday-start week.
+    return new Date(date.getTime() - diff * DAY_MS);
+}
+
+/** "Today's schedule" / "Weekly Schedule" / "Monthly Schedule" — the
+ * doc's own three named views for Production Schedule. Same preset
+ * technique as the Executive Dashboard and Report Dashboard use. */
+function periodRange(preset, customFrom, customTo) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (preset === "today") {
+        return [toISO(today), toISO(today)];
+    }
+    if (preset === "week") {
+        const start = startOfWeek(today);
+        return [toISO(start), toISO(new Date(start.getTime() + 6 * DAY_MS))];
+    }
+    if (preset === "month") {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return [toISO(start), toISO(end)];
+    }
+    return [customFrom || toISO(today), customTo || toISO(today)];
 }
 
 export class FmesSchedulingBoard extends Component {
@@ -33,24 +61,36 @@ export class FmesSchedulingBoard extends Component {
         this.notification = useService("notification");
 
         const params = this.props.action.params || this.props.action.context || {};
-        const today = new Date();
-        const start = params.date_from
-            ? new Date(params.date_from)
-            : new Date(today.getTime());
-        const end = params.date_to
-            ? new Date(params.date_to)
-            : new Date(today.getTime() + 6 * DAY_MS);
+        // An explicit date range (opened via a plan's own "Open Board"
+        // button) starts as its own fixed view; otherwise default to
+        // This Week, matching the 7-day window this board always showed
+        // before the preset selector existed.
+        const hasExplicitRange = Boolean(params.date_from);
+        const [dateFrom, dateTo] = hasExplicitRange
+            ? [params.date_from, params.date_to]
+            : periodRange("week");
 
         this.state = useState({
-            dateFrom: toISO(start),
-            dateTo: toISO(end),
+            preset: hasExplicitRange ? "custom" : "week",
+            dateFrom,
+            dateTo,
             planId: params.plan_id || null,
             loading: true,
             data: null,
             dragging: null,
+            // Server-side ACL already blocks a write for anyone without
+            // it (fmes.production.plan.line's perm_write is 0 for
+            // Operator) — this only keeps the drag interaction itself
+            // from ever starting for a role that can only view the
+            // schedule, so a drop never silently fails.
+            canEdit: true,
         });
 
-        onWillStart(() => this.load());
+        onWillStart(async () => {
+            this.state.canEdit = await user.hasGroup(
+                "furnishing_mes.group_fmes_supervisor");
+            await this.load();
+        });
     }
 
     async load() {
@@ -64,6 +104,17 @@ export class FmesSchedulingBoard extends Component {
         } finally {
             this.state.loading = false;
         }
+    }
+
+    onPresetChange(ev) {
+        const preset = ev.target.value;
+        const [dateFrom, dateTo] = periodRange(preset, this.state.dateFrom, this.state.dateTo);
+        this.state.preset = preset;
+        this.state.dateFrom = dateFrom;
+        this.state.dateTo = dateTo;
+        // A preset is a general view, not one plan's own window.
+        this.state.planId = null;
+        this.load();
     }
 
     // ------------------------------------------------------------------
@@ -155,6 +206,7 @@ export class FmesSchedulingBoard extends Component {
     // Interaction
     // ------------------------------------------------------------------
     async onDateChange(field, ev) {
+        this.state.preset = "custom";
         this.state[field] = ev.target.value;
         await this.load();
     }
@@ -176,7 +228,7 @@ export class FmesSchedulingBoard extends Component {
     }
 
     onDragStart(machine, column, cell, ev) {
-        if (!cell || !cell.line_ids.length) {
+        if (!this.state.canEdit || !cell || !cell.line_ids.length) {
             ev.preventDefault();
             return;
         }

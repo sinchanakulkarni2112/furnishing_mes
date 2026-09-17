@@ -15,14 +15,22 @@
                 </div>
 
                 <div class="fmes-board-controls">
-                    <label for="fmes_date_from">From</label>
-                    <input id="fmes_date_from" type="date" class="form-control"
-                           t-att-value="state.dateFrom"
-                           t-on-change="(ev) => this.onDateChange('dateFrom', ev)"/>
-                    <label for="fmes_date_to">To</label>
-                    <input id="fmes_date_to" type="date" class="form-control"
-                           t-att-value="state.dateTo"
-                           t-on-change="(ev) => this.onDateChange('dateTo', ev)"/>
+                    <select class="form-select" t-on-change="onPresetChange">
+                        <option value="today" t-att-selected="state.preset === 'today'">Today's Schedule</option>
+                        <option value="week" t-att-selected="state.preset === 'week'">Weekly Schedule</option>
+                        <option value="month" t-att-selected="state.preset === 'month'">Monthly Schedule</option>
+                        <option value="custom" t-att-selected="state.preset === 'custom'">Custom</option>
+                    </select>
+                    <t t-if="state.preset === 'custom'">
+                        <label for="fmes_date_from">From</label>
+                        <input id="fmes_date_from" type="date" class="form-control"
+                               t-att-value="state.dateFrom"
+                               t-on-change="(ev) => this.onDateChange('dateFrom', ev)"/>
+                        <label for="fmes_date_to">To</label>
+                        <input id="fmes_date_to" type="date" class="form-control"
+                               t-att-value="state.dateTo"
+                               t-on-change="(ev) => this.onDateChange('dateTo', ev)"/>
+                    </t>
                 </div>
             </div>
 
@@ -56,7 +64,7 @@
                 <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-mid"/> 60–90%</span>
                 <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-high"/> 90–100%</span>
                 <span class="fmes-legend-item"><i class="fmes-swatch fmes-cell-over"/> Over capacity</span>
-                <span class="fmes-legend-hint">Drag a cell onto another machine or shift to reassign it.</span>
+                <span t-if="state.canEdit" class="fmes-legend-hint">Drag a cell onto another machine or shift to reassign it.</span>
             </div>
 
             <div t-if="state.loading" class="fmes-board-loading">
@@ -120,7 +128,7 @@
                                    t-value="cell(machine.id, column.date, column.shift.id)"/>
                                 <td t-att-class="cellClass(cellData)"
                                     t-att-title="cellTitle(machine, column, cellData)"
-                                    t-att-draggable="cellData and cellData.lines ? 'true' : 'false'"
+                                    t-att-draggable="state.canEdit and cellData and cellData.lines ? 'true' : 'false'"
                                     t-on-click="() => this.openCell(machine, column, cellData)"
                                     t-on-dragstart="(ev) => this.onDragStart(machine, column, cellData, ev)"
                                     t-on-dragover="(ev) => this.onDragOver(ev)"

@@ -556,6 +556,20 @@ class TestPlanningAccess(PlanningCase):
         with self.assertRaises(AccessError):
             plan.with_user(self.operator).write({'note': 'nope'})
 
+    def test_operator_can_view_the_scheduling_board(self):
+        # docs/`Product visualization`: Production Schedule "should be
+        # visible to Employee, Plant Manager and Supervisor" — the
+        # Scheduling Board menu item now carries no group of its own;
+        # this confirms the read access it depends on (already granted
+        # via fmes.production.plan.line's own operator ACL row) actually
+        # works end to end, not just that write is refused.
+        plan = self._generate()
+        data = self.env['fmes.production.plan'].with_user(
+            self.operator).get_board_data(
+                str(self.plan_from), str(self.plan_to), plan.id)
+        self.assertTrue(data['machines'])
+        self.assertTrue(data['cells'])
+
     def test_operator_cannot_create_plan_lines(self):
         plan = self._generate()
         with self.assertRaises(AccessError):

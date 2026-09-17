@@ -100,11 +100,31 @@ else:
             <field name="groups_id" eval="[(5, 0, 0)]"/>
         </record>
 
-        <menuitem id="menu_fmes_planning_schedule"
-                  name="Production Schedule"
-                  parent="menu_fmes_planning"
-                  sequence="10"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+        <!--
+            Production Schedule — the doc's own Production Planning
+            section says this data "should be visible to Employee,
+            Plant Manager and Supervisor" (docs/`Product visualization`),
+            so unlike Output Tracking and Manpower just below, this one
+            carries no group of its own; only Generate Plan and Plan
+            Lines (the editing tools) and Production Plans (their own
+            management list) stay Supervisor/Manager-only below —
+            Scheduling Board, the actual "Today's/Weekly/Monthly
+            Schedule" view, is where the doc's requirement is met.
+            Operators already hold read-only ACL on
+            fmes.production.plan and .plan.line (perm_write is 0), so
+            no new ACL is needed — only the menu was hiding this.
+            Full <record> form, not the <menuitem> shortcut: this menu
+            previously carried groups="...supervisor", and removing an
+            attribute from a <menuitem> tag does not clear it on
+            upgrade — groups_id must be cleared explicitly, same fix
+            already applied to menu_fmes_planning and menu_fmes_backlog.
+        -->
+        <record id="menu_fmes_planning_schedule" model="ir.ui.menu">
+            <field name="name">Production Schedule</field>
+            <field name="parent_id" ref="menu_fmes_planning"/>
+            <field name="sequence">10</field>
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
 
         <menuitem id="menu_fmes_planning_output"
                   name="Output Tracking"
@@ -427,13 +447,15 @@ else:
                   name="Production Plans"
                   parent="menu_fmes_planning_schedule"
                   action="action_fmes_production_plan"
-                  sequence="10"/>
+                  sequence="10"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
 
         <menuitem id="menu_fmes_generate_plan"
                   name="Generate Plan"
                   parent="menu_fmes_planning_schedule"
                   action="action_fmes_plan_generator"
-                  sequence="20"/>
+                  sequence="20"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
 
         <menuitem id="menu_fmes_scheduling_board"
                   name="Scheduling Board"
@@ -445,7 +467,8 @@ else:
                   name="Plan Lines"
                   parent="menu_fmes_planning_schedule"
                   action="action_fmes_plan_line"
-                  sequence="40"/>
+                  sequence="40"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
 
         <!-- ============================================================ -->
         <!--  Production Planning > Output Tracking                      -->
