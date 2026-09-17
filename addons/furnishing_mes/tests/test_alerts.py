@@ -402,3 +402,14 @@ class TestEventTriggers(AlertCase):
             ('rule_id', '=', rule.id), ('res_model', '=', 'mrp.production'),
             ('res_id', '=', mo.id)])
         self.assertTrue(alert)
+
+    def test_new_order_received_event_raises_an_alert(self):
+        rule = self.env.ref('furnishing_mes.alert_rule_new_order_received')
+        mo = self.env['mrp.production'].create({
+            'product_id': self.product_wardrobe.id,
+            'product_qty': 10.0,
+        })
+        alert = self.env['fmes.alert'].search([
+            ('rule_id', '=', rule.id), ('res_model', '=', 'mrp.production'),
+            ('res_id', '=', mo.id)])
+        self.assertTrue(alert)

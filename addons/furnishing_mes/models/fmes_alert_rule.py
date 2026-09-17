@@ -24,6 +24,11 @@ ALERT_TYPES = [
     ('material_shortage', 'Material Shortage'),
     ('critical_backlog', 'Critical Backlog'),
     ('delayed_order', 'Delayed Order'),
+    # Not one of the customer's original seven — the doc's own Orders
+    # section separately calls for a notification-bar entry the moment a
+    # new order is received (docs/`Product visualization`). Event-driven
+    # like machine_breakdown/material_shortage, same engine, no new model.
+    ('new_order_received', 'New Order Received'),
 ]
 
 SCOPES = [

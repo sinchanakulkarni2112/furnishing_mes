@@ -127,6 +127,23 @@
             <field name="cooldown_minutes">1440</field>
         </record>
 
+        <!-- Not one of the original seven; the doc's own Orders section
+             separately calls for a notification the moment a new order is
+             received. Info-severity: routine, not urgent — no email, same
+             as Material Shortage's own pattern. -->
+        <record id="alert_rule_new_order_received" model="fmes.alert.rule">
+            <field name="name">New Order Received</field>
+            <field name="alert_type">new_order_received</field>
+            <field name="operator">gt</field>
+            <field name="threshold">0</field>
+            <field name="severity">info</field>
+            <field name="notify_activity" eval="True"/>
+            <field name="notify_discuss" eval="True"/>
+            <field name="recipient_group_ids"
+                   eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="cooldown_minutes">1</field>
+        </record>
+
         <record id="alert_rule_delayed_order" model="fmes.alert.rule">
             <field name="name">Delayed Order</field>
             <field name="alert_type">delayed_order</field>
