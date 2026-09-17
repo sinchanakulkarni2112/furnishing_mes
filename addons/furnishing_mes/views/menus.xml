@@ -165,7 +165,7 @@ else:
         <menuitem id="menu_fmes_report_downtime"
                   name="Downtime Reports"
                   parent="menu_fmes_downtime"
-                  action="action_fmes_report_downtime"
+                  action="action_fmes_report_dashboard_downtime"
                   sequence="40"/>
 
         <!-- 5. Maintenance -->
@@ -311,25 +311,25 @@ else:
         <menuitem id="menu_fmes_report_daily_production"
                   name="Daily Production"
                   parent="menu_fmes_analytics_production"
-                  action="action_fmes_report_daily_production"
+                  action="action_fmes_report_dashboard_daily_production"
                   sequence="10"/>
 
         <menuitem id="menu_fmes_report_productivity"
                   name="Productivity"
                   parent="menu_fmes_analytics_production"
-                  action="action_fmes_report_productivity"
+                  action="action_fmes_report_dashboard_productivity"
                   sequence="20"/>
 
         <menuitem id="menu_fmes_report_exception"
                   name="Exceptions"
                   parent="menu_fmes_analytics_production"
-                  action="action_fmes_report_exception"
+                  action="action_fmes_report_dashboard_exception"
                   sequence="30"/>
 
         <menuitem id="menu_fmes_report_machine_utilisation"
                   name="Machine Utilisation"
                   parent="menu_fmes_analytics_machine"
-                  action="action_fmes_report_machine_utilisation"
+                  action="action_fmes_report_dashboard_machine_utilisation"
                   sequence="10"/>
 
         <menuitem id="menu_fmes_manpower_impact_report"
@@ -341,7 +341,7 @@ else:
         <menuitem id="menu_fmes_report_monthly_mis"
                   name="Monthly MIS"
                   parent="menu_fmes_analytics_mis"
-                  action="action_fmes_report_monthly_mis"
+                  action="action_fmes_report_dashboard_monthly_mis"
                   sequence="10"/>
 
         <!-- 8. Notifications (renamed from "Alerts") -->
@@ -544,7 +544,7 @@ else:
         <menuitem id="menu_fmes_report_maintenance"
                   name="Maintenance Report"
                   parent="menu_fmes_maintenance"
-                  action="action_fmes_report_maintenance"
+                  action="action_fmes_report_dashboard_maintenance"
                   sequence="40"/>
 
         <!-- Maintenance staff data: no new model, view or action — Odoo's
@@ -591,7 +591,7 @@ else:
         <menuitem id="menu_fmes_report_backlog"
                   name="Backlog &amp; Carry Forward Report"
                   parent="menu_fmes_backlog"
-                  action="action_fmes_report_backlog"
+                  action="action_fmes_report_dashboard_backlog"
                   sequence="50"/>
 
         <!-- ============================================================ -->

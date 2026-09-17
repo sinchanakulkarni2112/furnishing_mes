@@ -30,72 +30,13 @@
             </field>
         </record>
 
-        <!-- One action per menu shortcut (docs/05 IA), each pre-selecting a
-             default report_type. The wizard's own dropdown can still switch
-             to any of the ten from any entry point. -->
-        <record id="action_fmes_report_daily_production" model="ir.actions.act_window">
-            <field name="name">Daily Production Report</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'daily_production'}</field>
-        </record>
-
-        <record id="action_fmes_report_machine_utilisation" model="ir.actions.act_window">
-            <field name="name">Machine Utilisation Report</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'machine_utilisation'}</field>
-        </record>
-
-        <record id="action_fmes_report_downtime" model="ir.actions.act_window">
-            <field name="name">Downtime Report</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'downtime'}</field>
-        </record>
-
-        <record id="action_fmes_report_backlog" model="ir.actions.act_window">
-            <field name="name">Backlog &amp; Carry Forward</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'backlog'}</field>
-        </record>
-
-        <record id="action_fmes_report_maintenance" model="ir.actions.act_window">
-            <field name="name">Maintenance Report</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'maintenance'}</field>
-        </record>
-
-        <record id="action_fmes_report_productivity" model="ir.actions.act_window">
-            <field name="name">Productivity Report</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'productivity'}</field>
-        </record>
-
-        <record id="action_fmes_report_exception" model="ir.actions.act_window">
-            <field name="name">Exception Report</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'exception'}</field>
-        </record>
-
-        <record id="action_fmes_report_monthly_mis" model="ir.actions.act_window">
-            <field name="name">Monthly MIS</field>
-            <field name="res_model">fmes.report.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-            <field name="context">{'default_report_type': 'monthly_mis'}</field>
-        </record>
+        <!-- The eight menu shortcuts that used to open this form directly
+             (one per report_type, docs/05 IA) now open
+             `views/fmes_report_dashboard_actions.xml`'s client actions
+             instead, which create a wizard record and call
+             `action_generate` themselves — see `report_dashboard.js`. This
+             form and `action_generate` are still very much in use, just no
+             longer reachable as a bare popup of their own. -->
 
     </data>
 </odoo>

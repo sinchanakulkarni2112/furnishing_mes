@@ -1,0 +1,43 @@
+// Report Dashboard — the per-report chart page in front of the eight
+// on-demand reports. Shares `.fmes-dashboard`'s layout, KPI tile and panel
+// classes from `fmes_dashboard.scss` (the Executive Dashboard); these are
+// only the pieces that dashboard does not already have.
+
+.fmes-dashboard {
+    .fmes-dashboard-explanation {
+        color: #666;
+        margin: 0 0 16px 0;
+    }
+
+    .fmes-section-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .fmes-section-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 12px;
+        background: #fff;
+
+        h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.95rem;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 0.85rem;
+            color: #444;
+        }
+    }
+
+    .fmes-dashboard-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+    }
+}
