@@ -263,5 +263,31 @@
             </field>
         </record>
 
+        <!--
+            Effect of rescheduling/absence of operators on production — the
+            third of the doc's own Department sub-items. No new model,
+            field or view: fmes.downtime.report already carries
+            fmes_category, and 'operator_absence' /
+            'manpower_rescheduling' are two of the plant's own existing
+            downtime-reason categories (docs/`Product visualization`'s own
+            WorkCentre Downtimes reason list) — a thin domain-filtered
+            window on the same downtime report Loss Analysis already uses,
+            scoped to just those two reasons, is exactly this question:
+            how much production time these two causes cost, by department.
+        -->
+        <record id="action_fmes_absence_reschedule_report" model="ir.actions.act_window">
+            <field name="name">Effect of Rescheduling / Absence</field>
+            <field name="res_model">fmes.downtime.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_downtime_report_view_search"/>
+            <field name="domain">[('fmes_category', 'in', ('operator_absence', 'manpower_rescheduling'))]</field>
+            <field name="context">{'search_default_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No operator-absence or rescheduling downtime yet
+                </p>
+            </field>
+        </record>
+
     </data>
 </odoo>

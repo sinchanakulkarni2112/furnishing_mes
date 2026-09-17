@@ -118,5 +118,28 @@
             </field>
         </record>
 
+        <!--
+            Shift-wise performance — one of the doc's own three Department
+            sub-items (docs/`Product visualization`). Same model, same
+            view, same search view as Production Output just above — the
+            search view's own "Shift" group-by filter already exists
+            (used interactively there); this action just defaults to it
+            instead of Department, the identical technique
+            action_fmes_production_report itself uses for its own default.
+            No new model, field or view.
+        -->
+        <record id="action_fmes_shift_performance_report" model="ir.actions.act_window">
+            <field name="name">Shift-wise Performance</field>
+            <field name="res_model">fmes.production.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_production_report_view_search"/>
+            <field name="context">{'search_default_group_shift': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No approved production yet
+                </p>
+            </field>
+        </record>
+
     </data>
 </odoo>

@@ -322,6 +322,41 @@ else:
                   parent="menu_fmes_reports"
                   sequence="40"/>
 
+        <!--
+            Department — the doc's own three sub-items. All three reuse an
+            existing model with no new field/view: Overall Performance is
+            the exact same action Department-wise Monitoring already uses
+            (fmes.production.report grouped by department — cross-listed
+            here the same way Machine-wise Monitoring is cross-listed
+            under both Monitoring and Analytics > Machine); Shift-wise
+            Performance is the same model/view defaulted to the Shift
+            group-by instead; Effect of Rescheduling/Absence is the same
+            downtime report Loss Analysis already uses, domain-filtered to
+            two existing downtime-reason categories.
+        -->
+        <menuitem id="menu_fmes_analytics_department"
+                  name="Department"
+                  parent="menu_fmes_reports"
+                  sequence="50"/>
+
+        <menuitem id="menu_fmes_analytics_department_overall"
+                  name="Overall Performance"
+                  parent="menu_fmes_analytics_department"
+                  action="action_fmes_production_report"
+                  sequence="10"/>
+
+        <menuitem id="menu_fmes_analytics_department_shift"
+                  name="Shift-wise Performance"
+                  parent="menu_fmes_analytics_department"
+                  action="action_fmes_shift_performance_report"
+                  sequence="20"/>
+
+        <menuitem id="menu_fmes_analytics_department_absence"
+                  name="Effect of Rescheduling / Absence"
+                  parent="menu_fmes_analytics_department"
+                  action="action_fmes_absence_reschedule_report"
+                  sequence="30"/>
+
         <menuitem id="menu_fmes_report_daily_production"
                   name="Daily Production"
                   parent="menu_fmes_analytics_production"
