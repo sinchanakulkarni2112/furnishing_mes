@@ -41,8 +41,11 @@
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
             <field name="comment">Shop-floor access only. Sees the Shop-Floor
 Terminal and the work orders for the work centers they are allocated to today.
-Records production output and logs work-center downtime. Cannot see costs,
-planning, backlog, reports, or other departments.</field>
+Records production output and logs work-center downtime. Also reads five of
+the Orders tab's sub-tabs (New, Backlogs, Delayed, Carry Forward, Existing),
+scoped to their own department — never Blocked Orders, Completed Orders, or
+any report/analytics screen. Cannot see costs, planning reports, or other
+departments' data.</field>
         </record>
 
         <!-- ============================================================ -->

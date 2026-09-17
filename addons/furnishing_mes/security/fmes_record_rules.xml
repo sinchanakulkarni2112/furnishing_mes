@@ -340,6 +340,24 @@
             </field>
         </record>
 
+        <!-- Operators now reach "Backlogs" (docs/`Product visualization`'s
+             Orders sub-tab), newly granted read access above. Without a
+             rule of their own, a plain Operator (not in group_fmes_supervisor,
+             which is where the rule above lives) would match no
+             group-scoped rule on this model at all and fall through to
+             the plain company rule — seeing every department's backlog,
+             MORE than a department-scoped Supervisor sees. Same
+             department-scoped domain as the Supervisor rule keeps that
+             from happening. -->
+        <record id="fmes_backlog_snapshot_operator_dept_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: operator sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
         <record id="fmes_backlog_snapshot_manager_rule" model="ir.rule">
             <field name="name">Backlog Snapshot: manager sees everything</field>
             <field name="model_id" ref="model_fmes_backlog_snapshot"/>

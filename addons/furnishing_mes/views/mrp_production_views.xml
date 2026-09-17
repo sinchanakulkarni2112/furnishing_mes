@@ -71,5 +71,58 @@
             </field>
         </record>
 
+        <!--
+            New / Existing / Completed Orders — three of the customer's own
+            seven Orders sub-tabs (docs/`Product visualization`), not
+            previously built. Same reuse pattern as Blocked Orders just
+            above: no new model or field, a thin domain-filtered window on
+            mrp.production's own native `state`, live rather than the
+            nightly backlog snapshot — a just-completed order should not
+            wait for tonight's snapshot to show up as Completed, the same
+            reasoning Blocked Orders already applies. The three domains
+            are a deliberate, non-overlapping split of every non-cancelled
+            state: draft (not yet confirmed) is New; confirmed/progress/
+            to_close (confirmed and actively moving) is Existing; done is
+            Completed.
+        -->
+        <record id="action_fmes_new_orders" model="ir.actions.act_window">
+            <field name="name">New Orders</field>
+            <field name="res_model">mrp.production</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('state', '=', 'draft')]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No new orders waiting to be confirmed
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_existing_orders" model="ir.actions.act_window">
+            <field name="name">Existing Orders</field>
+            <field name="res_model">mrp.production</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('state', 'in', ('confirmed', 'progress', 'to_close'))]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No orders are currently confirmed or in progress
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_completed_orders" model="ir.actions.act_window">
+            <field name="name">Completed Orders</field>
+            <field name="res_model">mrp.production</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('state', '=', 'done')]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No orders have been completed yet
+                </p>
+            </field>
+        </record>
+
     </data>
 </odoo>

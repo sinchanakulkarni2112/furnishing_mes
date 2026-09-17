@@ -130,12 +130,26 @@ else:
                   sequence="30"
                   groups="furnishing_mes.group_fmes_supervisor"/>
 
-        <!-- 3. Orders (renamed from "Backlog") -->
-        <menuitem id="menu_fmes_backlog"
-                  name="Orders"
-                  parent="menu_fmes_root"
-                  sequence="40"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+        <!--
+            3. Orders (renamed from "Backlog"). No group restriction, same
+            reason Production Planning has none: the doc's own Orders
+            section says Employees see five of the seven sub-tabs (New,
+            Existing, Backlogs, Carry Forward, Delayed) — only Blocked and
+            Completed are Supervisor/Manager-only, so those two carry their
+            own `groups=` below instead of the restriction living on the
+            parent. Full <record> form, not the <menuitem> shortcut, for
+            the same reason menu_fmes_planning above uses it: this menu
+            previously carried groups="...supervisor", and removing an
+            attribute from a <menuitem> tag does not clear an already-set
+            field on upgrade — groups_id must be cleared explicitly or an
+            Operator silently loses this menu on upgrade.
+        -->
+        <record id="menu_fmes_backlog" model="ir.ui.menu">
+            <field name="name">Orders</field>
+            <field name="parent_id" ref="menu_fmes_root"/>
+            <field name="sequence">40</field>
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
 
         <!-- 4. WorkCentre Downtimes (renamed from "Downtime") -->
         <menuitem id="menu_fmes_downtime"
@@ -561,11 +575,23 @@ else:
                   sequence="50"/>
 
         <!-- ============================================================ -->
-        <!--  Orders                                                      -->
+        <!--  Orders — the doc's own seven sub-tabs (New, Delayed,        -->
+        <!--  Completed, Blocked, Backlogs, Carry Forward, Existing).     -->
+        <!--  Employees see everything except Blocked and Completed       -->
+        <!--  (those two carry an explicit groups= of their own — see     -->
+        <!--  menu_fmes_backlog above for why the parent carries none).   -->
         <!-- ============================================================ -->
 
+        <menuitem id="menu_fmes_new_orders"
+                  name="New Orders"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_new_orders"
+                  sequence="5"/>
+
+        <!-- "Backlog Overview" renamed to "Backlogs" to match the doc's
+             own term; same action, same id, same data. -->
         <menuitem id="menu_fmes_backlog_overview"
-                  name="Backlog Overview"
+                  name="Backlogs"
                   parent="menu_fmes_backlog"
                   action="action_fmes_backlog_overview"
                   sequence="10"/>
@@ -574,7 +600,15 @@ else:
                   name="Blocked Orders"
                   parent="menu_fmes_backlog"
                   action="action_fmes_blocked_orders"
-                  sequence="20"/>
+                  sequence="20"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
+
+        <menuitem id="menu_fmes_completed_orders"
+                  name="Completed Orders"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_completed_orders"
+                  sequence="25"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
 
         <menuitem id="menu_fmes_backlog_delayed"
                   name="Delayed Orders"
@@ -588,11 +622,21 @@ else:
                   action="action_fmes_carry_forward"
                   sequence="40"/>
 
+        <menuitem id="menu_fmes_existing_orders"
+                  name="Existing Orders"
+                  parent="menu_fmes_backlog"
+                  action="action_fmes_existing_orders"
+                  sequence="45"/>
+
+        <!-- Not one of the doc's seven sub-tabs (it is the same PDF/XLSX
+             report family as the rest of Analytics) — kept
+             Supervisor/Manager-only, its access unchanged from before. -->
         <menuitem id="menu_fmes_report_backlog"
                   name="Backlog &amp; Carry Forward Report"
                   parent="menu_fmes_backlog"
                   action="action_fmes_report_dashboard_backlog"
-                  sequence="50"/>
+                  sequence="50"
+                  groups="furnishing_mes.group_fmes_supervisor"/>
 
         <!-- ============================================================ -->
         <!--  Configuration                                               -->

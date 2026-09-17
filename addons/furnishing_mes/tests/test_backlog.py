@@ -310,10 +310,36 @@ class TestBacklogSecurity(BacklogCase):
         cls.operator = cls._create_user(
             'fmes_bl_sec_op', 'furnishing_mes.group_fmes_operator')
 
-    def test_operator_cannot_read_the_backlog(self):
+    def test_operator_with_assigned_department_is_scoped_to_it(self):
+        # Employees now reach "Backlogs" (docs/`Product visualization`'s
+        # Orders sub-tab, one of the five they see) — read access, but
+        # department-scoped exactly like a Supervisor's own scoping just
+        # below, never every department's backlog.
+        self.operator.fmes_department_ids = [(6, 0, [self.dept_cutting.id])]
+        Snapshot = self.env['fmes.backlog.snapshot'].sudo()
+        cutting_row = Snapshot.create({
+            'snapshot_date': REFERENCE_DATE,
+            'product_id': self.product_wardrobe.id,
+            'department_id': self.dept_cutting.id, 'status': 'pending',
+        })
+        finishing_row = Snapshot.create({
+            'snapshot_date': REFERENCE_DATE,
+            'product_id': self.product_wardrobe.id,
+            'department_id': self.dept_finishing.id, 'status': 'pending',
+        })
+        visible = self.env['fmes.backlog.snapshot'].with_user(
+            self.operator).search([])
+        self.assertIn(cutting_row, visible)
+        self.assertNotIn(finishing_row, visible)
+
+    def test_operator_cannot_write_the_backlog(self):
         with self.assertRaises(AccessError):
             self.env['fmes.backlog.snapshot'].with_user(
-                self.operator).search([])
+                self.operator).create({
+                    'snapshot_date': REFERENCE_DATE,
+                    'product_id': self.product_wardrobe.id,
+                    'status': 'pending',
+                })
 
     def test_ui_cannot_create_or_edit_a_snapshot_row(self):
         supervisor = self._create_user(
