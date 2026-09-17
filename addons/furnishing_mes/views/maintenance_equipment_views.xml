@@ -16,8 +16,72 @@
                            invisible="not workcenter_id"/>
                     <field name="fmes_criticality"/>
                     <field name="fmes_health_score" widget="progressbar"/>
+                    <!-- Predictive Maintenance (Requirement 7): "a suggestion
+                         box where it predicts when the next maintenance for
+                         a machine can be scheduled." estimated_next_failure
+                         is a native Odoo field (latest_failure_date + MTBF)
+                         this module already reads elsewhere and explicitly
+                         never recomputes (see models/maintenance_equipment.py's
+                         own docstring) — it was simply never shown in any
+                         view before now. No new field, no new logic. -->
+                    <field name="estimated_next_failure"
+                           string="Predicted Next Maintenance"/>
                 </xpath>
             </field>
+        </record>
+
+        <record id="maintenance_equipment_view_list_health" model="ir.ui.view">
+            <field name="name">maintenance.equipment.list.health.fmes</field>
+            <field name="model">maintenance.equipment</field>
+            <field name="arch" type="xml">
+                <!-- No default_order by estimated_next_failure/mtbf/
+                     fmes_health_score: all three are compute fields
+                     Odoo's own maintenance module (and this module's own
+                     health score) never stores, so none of them can be
+                     used in an ORDER BY — a genuine native constraint,
+                     not something worth duplicating a stored shadow
+                     field to work around. Every machine's own predicted
+                     date is still shown; there just isn't a server-side
+                     "soonest first" sort available for it. -->
+                <list string="Machine Health"
+                      decoration-danger="fmes_health_score &lt; 50">
+                    <field name="name"/>
+                    <field name="workcenter_id"/>
+                    <field name="fmes_department_id"/>
+                    <field name="fmes_criticality"/>
+                    <field name="fmes_health_score" widget="progressbar"/>
+                    <field name="mtbf"/>
+                    <field name="latest_failure_date"/>
+                    <field name="estimated_next_failure"
+                           string="Predicted Next Maintenance"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="action_fmes_machine_health" model="ir.actions.act_window">
+            <field name="name">Machine Health</field>
+            <field name="res_model">maintenance.equipment</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('workcenter_id', '!=', False)]</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No production machines are registered as maintenance
+                    equipment yet
+                </p>
+                <p>
+                    Health score, MTBF and predicted next maintenance date
+                    for every production machine — the same figures the
+                    equipment's own form already shows, one machine at a
+                    time, gathered onto a single list.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_machine_health_list_view" model="ir.actions.act_window.view">
+            <field name="sequence">1</field>
+            <field name="view_mode">list</field>
+            <field name="view_id" ref="maintenance_equipment_view_list_health"/>
+            <field name="act_window_id" ref="action_fmes_machine_health"/>
         </record>
 
         <record id="maintenance_equipment_view_list_fmes" model="ir.ui.view">

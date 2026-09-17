@@ -608,6 +608,15 @@ else:
                   action="action_fmes_maintenance_report"
                   sequence="30"/>
 
+        <!-- Machine Health — the doc's own sixth Maintenance sub-tab, not
+             previously built as its own screen: health score, MTBF and a
+             predictive next-maintenance suggestion, per machine. -->
+        <menuitem id="menu_fmes_machine_health"
+                  name="Machine Health"
+                  parent="menu_fmes_maintenance"
+                  action="action_fmes_machine_health"
+                  sequence="35"/>
+
         <menuitem id="menu_fmes_report_maintenance"
                   name="Maintenance Report"
                   parent="menu_fmes_maintenance"
