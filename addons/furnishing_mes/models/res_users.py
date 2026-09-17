@@ -25,6 +25,15 @@ from odoo import api, fields, models
 class ResUsers(models.Model):
     _inherit = 'res.users'
 
+    fmes_employee_id = fields.Char(
+        string='Employee ID',
+        help="A plant-issued ID number the doc's own Login screen asks "
+             "for. Optional, and never replaces the account's real email: "
+             "unlike email, an ID number carries no working password-reset "
+             "or account-recovery path of its own (docs/`Product "
+             "visualization` — assumption, recorded here since the doc "
+             "never specifies one), so a user can sign in with either, but "
+             "email remains what 'Forgot password' still sends to.")
     fmes_workcenter_ids = fields.Many2many(
         'mrp.workcenter',
         'fmes_user_workcenter_rel', 'user_id', 'workcenter_id',
@@ -46,6 +55,19 @@ class ResUsers(models.Model):
     fmes_has_machine_scope = fields.Boolean(
         compute='_compute_fmes_allowed_workcenter_ids',
         help="True when the user's machines have been restricted at all.")
+    _sql_constraints = [
+        ('fmes_employee_id_uniq', 'unique(fmes_employee_id)',
+         'This Employee ID is already assigned to another user.'),
+    ]
+
+    @api.model
+    def _get_login_domain(self, login):
+        # The one hook Odoo's own auth flow already provides for "match a
+        # typed credential against more than just the login field" (other
+        # first-party auth modules use this same method) — logging in
+        # still runs through the native password check unmodified, this
+        # only widens which typed string can resolve to a user.
+        return ['|', ('login', '=', login), ('fmes_employee_id', '=', login)]
 
     @api.depends('fmes_workcenter_ids', 'fmes_department_ids')
     def _compute_fmes_allowed_workcenter_ids(self):

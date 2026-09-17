@@ -19,6 +19,10 @@
                     <page string="Furnishing MES" name="fmes"
                           groups="furnishing_mes.group_fmes_supervisor">
                         <group>
+                            <group string="Login">
+                                <field name="fmes_employee_id"
+                                       placeholder="e.g. EMP-0042"/>
+                            </group>
                             <group string="Shop Floor Access">
                                 <field name="fmes_workcenter_ids"
                                        widget="many2many_tags"
@@ -34,6 +38,14 @@
                                        options="{'no_create': True}"/>
                             </group>
                         </group>
+                        <div class="alert alert-info" role="status">
+                            An Employee ID lets this user sign in with their
+                            plant-issued ID number instead of typing their
+                            email — either still works. Leave blank to sign
+                            in with email only. "Forgot password" always
+                            sends to the account's real email, regardless of
+                            which one is set.
+                        </div>
                         <div class="alert alert-info" role="status">
                             An operator with no machines assigned can still
                             record production, but will only ever see entries

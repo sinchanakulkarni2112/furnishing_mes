@@ -79,6 +79,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'views/fmes_production_entry_downtime_views.xml',
         'views/fmes_live_status_views.xml',
         'views/res_users_views.xml',
+        'views/web_login_views.xml',
         'views/mrp_workcenter_views.xml',
         'views/mrp_workcenter_productivity_views.xml',
         'views/fmes_material_request_views.xml',

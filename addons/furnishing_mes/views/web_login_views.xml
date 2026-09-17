@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Login screen (Requirement 1, docs/`Product visualization`'s own
+            Login screen wording: users sign in with a plant-issued ID
+            number). res.users._get_login_domain is overridden
+            (models/res_users.py) to accept either the account's real email
+            or its fmes_employee_id — this template only relabels the same
+            single input so the field is not presented as email-only; no
+            new field, no new route, no change to password handling.
+        -->
+        <template id="web_login_fmes" inherit_id="web.login">
+            <xpath expr="//label[@for='login']" position="replace">
+                <label for="login" class="form-label d-flex justify-content-between">
+                    Email or Employee ID
+                </label>
+            </xpath>
+            <xpath expr="//input[@id='login']" position="attributes">
+                <attribute name="placeholder">Email or Employee ID</attribute>
+            </xpath>
+        </template>
+
+    </data>
+</odoo>
