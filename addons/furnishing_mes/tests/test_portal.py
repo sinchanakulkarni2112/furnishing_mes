@@ -180,6 +180,8 @@ class TestPortalHttp(HttpCase):
             'partner_id': cls.partner_a.id, 'subject': 'HTTP ticket A'})
         cls.ticket_b = cls.env['fmes.support.ticket'].create({
             'partner_id': cls.partner_b.id, 'subject': 'HTTP ticket B'})
+        cls.product = cls.env['product.product'].create({
+            'name': 'HTTP Portal Product'})
 
     def test_portal_user_can_open_their_own_ticket(self):
         self.authenticate('http_portal_a@example.com', 'demo12345')
@@ -219,6 +221,30 @@ class TestPortalHttp(HttpCase):
         after = self.env['fmes.support.ticket'].search_count(
             [('partner_id', '=', self.partner_a.id)])
         self.assertEqual(after, before + 1)
+
+    def test_production_report_shows_only_own_orders(self):
+        # sale.order's own native portal record rule scopes on
+        # message_partner_ids (followers), not partner_id — a plain
+        # create() does not auto-subscribe the customer the way going
+        # through the real Sales flow (send-by-email, confirmation, a
+        # portal invite) does, so the fixture must do it explicitly to
+        # represent a genuinely portal-visible order.
+        order_a = self.env['sale.order'].create({
+            'partner_id': self.partner_a.id, 'state': 'sale'})
+        order_a.message_subscribe(partner_ids=[self.partner_a.id])
+        self.env['sale.order.line'].create({
+            'order_id': order_a.id, 'product_id': self.product.id,
+            'product_uom_qty': 10.0,
+        })
+        order_b = self.env['sale.order'].create({
+            'partner_id': self.partner_b.id, 'state': 'sale'})
+        order_b.message_subscribe(partner_ids=[self.partner_b.id])
+
+        self.authenticate('http_portal_a@example.com', 'demo12345')
+        response = self.url_open('/my/production-report')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(order_a.name.encode(), response.content)
+        self.assertNotIn(order_b.name.encode(), response.content)
 
     def test_portal_login_does_not_reach_the_backend(self):
         self.authenticate('http_portal_a@example.com', 'demo12345')

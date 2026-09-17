@@ -36,6 +36,12 @@ class FmesPortal(CustomerPortal):
                 Ticket.search_count(self._ticket_domain(
                     request.env.user.partner_id))
                 if Ticket.has_access('read') else 0)
+        if 'production_report_count' in counters:
+            SaleOrder = request.env['sale.order']
+            values['production_report_count'] = (
+                SaleOrder.search_count(self._production_report_domain(
+                    request.env.user.partner_id))
+                if SaleOrder.has_access('read') else 0)
         return values
 
     def _ticket_domain(self, partner):
@@ -145,3 +151,33 @@ class FmesPortal(CustomerPortal):
         values = self._ticket_get_page_view_values(
             ticket_sudo, access_token, **kwargs)
         return request.render('furnishing_mes.portal_ticket_page', values)
+
+    # ------------------------------------------------------------
+    # Production report — one of the Customer Dashboard's five buttons
+    # (docs/`Product visualization`): "Production Report" distinct from
+    # "Track Progress" (the per-order inline section below) and "Your
+    # Orders" (sale's own native /my/orders) — a single consolidated page
+    # across every one of the customer's own confirmed orders, instead of
+    # having to open each order individually to see its progress.
+    # ------------------------------------------------------------
+    def _production_report_domain(self, partner):
+        # Same child_of + commercial_partner_id + confirmed-only shape
+        # sale.order's own native portal domain uses (this file's own
+        # docstring) and _ticket_domain already mirrors — a contact at the
+        # customer's company sees every one of that company's orders, not
+        # just ones placed by their own exact login.
+        return [
+            ('partner_id', 'child_of', [partner.commercial_partner_id.id]),
+            ('state', '=', 'sale'),
+        ]
+
+    @http.route(['/my/production-report'], type='http', auth='user', website=True)
+    def portal_production_report(self, **kwargs):
+        SaleOrder = request.env['sale.order']
+        partner = request.env.user.partner_id
+        orders = SaleOrder.search(
+            self._production_report_domain(partner), order='date_order desc')
+        return request.render('furnishing_mes.portal_production_report', {
+            'orders': orders,
+            'page_name': 'production_report',
+        })
