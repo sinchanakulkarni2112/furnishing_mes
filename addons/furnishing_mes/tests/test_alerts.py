@@ -349,7 +349,7 @@ class TestEscalation(AlertCase):
 
 @tagged('post_install', '-at_install', 'fmes', 'fmes_phase11')
 class TestEventTriggers(AlertCase):
-    """The base.automation wiring in data/alert_automations.xml.
+    """The base.automation wiring in data/fmes_alert_automations.xml.
 
     Each of these writes the exact field a plant user would, and lets
     base_automation itself decide to call `fmes.alert.engine._on_event` --

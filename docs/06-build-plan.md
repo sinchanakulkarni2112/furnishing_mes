@@ -858,7 +858,7 @@ rather than silently dropped.
    raises alerts, dispatches to activity / Discuss / email — ✅
 3. Cron `fmes_evaluate_alerts` (every 15 minutes) for threshold-based rules;
    `base_automation` triggers for event-based rules (breakdown, block) — ✅
-4. Default rules seeded in `data/alert_rules.xml` for all seven required types
+4. Default rules seeded in `data/fmes_alert_rules.xml` for all seven required types
    — ✅ (nine rules: two types are each seeded as a pair of rules sharing one
    `alert_type`, which is how a single rule's one threshold+operator pair
    expresses an "or" condition — see Decisions)

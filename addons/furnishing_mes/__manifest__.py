@@ -68,8 +68,8 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'data/fmes_crons.xml',
         'data/fmes_report_schedules.xml',
         'data/fmes_alert_mail_template.xml',
-        'data/alert_rules.xml',
-        'data/alert_automations.xml',
+        'data/fmes_alert_rules.xml',
+        'data/fmes_alert_automations.xml',
 
         # Views, then menus (menus reference the actions above)
         'views/fmes_shift_views.xml',
