@@ -1,0 +1,52 @@
+name: Tests
+
+# One job: install the module fresh and run its own test suite inside
+# Docker, the same way `make test` (docs/07-development-setup.md) does
+# locally — just `-i` instead of `-u`, since the CI database does not
+# exist yet. Odoo's own process exit code reflects a failed or errored
+# test (confirmed against this exact command during development), so no
+# separate log-parsing step is needed to catch a red run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure environment
+        run: cp .env.example .env
+
+      - name: Start the database
+        run: docker compose up -d db
+
+      - name: Wait for the database to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            status="$(docker compose ps db --format '{{.Health}}')"
+            if [ "$status" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Database never became healthy" >&2
+          docker compose logs db
+          exit 1
+
+      - name: Install furnishing_mes and run its test suite
+        run: |
+          docker compose run --rm web odoo \
+            -d furnishing_mes -i furnishing_mes \
+            --test-enable --test-tags /furnishing_mes \
+            --log-level=test --stop-after-init
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs

@@ -14,7 +14,13 @@ name: furnishing-mes
 services:
 
   db:
-    image: postgres:15
+    # Pinned by digest, same reasoning as the web image below: so
+    # "postgres:15" cannot silently drift to a different build between two
+    # people's (or two days') `docker compose up`. Re-pin with
+    # `docker inspect postgres:15 --format '{{index .RepoDigests 0}}'`
+    # after a deliberate, tested upgrade, never as a side effect of a
+    # routine pull.
+    image: postgres@sha256:9b1d34adbce1dd07ee6e94b4a2cf698884b89bd44a6c9c12f5da8f3acbfe4957  # postgres:15
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-odoo}
