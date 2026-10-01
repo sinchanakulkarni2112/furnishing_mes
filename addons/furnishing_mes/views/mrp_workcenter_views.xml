@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Extend Odoo's work center form with the machine master      -->
+        <!-- ============================================================ -->
+        <record id="mrp_workcenter_view_form_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.form.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//div[@name='button_box']" position="inside">
+                    <button type="object" name="action_fmes_view_capacity"
+                            class="oe_stat_button" icon="fa-table">
+                        <div class="o_field_widget o_stat_info">
+                            <span class="o_stat_value">
+                                <field name="fmes_capacity_count"/>
+                            </span>
+                            <span class="o_stat_text">Capacity</span>
+                        </div>
+                    </button>
+                </xpath>
+
+                <xpath expr="//field[@name='code']" position="after">
+                    <field name="fmes_machine_code"
+                           placeholder="e.g. SAW-01"/>
+                    <field name="department_id"/>
+                </xpath>
+
+                <xpath expr="//field[@name='resource_calendar_id']" position="after">
+                    <field name="equipment_id"
+                           context="{'default_workcenter_id': id,
+                                     'default_name': name}"/>
+                    <field name="fmes_std_manpower"/>
+                    <field name="fmes_criticality"/>
+                    <field name="fmes_is_bottleneck"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Extend the work center list                                 -->
+        <!-- ============================================================ -->
+        <record id="mrp_workcenter_view_list_fmes" model="ir.ui.view">
+            <field name="name">mrp.workcenter.list.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="inherit_id" ref="mrp.mrp_workcenter_tree_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='code']" position="after">
+                    <field name="fmes_machine_code" optional="show"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="fmes_criticality" optional="hide"/>
+                    <field name="fmes_is_bottleneck" optional="hide"/>
+                    <field name="fmes_std_manpower" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Machine master kanban                                       -->
+        <!--                                                              -->
+        <!--  A dedicated view rather than an override of Odoo's shop-    -->
+        <!--  floor kanban, which is built for a different question.      -->
+        <!-- ============================================================ -->
+        <record id="fmes_workcenter_view_kanban" model="ir.ui.view">
+            <field name="name">mrp.workcenter.kanban.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="arch" type="xml">
+                <kanban sample="1" default_group_by="department_id">
+                    <field name="fmes_criticality"/>
+                    <field name="fmes_is_bottleneck"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="d-flex justify-content-between">
+                                <field name="name" class="fw-bold fs-5"/>
+                                <span t-if="record.fmes_is_bottleneck.raw_value"
+                                      class="badge text-bg-warning"
+                                      title="Constrains overall throughput">
+                                    Bottleneck
+                                </span>
+                            </div>
+                            <div class="text-muted">
+                                <field name="fmes_machine_code"/>
+                            </div>
+                            <div class="mt-2">
+                                <span class="me-3">
+                                    <i class="fa fa-users me-1" title="Standard manpower"/>
+                                    <field name="fmes_std_manpower"/>
+                                </span>
+                                <span class="me-3">
+                                    <i class="fa fa-table me-1" title="Capacity rates defined"/>
+                                    <field name="fmes_capacity_count"/>
+                                </span>
+                            </div>
+                            <footer>
+                                <span class="badge"
+                                      t-attf-class="badge #{
+                                        record.fmes_criticality.raw_value == 'critical' ? 'text-bg-danger' :
+                                        record.fmes_criticality.raw_value == 'high' ? 'text-bg-warning' :
+                                        record.fmes_criticality.raw_value == 'medium' ? 'text-bg-info' :
+                                        'text-bg-secondary'}">
+                                    <field name="fmes_criticality"/>
+                                </span>
+                                <div class="d-flex ms-auto align-items-center">
+                                    <field name="equipment_id" invisible="1"/>
+                                    <i t-if="record.equipment_id.raw_value"
+                                       class="fa fa-wrench text-muted"
+                                       title="Linked to maintenance equipment"/>
+                                </div>
+                            </footer>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Search: machine-master oriented                             -->
+        <!-- ============================================================ -->
+        <record id="fmes_workcenter_view_search" model="ir.ui.view">
+            <field name="name">mrp.workcenter.search.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="inherit_id" ref="mrp.view_mrp_workcenter_search"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="fmes_machine_code"/>
+                    <field name="department_id"/>
+                </xpath>
+                <xpath expr="//search" position="inside">
+                    <separator/>
+                    <filter name="fmes_filter_bottleneck" string="Bottlenecks"
+                            domain="[('fmes_is_bottleneck', '=', True)]"/>
+                    <filter name="fmes_filter_critical" string="Critical Machines"
+                            domain="[('fmes_criticality', 'in', ['high', 'critical'])]"/>
+                    <filter name="fmes_filter_no_equipment"
+                            string="No Maintenance Equipment"
+                            domain="[('equipment_id', '=', False)]"/>
+                    <filter name="fmes_filter_no_capacity"
+                            string="No Capacity Rate"
+                            domain="[('fmes_capacity_ids', '=', False)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="fmes_group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="fmes_group_criticality" string="Criticality"
+                                context="{'group_by': 'fmes_criticality'}"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Machine master action                                       -->
+        <!-- ============================================================ -->
+        <record id="action_fmes_machine_master" model="ir.actions.act_window">
+            <field name="name">Machines</field>
+            <field name="res_model">mrp.workcenter</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="search_view_id" ref="fmes_workcenter_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Add your first machine
+                </p>
+                <p>
+                    Machines are Odoo work centers, extended with the plant's own
+                    machine code, department, standard manpower and the link to
+                    the maintenance equipment record.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_machine_master_kanban_view" model="ir.actions.act_window.view">
+            <field name="sequence">1</field>
+            <field name="view_mode">kanban</field>
+            <field name="view_id" ref="fmes_workcenter_view_kanban"/>
+            <field name="act_window_id" ref="action_fmes_machine_master"/>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="furnishing_mes.ExecutiveDashboard">
+        <div class="fmes-dashboard o_action">
+
+            <div class="fmes-dashboard-toolbar">
+                <h2>
+                    <t t-if="state.isManager">Executive Dashboard</t>
+                    <t t-else="">Supervisor Dashboard</t>
+                </h2>
+                <div class="fmes-dashboard-controls">
+                    <select class="form-select" t-on-change="onPresetChange">
+                        <option value="today" t-att-selected="state.preset === 'today'">Today</option>
+                        <option value="week" t-att-selected="state.preset === 'week'">This Week</option>
+                        <option value="month" t-att-selected="state.preset === 'month'">This Month</option>
+                        <option value="quarter" t-att-selected="state.preset === 'quarter'">This Quarter</option>
+                        <option value="custom" t-att-selected="state.preset === 'custom'">Custom</option>
+                    </select>
+                    <t t-if="state.preset === 'custom'">
+                        <input type="date" class="form-control" t-att-value="state.dateFrom"
+                               t-on-change="(ev) => this.onCustomDateChange('dateFrom', ev)"/>
+                        <input type="date" class="form-control" t-att-value="state.dateTo"
+                               t-on-change="(ev) => this.onCustomDateChange('dateTo', ev)"/>
+                    </t>
+                    <select class="form-select" multiple="multiple"
+                            t-on-change="onDepartmentChange">
+                        <option t-foreach="state.departments" t-as="dept" t-key="dept.id"
+                                t-att-value="dept.id"
+                                t-att-selected="state.departmentIds.includes(dept.id)">
+                            <t t-esc="dept.name"/>
+                        </option>
+                    </select>
+                    <button class="btn btn-secondary" t-on-click="onRefresh">
+                        <i class="fa fa-refresh"/> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div t-if="state.loading" class="fmes-dashboard-loading">
+                <i class="fa fa-spin fa-spinner"/> Loading…
+            </div>
+
+            <t t-if="!state.loading and state.data">
+                <div class="fmes-kpi-row">
+                    <t t-foreach="this.kpiTiles" t-as="tile" t-key="tile.key">
+                        <div t-attf-class="fmes-kpi-tile #{this.kpiStatusClass(tile.kpi)}">
+                            <div class="fmes-kpi-value">
+                                <t t-esc="tile.kpi.value"/><t t-esc="tile.suffix"/>
+                                <span t-if="tile.kpi.value >= tile.kpi.previous" class="fmes-trend-up">▲</span>
+                                <span t-else="" class="fmes-trend-down">▼</span>
+                            </div>
+                            <div class="fmes-kpi-label"><t t-esc="tile.label"/></div>
+                            <div t-if="tile.kpi.target" class="fmes-kpi-target">
+                                Target: <t t-esc="tile.kpi.target"/><t t-esc="tile.suffix"/>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+
+                <div class="fmes-dashboard-grid">
+                    <div class="fmes-panel">
+                        <h3>Production Trend</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="productionTrendCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Downtime Pareto</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="downtimeParetoCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Department Performance</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="departmentPerfCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Shift Performance</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="shiftPerfCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Machine Utilisation Ranking</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="machineRankingCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Capacity Utilisation</h3>
+                        <div class="fmes-capacity-list">
+                            <div t-foreach="state.data.capacity_utilization" t-as="row"
+                                 t-key="row.department" class="fmes-capacity-row">
+                                <span class="fmes-capacity-label"><t t-esc="row.department"/></span>
+                                <div class="fmes-capacity-bar">
+                                    <div class="fmes-capacity-bar-fill"
+                                         t-attf-style="width: #{Math.min(row.utilization_pct, 100)}%"/>
+                                </div>
+                                <span class="fmes-capacity-pct">
+                                    <t t-esc="Math.round(row.utilization_pct)"/>%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Backlog Ageing</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="backlogAgeingCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel">
+                        <h3>Productivity</h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="productivityCanvas"/>
+                        </div>
+                    </div>
+                    <div class="fmes-panel fmes-panel-wide">
+                        <h3>Maintenance Performance</h3>
+                        <div class="fmes-maintenance-stats">
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.data.maintenance_performance.mtbf"/>
+                                </span>
+                                <span class="fmes-kpi-label">MTBF (days)</span>
+                            </div>
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.data.maintenance_performance.mttr"/>
+                                </span>
+                                <span class="fmes-kpi-label">MTTR (days)</span>
+                            </div>
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.data.maintenance_performance.pm_compliance_pct"/>%
+                                </span>
+                                <span class="fmes-kpi-label">PM Compliance</span>
+                            </div>
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.data.maintenance_performance.open_breakdowns"/>
+                                </span>
+                                <span class="fmes-kpi-label">Open Breakdowns</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

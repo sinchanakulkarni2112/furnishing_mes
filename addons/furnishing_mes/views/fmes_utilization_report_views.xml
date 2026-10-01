@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Machine utilisation & OEE analysis (Requirement 5, 3.6)      -->
+        <!-- ============================================================ -->
+        <record id="fmes_utilization_report_view_list" model="ir.ui.view">
+            <field name="name">fmes.utilization.report.list</field>
+            <field name="model">fmes.utilization.report</field>
+            <field name="arch" type="xml">
+                <list string="Machine Utilisation" create="0" edit="0"
+                      delete="0" sample="1"
+                      decoration-danger="utilization_pct &lt; 60"
+                      decoration-success="utilization_pct &gt;= 90">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="available_hours" widget="float_time"
+                           optional="hide"/>
+                    <field name="run_hours" widget="float_time"/>
+                    <field name="planned_downtime_hours" widget="float_time"
+                           optional="hide"/>
+                    <field name="unplanned_downtime_hours"
+                           widget="float_time" optional="show"/>
+                    <field name="idle_hours" widget="float_time"
+                           optional="hide"/>
+                    <field name="utilization_pct" widget="percentage"/>
+                    <field name="availability" widget="percentage"
+                           optional="hide"/>
+                    <field name="performance" widget="percentage"
+                           optional="hide"/>
+                    <field name="quality" widget="percentage" optional="hide"/>
+                    <field name="oee_pct" widget="percentage"/>
+                    <field name="efficiency_pct" widget="percentage"
+                           optional="show"/>
+                    <field name="std_output_qty" optional="hide"/>
+                    <field name="actual_qty" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_utilization_report_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.utilization.report.pivot</field>
+            <field name="model">fmes.utilization.report</field>
+            <field name="arch" type="xml">
+                <pivot string="Machine Utilisation" sample="1">
+                    <field name="workcenter_id" type="row"/>
+                    <field name="date" type="col" interval="week"/>
+                    <field name="utilization_pct" type="measure"/>
+                    <field name="oee_pct" type="measure"/>
+                    <field name="run_hours" type="measure"/>
+                    <field name="unplanned_downtime_hours" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_utilization_report_view_graph" model="ir.ui.view">
+            <field name="name">fmes.utilization.report.graph</field>
+            <field name="model">fmes.utilization.report</field>
+            <field name="arch" type="xml">
+                <graph string="Utilisation Trend" type="line" sample="1">
+                    <field name="date" interval="day"/>
+                    <field name="utilization_pct" type="measure"/>
+                    <field name="oee_pct" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_utilization_report_view_search" model="ir.ui.view">
+            <field name="name">fmes.utilization.report.search</field>
+            <field name="model">fmes.utilization.report</field>
+            <field name="arch" type="xml">
+                <search string="Machine Utilisation">
+                    <field name="workcenter_id"/>
+                    <field name="department_id"/>
+                    <field name="shift_id"/>
+                    <filter name="filter_this_month" string="This Month"
+                            domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    <separator/>
+                    <filter name="filter_under_utilized" string="Under-Utilised (&lt; 60%)"
+                            domain="[('utilization_pct', '&lt;', 60)]"/>
+                    <filter name="filter_high_load" string="Heavily Loaded (&gt;= 90%)"
+                            domain="[('utilization_pct', '&gt;=', 90)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_machine" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_utilization_report" model="ir.actions.act_window">
+            <field name="name">Machine Utilisation</field>
+            <field name="res_model">fmes.utilization.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_utilization_report_view_search"/>
+            <field name="context">{'search_default_group_machine': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No approved production yet
+                </p>
+                <p>
+                    Utilisation, availability, performance, quality and OEE per
+                    machine per shift, built from approved production entries
+                    and approved downtime events. Only reviewed figures ever
+                    appear here.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

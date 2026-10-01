@@ -1,0 +1,4 @@
+workcenter_id,product_id,product_category_id,std_output_qty,time_basis,basis_hours,std_manpower,changeover_minutes,priority
+Panel Saw 01,,Wardrobes,11,per_hour,1.0,2,15,10
+Panel Saw 01,2-Door Wardrobe,,14,per_hour,1.0,2,15,5
+Beam Saw 01,,Office Furniture,90,per_shift,7.5,2,20,5

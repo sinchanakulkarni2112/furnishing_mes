@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Preventive maintenance schedules for the demo plant (Requirement
+            7.2), so a fresh demo install already has something for the
+            "Furnishing MES: generate preventive maintenance requests" cron
+            to act on, per assumption A20 — monthly routine, quarterly major,
+            raised 7 days ahead.
+        -->
+
+        <record id="demo_pm_saw_01_monthly" model="fmes.maintenance.schedule">
+            <field name="equipment_id" ref="equip_saw_01"/>
+            <field name="maintenance_team_id" ref="furnishing_mes.fmes_maintenance_team_default"/>
+            <field name="trigger_type">time_based</field>
+            <field name="interval_number">1</field>
+            <field name="interval_unit">month</field>
+            <field name="lead_time_days">7</field>
+            <field name="estimated_duration_hours">2.0</field>
+        </record>
+        <record id="demo_pm_saw_01_checklist_1" model="fmes.maintenance.checklist.line">
+            <field name="schedule_id" ref="demo_pm_saw_01_monthly"/>
+            <field name="sequence">10</field>
+            <field name="name">Check and adjust blade tension</field>
+            <field name="is_mandatory" eval="True"/>
+        </record>
+        <record id="demo_pm_saw_01_checklist_2" model="fmes.maintenance.checklist.line">
+            <field name="schedule_id" ref="demo_pm_saw_01_monthly"/>
+            <field name="sequence">20</field>
+            <field name="name">Lubricate rails and bearings</field>
+            <field name="is_mandatory" eval="True"/>
+        </record>
+        <record id="demo_pm_saw_01_checklist_3" model="fmes.maintenance.checklist.line">
+            <field name="schedule_id" ref="demo_pm_saw_01_monthly"/>
+            <field name="sequence">30</field>
+            <field name="name">Dust extraction filter condition</field>
+            <field name="is_mandatory" eval="False"/>
+        </record>
+
+        <record id="demo_pm_cnc_01_monthly" model="fmes.maintenance.schedule">
+            <field name="equipment_id" ref="equip_cnc_01"/>
+            <field name="maintenance_team_id" ref="furnishing_mes.fmes_maintenance_team_default"/>
+            <field name="trigger_type">time_based</field>
+            <field name="interval_number">1</field>
+            <field name="interval_unit">month</field>
+            <field name="lead_time_days">7</field>
+            <field name="estimated_duration_hours">3.0</field>
+        </record>
+
+        <record id="demo_pm_spray_01_quarterly" model="fmes.maintenance.schedule">
+            <field name="equipment_id" ref="equip_spray_01"/>
+            <field name="maintenance_team_id" ref="furnishing_mes.fmes_maintenance_team_default"/>
+            <field name="trigger_type">time_based</field>
+            <field name="interval_number">3</field>
+            <field name="interval_unit">month</field>
+            <field name="lead_time_days">14</field>
+            <field name="estimated_duration_hours">6.0</field>
+        </record>
+        <record id="demo_pm_spray_01_checklist_1" model="fmes.maintenance.checklist.line">
+            <field name="schedule_id" ref="demo_pm_spray_01_quarterly"/>
+            <field name="sequence">10</field>
+            <field name="name">Filter bank replacement</field>
+            <field name="is_mandatory" eval="True"/>
+            <field name="expected_value">Replaced, logged</field>
+        </record>
+
+        <record id="demo_pm_beam_01_usage" model="fmes.maintenance.schedule">
+            <field name="equipment_id" ref="equip_beam_01"/>
+            <field name="maintenance_team_id" ref="furnishing_mes.fmes_maintenance_team_default"/>
+            <field name="trigger_type">usage_based</field>
+            <field name="usage_threshold_hours">200</field>
+            <field name="lead_time_days">3</field>
+            <field name="estimated_duration_hours">2.5</field>
+        </record>
+
+    </data>
+</odoo>

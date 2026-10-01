@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Two blocks with different update policies.
+
+        noupdate="0" for the records Odoo itself ships: classifying them is
+        part of this module's specification, and with noupdate="1" Odoo
+        treats writing to a pre-existing record as an update and skips it,
+        which would silently leave the category empty.
+
+        noupdate="1" for the reasons we add: a plant may retune their alert
+        thresholds and those edits must survive an upgrade.
+    -->
+    <data noupdate="0">
+
+        <!--
+            Downtime reason taxonomy (Requirement 6.1).
+
+            Odoo's `mrp` module already seeds loss reasons, and
+            `mrp.workcenter._compute_oee()` depends on their `loss_type`. So we
+            classify the existing records rather than duplicating them (ADR-001),
+            then add the reasons the customer's process needs.
+
+            The classification runs as a function rather than as <record> tags,
+            because Odoo ships those reasons inside a noupdate="1" block: any
+            declarative update aimed at them is skipped silently. See the
+            method's docstring.
+        -->
+
+        <function model="mrp.workcenter.productivity.loss"
+                  name="_fmes_apply_default_categories"/>
+
+    </data>
+
+    <data noupdate="1">
+
+        <!-- ============================================================ -->
+        <!--  Reasons the customer's process needs                        -->
+        <!-- ============================================================ -->
+
+        <record id="loss_power_failure" model="mrp.workcenter.productivity.loss">
+            <field name="name">Power Failure</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">11</field>
+            <field name="fmes_category">power_failure</field>
+            <field name="fmes_alert_threshold_hours">0.5</field>
+        </record>
+
+        <record id="loss_planned_maintenance" model="mrp.workcenter.productivity.loss">
+            <field name="name">Planned Maintenance</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">12</field>
+            <field name="fmes_category">maintenance</field>
+            <field name="fmes_is_planned" eval="True"/>
+            <field name="fmes_alert_threshold_hours">0.0</field>
+        </record>
+
+        <record id="loss_material_handling" model="mrp.workcenter.productivity.loss">
+            <field name="name">Material Handling Delay</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">13</field>
+            <field name="fmes_category">material_handling</field>
+            <field name="fmes_alert_threshold_hours">1.0</field>
+        </record>
+
+        <record id="loss_operator_absence" model="mrp.workcenter.productivity.loss">
+            <field name="name">Operator Absence</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">14</field>
+            <field name="fmes_category">operator_absence</field>
+            <field name="fmes_alert_threshold_hours">1.0</field>
+        </record>
+
+        <record id="loss_manpower_rescheduling" model="mrp.workcenter.productivity.loss">
+            <field name="name">Manpower Rescheduling</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">15</field>
+            <field name="fmes_category">manpower_rescheduling</field>
+            <field name="fmes_is_planned" eval="True"/>
+            <field name="fmes_alert_threshold_hours">1.5</field>
+        </record>
+
+        <record id="loss_unscheduled_stoppage" model="mrp.workcenter.productivity.loss">
+            <field name="name">Unscheduled Stoppage</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">16</field>
+            <field name="fmes_category">unscheduled_stoppage</field>
+            <field name="fmes_alert_threshold_hours">0.5</field>
+        </record>
+
+        <record id="loss_other" model="mrp.workcenter.productivity.loss">
+            <field name="name">Other (specify in remarks)</field>
+            <field name="loss_id" ref="mrp.category_availability"/>
+            <field name="sequence">99</field>
+            <field name="fmes_category">other</field>
+            <field name="fmes_alert_threshold_hours">1.0</field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Report Dashboard — one client action, eight records differing
+            only in `report_type` (same pattern the wizard's own eight
+            act_window shortcuts already use for `default_report_type`).
+            Each menu item that used to open `fmes.report.wizard` directly
+            now opens one of these instead; the wizard record, its form and
+            `action_generate` are untouched — the dashboard's own Download
+            buttons create a wizard record and call that same method.
+        -->
+        <record id="action_fmes_report_dashboard_daily_production" model="ir.actions.client">
+            <field name="name">Daily Production Report</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'daily_production'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_machine_utilisation" model="ir.actions.client">
+            <field name="name">Machine Utilisation Report</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'machine_utilisation'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_downtime" model="ir.actions.client">
+            <field name="name">Downtime Report</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'downtime'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_backlog" model="ir.actions.client">
+            <field name="name">Backlog &amp; Carry Forward</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'backlog'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_maintenance" model="ir.actions.client">
+            <field name="name">Maintenance Report</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'maintenance'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_productivity" model="ir.actions.client">
+            <field name="name">Productivity Report</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'productivity'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_exception" model="ir.actions.client">
+            <field name="name">Exception Report</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'exception'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_monthly_mis" model="ir.actions.client">
+            <field name="name">Monthly MIS</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'monthly_mis'}</field>
+        </record>
+
+        <!-- Material/Manpower follow-up — same one-action-per-report_type
+             pattern as the eight above, added later once report_service
+             grew data methods for these three. -->
+        <record id="action_fmes_report_dashboard_material_consumption" model="ir.actions.client">
+            <field name="name">Material Consumption</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'material_consumption'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_material_scrap" model="ir.actions.client">
+            <field name="name">Material Defects &amp; Mishandled</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'material_scrap'}</field>
+        </record>
+
+        <record id="action_fmes_report_dashboard_manpower_impact" model="ir.actions.client">
+            <field name="name">Manpower Impact</field>
+            <field name="tag">fmes_report_dashboard</field>
+            <field name="context">{'report_type': 'manpower_impact'}</field>
+        </record>
+
+    </data>
+</odoo>

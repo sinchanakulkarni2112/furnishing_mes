@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            One component (static/src/js/executive_dashboard.js) serves both
+            role variants — a Plant Manager sees the plant-wide figures, a
+            Supervisor's own fmes_department_ids is pre-selected on load.
+            Requirement 9, docs/05-ui-ux-design.md section 3.3.
+        -->
+        <record id="action_fmes_executive_dashboard" model="ir.actions.client">
+            <field name="name">Executive Dashboard</field>
+            <field name="tag">fmes_executive_dashboard</field>
+        </record>
+
+    </data>
+</odoo>

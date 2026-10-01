@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_entry_view_list" model="ir.ui.view">
+            <field name="name">fmes.production.entry.list</field>
+            <field name="model">fmes.production.entry</field>
+            <field name="arch" type="xml">
+                <list string="Production Entries" sample="1" multi_edit="1"
+                      decoration-muted="state == 'rejected'"
+                      decoration-success="state == 'approved'"
+                      decoration-info="state == 'submitted'"
+                      decoration-danger="has_target and achievement_pct &lt; 90">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="product_id"/>
+                    <field name="planned_qty" sum="Target"/>
+                    <field name="actual_qty" sum="Produced"/>
+                    <field name="rejected_qty" sum="Rejected" optional="show"/>
+                    <field name="ok_qty" sum="Good" optional="hide"/>
+                    <field name="variance_qty" sum="Variance" optional="show"/>
+                    <field name="has_target" column_invisible="True"/>
+                    <field name="achievement_pct" widget="percentage"
+                           optional="show"/>
+                    <field name="run_hours" sum="Run" widget="float_time"
+                           optional="hide"/>
+                    <field name="downtime_hours" sum="Downtime"
+                           widget="float_time" optional="show"/>
+                    <field name="utilization_pct" widget="percentage"
+                           optional="hide"/>
+                    <field name="efficiency_pct" widget="percentage"
+                           optional="hide"/>
+                    <field name="actual_manpower" optional="hide"/>
+                    <field name="state" widget="badge"
+                           decoration-success="state == 'approved'"
+                           decoration-info="state == 'submitted'"
+                           decoration-danger="state == 'rejected'"/>
+                    <field name="import_batch_id" optional="hide"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_entry_view_form" model="ir.ui.view">
+            <field name="name">fmes.production.entry.form</field>
+            <field name="model">fmes.production.entry</field>
+            <field name="arch" type="xml">
+                <form string="Production Entry">
+                    <header>
+                        <button name="action_submit" type="object"
+                                string="Submit" class="btn-primary"
+                                invisible="state not in ('draft', 'rejected')"/>
+                        <button name="action_approve" type="object"
+                                string="Approve" class="btn-primary"
+                                invisible="state != 'submitted'"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
+                        <button name="action_reject" type="object"
+                                string="Reject"
+                                invisible="state != 'submitted'"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
+                        <button name="action_reset_to_draft" type="object"
+                                string="Reopen"
+                                invisible="state == 'draft'"
+                                groups="furnishing_mes.group_fmes_supervisor"/>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,submitted,approved"/>
+                    </header>
+                    <sheet>
+                        <widget name="web_ribbon" title="Approved"
+                                bg_color="text-bg-success"
+                                invisible="state != 'approved'"/>
+                        <div class="oe_title">
+                            <h1><field name="name" readonly="1"/></h1>
+                        </div>
+                        <group>
+                            <group string="Slot">
+                                <field name="date"/>
+                                <field name="shift_id"/>
+                                <field name="workcenter_id"/>
+                                <field name="department_id"/>
+                                <field name="product_id"/>
+                                <field name="company_id"
+                                       groups="base.group_multi_company"/>
+                            </group>
+                            <group string="Source">
+                                <field name="plan_line_id"/>
+                                <field name="production_id"/>
+                                <field name="workorder_id"/>
+                                <field name="import_batch_id"
+                                       invisible="not import_batch_id"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Output">
+                                <field name="planned_qty"/>
+                                <field name="actual_qty"/>
+                                <field name="rejected_qty"/>
+                                <field name="ok_qty"/>
+                                <field name="variance_qty"/>
+                                <field name="has_target" invisible="1"/>
+                                <field name="achievement_pct"
+                                       widget="percentage"
+                                       invisible="not has_target"/>
+                                <div colspan="2" class="text-muted"
+                                     invisible="has_target">
+                                    No target was planned for this shift, so
+                                    there is no achievement figure — which is
+                                    not the same as having missed one.
+                                </div>
+                            </group>
+                            <group string="Time and People">
+                                <field name="run_hours" widget="float_time"/>
+                                <field name="downtime_hours"
+                                       widget="float_time"/>
+                                <field name="available_hours"
+                                       widget="float_time"/>
+                                <field name="utilization_pct"
+                                       widget="percentage"/>
+                                <field name="std_output_qty"/>
+                                <field name="efficiency_pct"
+                                       widget="percentage"/>
+                                <field name="std_manpower"/>
+                                <field name="actual_manpower"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Operators" name="operators">
+                                <field name="operator_ids"
+                                       widget="many2many_tags"/>
+                            </page>
+                            <page string="Remarks" name="remarks">
+                                <field name="note"/>
+                                <group>
+                                    <field name="submitted_by" readonly="1"/>
+                                    <field name="submitted_on" readonly="1"/>
+                                    <field name="approved_by" readonly="1"
+                                           groups="furnishing_mes.group_fmes_supervisor"/>
+                                    <field name="approved_on" readonly="1"
+                                           groups="furnishing_mes.group_fmes_supervisor"/>
+                                    <field name="rejection_reason" readonly="1"
+                                           invisible="state != 'rejected'"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_entry_view_search" model="ir.ui.view">
+            <field name="name">fmes.production.entry.search</field>
+            <field name="model">fmes.production.entry</field>
+            <field name="arch" type="xml">
+                <search string="Production Entries">
+                    <field name="workcenter_id"/>
+                    <field name="product_id"/>
+                    <field name="department_id"/>
+                    <field name="shift_id"/>
+                    <field name="production_id"/>
+                    <filter name="filter_today" string="Today"
+                            domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter name="filter_this_month" string="This Month"
+                            domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    <separator/>
+                    <filter name="filter_draft" string="Draft"
+                            domain="[('state', '=', 'draft')]"/>
+                    <filter name="filter_submitted" string="Awaiting Approval"
+                            domain="[('state', '=', 'submitted')]"/>
+                    <filter name="filter_approved" string="Approved"
+                            domain="[('state', '=', 'approved')]"/>
+                    <separator/>
+                    <filter name="filter_below_target" string="Below Target"
+                            domain="[('has_target', '=', True),
+                                     ('achievement_pct', '&lt;', 95)]"/>
+                    <filter name="filter_with_downtime" string="With Downtime"
+                            domain="[('downtime_hours', '&gt;', 0)]"/>
+                    <filter name="filter_rejects" string="With Rejects"
+                            domain="[('rejected_qty', '&gt;', 0)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_machine" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_product" string="Product"
+                                context="{'group_by': 'product_id'}"/>
+                        <filter name="group_state" string="Status"
+                                context="{'group_by': 'state'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="fmes_entry_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.production.entry.pivot</field>
+            <field name="model">fmes.production.entry</field>
+            <field name="arch" type="xml">
+                <pivot string="Planned vs Actual" sample="1">
+                    <field name="workcenter_id" type="row"/>
+                    <field name="date" type="col"/>
+                    <field name="planned_qty" type="measure"/>
+                    <field name="actual_qty" type="measure"/>
+                    <field name="variance_qty" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_entry_view_graph" model="ir.ui.view">
+            <field name="name">fmes.production.entry.graph</field>
+            <field name="model">fmes.production.entry</field>
+            <field name="arch" type="xml">
+                <graph string="Planned vs Actual" type="bar" sample="1">
+                    <field name="date" interval="day"/>
+                    <field name="planned_qty" type="measure"/>
+                    <field name="actual_qty" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Actions                                                     -->
+        <!-- ============================================================ -->
+        <record id="action_fmes_production_entry" model="ir.actions.act_window">
+            <field name="name">Production Entries</field>
+            <field name="res_model">fmes.production.entry</field>
+            <field name="view_mode">list,form,pivot,graph</field>
+            <field name="search_view_id" ref="fmes_entry_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No production recorded yet
+                </p>
+                <p>
+                    Entries are created automatically each morning from the
+                    released plan, filled in on the shop-floor terminal, and
+                    approved by a supervisor at shift end. Only approved entries
+                    reach reports.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_approval_queue" model="ir.actions.act_window">
+            <field name="name">Approval Queue</field>
+            <field name="res_model">fmes.production.entry</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('state', '=', 'submitted')]</field>
+            <field name="search_view_id" ref="fmes_entry_view_search"/>
+            <field name="context">{'search_default_group_machine': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Nothing waiting for approval
+                </p>
+                <p>
+                    Shifts submitted from the shop floor land here. Select
+                    several and approve them together.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_planned_vs_actual" model="ir.actions.act_window">
+            <field name="name">Planned vs Actual</field>
+            <field name="res_model">fmes.production.entry</field>
+            <field name="view_mode">pivot,graph,list,form</field>
+            <field name="domain">[('state', '=', 'approved')]</field>
+            <field name="search_view_id" ref="fmes_entry_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No approved production yet
+                </p>
+                <p>
+                    This view reads approved entries only, so the comparison
+                    always reflects figures a supervisor has signed off.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_shopfloor_terminal" model="ir.actions.client">
+            <field name="name">Shop Floor Terminal</field>
+            <field name="tag">fmes_shopfloor_terminal</field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Import batches                                              -->
+        <!-- ============================================================ -->
+        <record id="fmes_import_batch_view_list" model="ir.ui.view">
+            <field name="name">fmes.import.batch.list</field>
+            <field name="model">fmes.import.batch</field>
+            <field name="arch" type="xml">
+                <list string="Import Batches"
+                      decoration-muted="state == 'reverted'">
+                    <field name="name"/>
+                    <field name="source_filename"/>
+                    <field name="imported_by"/>
+                    <field name="imported_on"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                    <field name="row_count"/>
+                    <field name="entry_count"/>
+                    <field name="skipped_count"/>
+                    <field name="total_actual_qty" sum="Produced"/>
+                    <field name="state" widget="badge"
+                           decoration-success="state == 'imported'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_import_batch_view_form" model="ir.ui.view">
+            <field name="name">fmes.import.batch.form</field>
+            <field name="model">fmes.import.batch</field>
+            <field name="arch" type="xml">
+                <form string="Import Batch">
+                    <header>
+                        <button name="action_revert" type="object"
+                                string="Revert Import"
+                                confirm="This deletes every entry this import created. Approved entries are kept. Continue?"
+                                invisible="state == 'reverted'"
+                                groups="furnishing_mes.group_fmes_manager"/>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_open_entries" type="object"
+                                    class="oe_stat_button" icon="fa-list">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">
+                                        <field name="entry_count"/>
+                                    </span>
+                                    <span class="o_stat_text">Entries</span>
+                                </div>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1><field name="name" readonly="1"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="source_filename"/>
+                                <field name="imported_by"/>
+                                <field name="imported_on"/>
+                                <field name="company_id"
+                                       groups="base.group_multi_company"/>
+                            </group>
+                            <group>
+                                <field name="row_count"/>
+                                <field name="skipped_count"/>
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="total_actual_qty"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Log" name="log">
+                                <field name="log" readonly="1"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_import_batch" model="ir.actions.act_window">
+            <field name="name">Import Batches</field>
+            <field name="res_model">fmes.import.batch</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Import wizard                                               -->
+        <!-- ============================================================ -->
+        <record id="fmes_production_import_view_form" model="ir.ui.view">
+            <field name="name">fmes.production.import.form</field>
+            <field name="model">fmes.production.import</field>
+            <field name="arch" type="xml">
+                <form string="Import Daily Production Output">
+                    <field name="state" invisible="1"/>
+
+                    <!-- Step 1 -->
+                    <group invisible="state != 'upload'">
+                        <div class="alert alert-info" colspan="2" role="status">
+                            Upload the plant's daily output workbook (.xlsx).
+                            The next step reads its column titles and lets you
+                            say which column means what, so the file does not
+                            have to be reformatted first.
+                        </div>
+                        <field name="file_data" filename="file_name"/>
+                        <field name="file_name" invisible="1"/>
+                        <field name="sheet_name"/>
+                        <field name="header_row"/>
+                        <field name="company_id"
+                               groups="base.group_multi_company"/>
+                    </group>
+
+                    <!-- Step 2 -->
+                    <div invisible="state != 'map'">
+                        <div class="alert alert-secondary" role="status">
+                            <strong>Columns found:</strong>
+                            <field name="detected_columns" readonly="1"
+                                   nolabel="1"/>
+                        </div>
+                        <group>
+                            <group string="Required">
+                                <field name="col_date"/>
+                                <field name="col_machine"/>
+                                <field name="col_product"/>
+                                <field name="col_actual"/>
+                            </group>
+                            <group string="Optional">
+                                <field name="col_shift"/>
+                                <field name="col_planned"/>
+                                <field name="col_rejected"/>
+                                <field name="col_run_hours"/>
+                                <field name="col_downtime"/>
+                                <field name="col_manpower"/>
+                                <field name="col_remarks"/>
+                            </group>
+                        </group>
+                        <group string="Matching">
+                            <field name="default_shift_id"/>
+                            <field name="create_missing_entries"/>
+                        </group>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div invisible="state != 'preview'">
+                        <group>
+                            <group>
+                                <field name="row_count"/>
+                                <field name="valid_count"/>
+                                <field name="error_count"/>
+                            </group>
+                        </group>
+                        <div class="alert alert-warning" role="alert"
+                             invisible="error_count == 0">
+                            Rows with a problem are highlighted below and will
+                            be skipped. Nothing is imported until you press
+                            Import.
+                        </div>
+                        <field name="preview_html" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <footer>
+                        <button name="action_read_headers" type="object"
+                                string="Read Columns" class="btn-primary"
+                                invisible="state != 'upload'"/>
+                        <button name="action_preview" type="object"
+                                string="Preview" class="btn-primary"
+                                invisible="state != 'map'"/>
+                        <button name="action_import" type="object"
+                                string="Import" class="btn-primary"
+                                invisible="state != 'preview'"/>
+                        <button name="action_back_to_mapping" type="object"
+                                string="Back to Mapping"
+                                invisible="state != 'preview'"/>
+                        <button string="Cancel" class="btn-secondary"
+                                special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_production_import" model="ir.actions.act_window">
+            <field name="name">Import Daily Output</field>
+            <field name="res_model">fmes.production.import</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+    </data>
+</odoo>

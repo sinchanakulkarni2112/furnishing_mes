@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Plan lines                                                  -->
+        <!-- ============================================================ -->
+        <record id="fmes_plan_line_view_list" model="ir.ui.view">
+            <field name="name">fmes.production.plan.line.list</field>
+            <field name="model">fmes.production.plan.line</field>
+            <field name="arch" type="xml">
+                <list string="Plan Lines" sample="1" multi_edit="1"
+                      decoration-muted="state == 'cancelled'"
+                      decoration-success="state == 'done'"
+                      decoration-warning="state == 'partial'"
+                      decoration-bf="priority == '1'">
+                    <field name="sequence" widget="handle"/>
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="product_id"/>
+                    <field name="planned_qty" sum="Planned"/>
+                    <field name="qty_done" sum="Produced" optional="hide"/>
+                    <field name="remaining_qty" sum="Remaining" optional="hide"/>
+                    <field name="planned_hours" sum="Hours" widget="float_time"/>
+                    <field name="output_rate" optional="hide"/>
+                    <field name="changeover_minutes" optional="hide"/>
+                    <field name="planned_manpower" optional="hide"/>
+                    <field name="production_id" optional="show"/>
+                    <field name="workorder_id" optional="hide"/>
+                    <field name="date_deadline" optional="show"/>
+                    <field name="source" optional="show"/>
+                    <field name="priority" optional="hide"/>
+                    <field name="state"/>
+                    <field name="plan_id" optional="hide"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_plan_line_view_form" model="ir.ui.view">
+            <field name="name">fmes.production.plan.line.form</field>
+            <field name="model">fmes.production.plan.line</field>
+            <field name="arch" type="xml">
+                <form string="Plan Line">
+                    <sheet>
+                        <group>
+                            <group string="Slot">
+                                <field name="plan_id"/>
+                                <field name="date"/>
+                                <field name="shift_id"/>
+                                <field name="workcenter_id"/>
+                                <field name="department_id"/>
+                            </group>
+                            <group string="Work">
+                                <field name="product_id"/>
+                                <field name="planned_qty"/>
+                                <field name="qty_done"/>
+                                <field name="remaining_qty"/>
+                                <field name="production_id"/>
+                                <field name="workorder_id"/>
+                                <field name="date_deadline"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Sizing">
+                                <field name="output_rate"/>
+                                <field name="planned_hours" widget="float_time"/>
+                                <field name="changeover_minutes"/>
+                                <field name="planned_manpower"/>
+                            </group>
+                            <group string="Status">
+                                <field name="state"/>
+                                <field name="priority"/>
+                                <field name="source"/>
+                                <field name="carry_forward_from_id"
+                                       invisible="source != 'carry_forward'"/>
+                                <field name="sequence"/>
+                            </group>
+                        </group>
+                        <field name="note" placeholder="Notes for the shop floor."/>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_plan_line_view_search" model="ir.ui.view">
+            <field name="name">fmes.production.plan.line.search</field>
+            <field name="model">fmes.production.plan.line</field>
+            <field name="arch" type="xml">
+                <search string="Plan Lines">
+                    <field name="workcenter_id"/>
+                    <field name="product_id"/>
+                    <field name="production_id"/>
+                    <field name="plan_id"/>
+                    <field name="department_id"/>
+                    <filter name="filter_today" string="Today"
+                            domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter name="filter_pending" string="Pending"
+                            domain="[('state', '=', 'pending')]"/>
+                    <filter name="filter_carry_forward" string="Carried Forward"
+                            domain="[('source', '=', 'carry_forward')]"/>
+                    <filter name="filter_urgent" string="Urgent"
+                            domain="[('priority', '=', '1')]"/>
+                    <separator/>
+                    <filter name="filter_late" string="Past Deadline"
+                            domain="[('date_deadline', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_date" string="Date"
+                                context="{'group_by': 'date'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_machine" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_product" string="Product"
+                                context="{'group_by': 'product_id'}"/>
+                        <filter name="group_state" string="Status"
+                                context="{'group_by': 'state'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="fmes_plan_line_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.production.plan.line.pivot</field>
+            <field name="model">fmes.production.plan.line</field>
+            <field name="arch" type="xml">
+                <pivot string="Planned Load" sample="1">
+                    <field name="workcenter_id" type="row"/>
+                    <field name="date" type="col"/>
+                    <field name="planned_hours" type="measure"/>
+                    <field name="planned_qty" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_plan_line_view_graph" model="ir.ui.view">
+            <field name="name">fmes.production.plan.line.graph</field>
+            <field name="model">fmes.production.plan.line</field>
+            <field name="arch" type="xml">
+                <graph string="Planned Load" type="bar" sample="1">
+                    <field name="workcenter_id"/>
+                    <field name="planned_hours" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Plan                                                        -->
+        <!-- ============================================================ -->
+        <record id="fmes_plan_view_list" model="ir.ui.view">
+            <field name="name">fmes.production.plan.list</field>
+            <field name="model">fmes.production.plan</field>
+            <field name="arch" type="xml">
+                <list string="Production Plans" sample="1"
+                      decoration-muted="state == 'cancelled'"
+                      decoration-success="state == 'released'"
+                      decoration-danger="capacity_utilization_pct &gt; 100">
+                    <field name="name"/>
+                    <field name="plan_type"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                    <field name="line_count"/>
+                    <field name="total_planned_qty" sum="Quantity"/>
+                    <field name="total_planned_hours" sum="Hours"
+                           widget="float_time"/>
+                    <field name="capacity_utilization_pct" widget="percentage"
+                           optional="show"/>
+                    <field name="overloaded_line_count" optional="hide"/>
+                    <field name="generated_by" optional="hide"/>
+                    <field name="state" widget="badge"
+                           decoration-success="state == 'released'"
+                           decoration-info="state == 'confirmed'"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_plan_view_form" model="ir.ui.view">
+            <field name="name">fmes.production.plan.form</field>
+            <field name="model">fmes.production.plan</field>
+            <field name="arch" type="xml">
+                <form string="Production Plan">
+                    <header>
+                        <button name="action_confirm" type="object"
+                                string="Confirm" class="btn-primary"
+                                invisible="state != 'draft'"/>
+                        <button name="action_release" type="object"
+                                string="Release to Shop Floor"
+                                class="btn-primary"
+                                invisible="state != 'confirmed'"
+                                help="Pushes the planned dates onto the manufacturing and work orders."/>
+                        <button name="action_done" type="object" string="Mark Done"
+                                invisible="state not in ('released', 'in_progress')"/>
+                        <button name="action_open_board" type="object"
+                                string="Scheduling Board" class="btn-secondary"
+                                invisible="not id"/>
+                        <button name="action_export_xlsx" type="object"
+                                string="Export Excel" class="btn-secondary"
+                                invisible="not id"/>
+                        <button name="action_reset_to_draft" type="object"
+                                string="Reset to Draft"
+                                invisible="state in ('draft', 'cancelled')"/>
+                        <button name="action_cancel" type="object" string="Cancel"
+                                invisible="state in ('done', 'cancelled')"/>
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,confirmed,released,done"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_open_lines" type="object"
+                                    class="oe_stat_button" icon="fa-list">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">
+                                        <field name="line_count"/>
+                                    </span>
+                                    <span class="o_stat_text">Lines</span>
+                                </div>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1><field name="name" readonly="1"/></h1>
+                        </div>
+                        <group>
+                            <group string="Period">
+                                <field name="plan_type"/>
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="department_ids"
+                                       widget="many2many_tags"
+                                       placeholder="All departments"/>
+                                <field name="company_id"
+                                       groups="base.group_multi_company"/>
+                            </group>
+                            <group string="Load">
+                                <field name="total_planned_qty"/>
+                                <field name="total_planned_hours"
+                                       widget="float_time"/>
+                                <field name="total_available_hours"
+                                       widget="float_time"/>
+                                <field name="capacity_utilization_pct"
+                                       widget="percentage"/>
+                                <field name="overloaded_line_count"/>
+                                <field name="generated_by"/>
+                            </group>
+                        </group>
+
+                        <div class="alert alert-warning" role="alert"
+                             invisible="capacity_utilization_pct &lt;= 100">
+                            This plan is loaded beyond the available capacity.
+                            Extend the period, add a shift, or move work to
+                            another machine.
+                        </div>
+                        <div class="alert alert-info" role="status"
+                             invisible="not unscheduled_demand_note">
+                            <field name="unscheduled_demand_note" readonly="1"
+                                   nolabel="1"/>
+                        </div>
+
+                        <notebook>
+                            <page string="Plan Lines" name="lines">
+                                <field name="line_ids" nolabel="1">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="date"/>
+                                        <field name="shift_id"/>
+                                        <field name="workcenter_id"/>
+                                        <field name="product_id"/>
+                                        <field name="planned_qty"/>
+                                        <field name="planned_hours"
+                                               widget="float_time"/>
+                                        <field name="output_rate"
+                                               optional="hide"/>
+                                        <field name="planned_manpower"
+                                               optional="hide"/>
+                                        <field name="production_id"
+                                               optional="show"/>
+                                        <field name="date_deadline"
+                                               optional="hide"/>
+                                        <field name="source"/>
+                                        <field name="state"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Notes" name="notes">
+                                <field name="note"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="fmes_plan_view_search" model="ir.ui.view">
+            <field name="name">fmes.production.plan.search</field>
+            <field name="model">fmes.production.plan</field>
+            <field name="arch" type="xml">
+                <search string="Production Plans">
+                    <field name="name"/>
+                    <field name="department_ids"/>
+                    <filter name="filter_draft" string="Draft"
+                            domain="[('state', '=', 'draft')]"/>
+                    <filter name="filter_released" string="Released"
+                            domain="[('state', 'in', ('released', 'in_progress'))]"/>
+                    <filter name="filter_overloaded" string="Over Capacity"
+                            domain="[('capacity_utilization_pct', '&gt;', 100)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_state" string="Status"
+                                context="{'group_by': 'state'}"/>
+                        <filter name="group_type" string="Plan Type"
+                                context="{'group_by': 'plan_type'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!--  Actions                                                     -->
+        <!-- ============================================================ -->
+        <record id="action_fmes_production_plan" model="ir.actions.act_window">
+            <field name="name">Production Plans</field>
+            <field name="res_model">fmes.production.plan</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="fmes_plan_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Generate your first production plan
+                </p>
+                <p>
+                    The planning engine reads open manufacturing orders and the
+                    machine capacity matrix, then builds a machine-wise,
+                    shift-wise schedule that fits the capacity actually
+                    available.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_plan_line" model="ir.actions.act_window">
+            <field name="name">Plan Lines</field>
+            <field name="res_model">fmes.production.plan.line</field>
+            <field name="view_mode">list,pivot,graph,form</field>
+            <field name="search_view_id" ref="fmes_plan_line_view_search"/>
+            <field name="context">{'search_default_group_machine': 1}</field>
+        </record>
+
+        <record id="action_fmes_carry_forward" model="ir.actions.act_window">
+            <field name="name">Carry Forward Lines</field>
+            <field name="res_model">fmes.production.plan.line</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[('source', '=', 'carry_forward')]</field>
+            <field name="search_view_id" ref="fmes_plan_line_view_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Nothing has been carried forward
+                </p>
+                <p>
+                    When a released plan leaves work unfinished, the next
+                    planning run brings it forward automatically, ahead of new
+                    orders.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_plan_generator" model="ir.actions.act_window">
+            <field name="name">Generate Plan</field>
+            <field name="res_model">fmes.plan.generator</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <record id="fmes_plan_generator_view_form" model="ir.ui.view">
+            <field name="name">fmes.plan.generator.form</field>
+            <field name="model">fmes.plan.generator</field>
+            <field name="arch" type="xml">
+                <form string="Generate Production Plan">
+                    <group>
+                        <group string="Period">
+                            <field name="plan_type"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="company_id"
+                                   groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Scope">
+                            <field name="department_ids"
+                                   widget="many2many_tags"
+                                   placeholder="All departments"/>
+                            <field name="demand_source"/>
+                            <field name="include_carry_forward"/>
+                        </group>
+                    </group>
+
+                    <separator string="Before you generate"/>
+                    <group>
+                        <group>
+                            <field name="demand_count"/>
+                            <field name="carry_forward_count"/>
+                            <field name="unrated_count"/>
+                        </group>
+                        <group>
+                            <field name="machine_shift_slots"/>
+                            <field name="required_hours" widget="float_time"/>
+                            <field name="available_hours" widget="float_time"/>
+                            <field name="utilization_pct" widget="percentage"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="not preview_warning">
+                        <field name="preview_warning" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <footer>
+                        <button name="action_generate" type="object"
+                                string="Generate Plan" class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary"
+                                special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_scheduling_board" model="ir.actions.client">
+            <field name="name">Scheduling Board</field>
+            <field name="tag">fmes_scheduling_board</field>
+        </record>
+
+    </data>
+</odoo>

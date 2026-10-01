@@ -1,0 +1,4 @@
+name,code,sequence,start_time,end_time,break_minutes
+Shift A,A,10,6.0,14.0,30
+Shift B,B,20,14.0,22.0,30
+Shift C,C,30,22.0,6.0,30

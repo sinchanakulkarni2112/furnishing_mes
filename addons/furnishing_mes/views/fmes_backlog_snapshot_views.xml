@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Backlog snapshot (Requirement 4) — read-only by design       -->
+        <!-- ============================================================ -->
+        <record id="fmes_backlog_snapshot_view_list" model="ir.ui.view">
+            <field name="name">fmes.backlog.snapshot.list</field>
+            <field name="model">fmes.backlog.snapshot</field>
+            <field name="arch" type="xml">
+                <list string="Backlog" create="0" edit="0" delete="0" sample="1"
+                      decoration-danger="status == 'delayed' or status == 'blocked'"
+                      decoration-warning="status == 'at_risk'"
+                      decoration-muted="status == 'completed'"
+                      decoration-bf="is_critical">
+                    <field name="snapshot_date"/>
+                    <field name="product_id"/>
+                    <field name="partner_id" optional="show"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="workcenter_id" optional="hide"/>
+                    <field name="ordered_qty" optional="hide"/>
+                    <field name="produced_qty" optional="hide"/>
+                    <field name="pending_qty"/>
+                    <field name="completion_pct" widget="percentage" optional="show"/>
+                    <field name="date_deadline" optional="show"/>
+                    <field name="days_delayed"/>
+                    <field name="status" widget="badge"
+                           decoration-danger="status in ('delayed', 'blocked')"
+                           decoration-warning="status == 'at_risk'"
+                           decoration-success="status == 'completed'"/>
+                    <field name="block_reason" optional="hide"/>
+                    <field name="is_critical" optional="show"/>
+                    <field name="company_id" groups="base.group_multi_company"
+                           optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.backlog.snapshot.pivot</field>
+            <field name="model">fmes.backlog.snapshot</field>
+            <field name="arch" type="xml">
+                <pivot string="Backlog Trend" sample="1">
+                    <field name="snapshot_date" type="col" interval="day"/>
+                    <field name="status" type="row"/>
+                    <field name="pending_qty" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_view_graph" model="ir.ui.view">
+            <field name="name">fmes.backlog.snapshot.graph</field>
+            <field name="model">fmes.backlog.snapshot</field>
+            <field name="arch" type="xml">
+                <graph string="Backlog Trend" type="line" sample="1">
+                    <field name="snapshot_date" interval="day"/>
+                    <field name="pending_qty" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_view_search" model="ir.ui.view">
+            <field name="name">fmes.backlog.snapshot.search</field>
+            <field name="model">fmes.backlog.snapshot</field>
+            <field name="arch" type="xml">
+                <search string="Backlog">
+                    <field name="product_id"/>
+                    <field name="partner_id"/>
+                    <field name="department_id"/>
+                    <filter name="filter_latest" string="Latest Snapshot"
+                            domain="[('snapshot_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <separator/>
+                    <filter name="filter_pending" string="Pending"
+                            domain="[('status', '=', 'pending')]"/>
+                    <filter name="filter_at_risk" string="At Risk"
+                            domain="[('status', '=', 'at_risk')]"/>
+                    <filter name="filter_delayed" string="Delayed"
+                            domain="[('status', '=', 'delayed')]"/>
+                    <filter name="filter_blocked" string="Blocked"
+                            domain="[('status', '=', 'blocked')]"/>
+                    <filter name="filter_critical" string="Critical"
+                            domain="[('is_critical', '=', True)]"/>
+                    <separator/>
+                    <filter name="filter_age_0_3" string="0-3 Days"
+                            domain="[('days_delayed', '&gt;=', 0), ('days_delayed', '&lt;=', 3)]"/>
+                    <filter name="filter_age_4_7" string="4-7 Days"
+                            domain="[('days_delayed', '&gt;=', 4), ('days_delayed', '&lt;=', 7)]"/>
+                    <filter name="filter_age_8_15" string="8-15 Days"
+                            domain="[('days_delayed', '&gt;=', 8), ('days_delayed', '&lt;=', 15)]"/>
+                    <filter name="filter_age_15_plus" string="15+ Days"
+                            domain="[('days_delayed', '&gt;', 15)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_status" string="Status"
+                                context="{'group_by': 'status'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_date" string="Snapshot Date"
+                                context="{'group_by': 'snapshot_date'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_backlog_overview" model="ir.actions.act_window">
+            <field name="name">Backlog Overview</field>
+            <field name="res_model">fmes.backlog.snapshot</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_backlog_snapshot_view_search"/>
+            <field name="context">{'search_default_filter_latest': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No backlog data yet
+                </p>
+                <p>
+                    Written nightly, never edited by hand — a trend needs a
+                    trustworthy history, not one that can quietly change after
+                    the fact.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_delayed_orders" model="ir.actions.act_window">
+            <field name="name">Delayed Orders</field>
+            <field name="res_model">fmes.backlog.snapshot</field>
+            <field name="view_mode">list</field>
+            <field name="search_view_id" ref="fmes_backlog_snapshot_view_search"/>
+            <field name="domain">[('status', '=', 'delayed')]</field>
+            <field name="context">{'search_default_filter_latest': 1,
+                                    'search_default_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Nothing is delayed in the latest snapshot
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

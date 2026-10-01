@@ -1,0 +1,13 @@
+// Customer portal (Phase 13): light styling for the ticket pages and the
+// order detail page's own Production Progress table. Odoo's portal grid
+// (Bootstrap, via portal.portal_layout) already does the responsive work
+// (docs/05 section 6) — nothing here overrides it, only accents it.
+
+#fmes_production_progress table td,
+#fmes_production_progress table th {
+    vertical-align: middle;
+}
+
+.o_portal_my_doc_table tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}

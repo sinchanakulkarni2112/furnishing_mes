@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Default maintenance team (assumption A21 — one in-house team,
+            docs/15-open-questions-and-assumptions.md).
+
+            Odoo core's `maintenance` module only ships a maintenance.team
+            through its *demo* data (equipment_team_metrology /
+            equipment_team_subcontractor in maintenance_demo.xml). A
+            production install, which never loads demo data, would otherwise
+            have zero teams — and maintenance_team_id is a required field on
+            maintenance.request, so Phase 5's auto-escalation would crash the
+            first time it tried to raise one. This record exists so
+            escalation always has somewhere real to go, on day one, with or
+            without demo data.
+
+            noupdate="1" so a plant that renames or reorganises this team
+            keeps its change across upgrades.
+        -->
+        <record id="fmes_maintenance_team_default" model="maintenance.team">
+            <field name="name">Machine Maintenance</field>
+        </record>
+
+    </data>
+</odoo>

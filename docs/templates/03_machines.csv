@@ -1,0 +1,4 @@
+name,code,fmes_machine_code,department_id,fmes_std_manpower,fmes_criticality,fmes_is_bottleneck,costs_hour
+Panel Saw 01,SAW-01,SAW-01,Cutting,2,high,0,420
+Beam Saw 01,BEAM-01,BEAM-01,Cutting,2,critical,1,650
+Edge Bander 01,EDGE-01,EDGE-01,Edge Banding,1,high,0,380

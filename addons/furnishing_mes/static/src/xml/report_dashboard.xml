@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="furnishing_mes.ReportDashboard">
+        <div class="fmes-dashboard o_action">
+
+            <div class="fmes-dashboard-toolbar">
+                <h2><t t-esc="this.title"/></h2>
+                <div class="fmes-dashboard-controls">
+                    <select class="form-select" t-on-change="onPresetChange">
+                        <option value="today" t-att-selected="state.preset === 'today'">Today</option>
+                        <option value="week" t-att-selected="state.preset === 'week'">This Week</option>
+                        <option value="month" t-att-selected="state.preset === 'month'">This Month</option>
+                        <option value="quarter" t-att-selected="state.preset === 'quarter'">This Quarter</option>
+                        <option value="custom" t-att-selected="state.preset === 'custom'">Custom</option>
+                    </select>
+                    <t t-if="state.preset === 'custom'">
+                        <input type="date" class="form-control" t-att-value="state.dateFrom"
+                               t-on-change="(ev) => this.onCustomDateChange('dateFrom', ev)"/>
+                        <input type="date" class="form-control" t-att-value="state.dateTo"
+                               t-on-change="(ev) => this.onCustomDateChange('dateTo', ev)"/>
+                    </t>
+                    <button class="btn btn-secondary" t-on-click="onRefresh">
+                        <i class="fa fa-refresh"/> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div t-if="state.loading" class="fmes-dashboard-loading">
+                <i class="fa fa-spin fa-spinner"/> Loading…
+            </div>
+
+            <t t-if="!state.loading and state.data">
+                <p class="fmes-dashboard-explanation"><t t-esc="this.explanation"/></p>
+
+                <div class="fmes-kpi-row">
+                    <t t-foreach="state.data.summary" t-as="entry" t-key="entry.label">
+                        <div class="fmes-kpi-tile">
+                            <div class="fmes-kpi-value">
+                                <t t-esc="this.formatValue(entry.value, entry.fmt)"/>
+                            </div>
+                            <div class="fmes-kpi-label"><t t-esc="entry.label"/></div>
+                        </div>
+                    </t>
+                </div>
+
+                <div class="fmes-dashboard-grid">
+                    <div t-if="this.chartKind !== 'maintenance'" class="fmes-panel fmes-panel-wide">
+                        <h3><t t-esc="this.chartTitle"/></h3>
+                        <div class="fmes-chart-container">
+                            <canvas t-ref="mainChartCanvas"/>
+                        </div>
+                    </div>
+                    <div t-if="this.chartKind === 'maintenance' and state.dashboardData"
+                         class="fmes-panel fmes-panel-wide">
+                        <h3>Maintenance Performance</h3>
+                        <div class="fmes-maintenance-stats">
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.dashboardData.maintenance_performance.mtbf"/>
+                                </span>
+                                <span class="fmes-kpi-label">MTBF (days)</span>
+                            </div>
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.dashboardData.maintenance_performance.mttr"/>
+                                </span>
+                                <span class="fmes-kpi-label">MTTR (days)</span>
+                            </div>
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.dashboardData.maintenance_performance.pm_compliance_pct"/>%
+                                </span>
+                                <span class="fmes-kpi-label">PM Compliance</span>
+                            </div>
+                            <div class="fmes-kpi">
+                                <span class="fmes-kpi-value">
+                                    <t t-esc="state.dashboardData.maintenance_performance.open_breakdowns"/>
+                                </span>
+                                <span class="fmes-kpi-label">Open Breakdowns</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div t-if="state.data.sections" class="fmes-section-list">
+                    <div t-foreach="state.data.sections" t-as="section" t-key="section.report_type"
+                         class="fmes-section-card">
+                        <h4><t t-esc="section.title"/></h4>
+                        <ul>
+                            <li t-foreach="section.summary" t-as="entry" t-key="entry.label">
+                                <t t-esc="entry.label"/>: <t t-esc="this.formatValue(entry.value, entry.fmt)"/>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="fmes-dashboard-actions">
+                    <button class="btn btn-primary" t-on-click="() => this.downloadReport('pdf')"
+                            t-att-disabled="state.downloading">
+                        <i class="fa fa-file-pdf-o"/> Download PDF
+                    </button>
+                    <button class="btn btn-secondary" t-on-click="() => this.downloadReport('xlsx')"
+                            t-att-disabled="state.downloading">
+                        <i class="fa fa-file-excel-o"/> Download Excel
+                    </button>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

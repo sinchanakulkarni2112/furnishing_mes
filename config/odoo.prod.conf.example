@@ -1,0 +1,57 @@
+; ============================================================================
+;  Furnishing MES — Odoo server configuration (PRODUCTION TEMPLATE)
+; ============================================================================
+;  Copy this file to config/odoo.prod.conf before the first production
+;  deploy and set a real admin_passwd. That copy is git-ignored — it holds
+;  the one production secret this project keeps outside .env.
+;
+;      cp config/odoo.prod.conf.example config/odoo.prod.conf
+;
+;  Then generate a strong master password and paste it in below, e.g.:
+;
+;      python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+;
+;  See docs/08-deployment-operations.md section 3.
+; ============================================================================
+
+[options]
+
+addons_path = /mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+data_dir = /var/lib/odoo
+
+db_maxconn = 64
+
+; The database manager (/web/database/manager) is disabled in production —
+; there is exactly one database, created once at go-live via `make init-prod`,
+; never through the web UI.
+list_db = False
+dbfilter = ^furnishing_mes$
+
+; CHANGE_ME — replace before first deploy. See the header comment above.
+admin_passwd = CHANGE_ME_GENERATE_A_STRONG_VALUE
+
+http_enable = True
+http_interface = 0.0.0.0
+http_port = 8069
+gevent_port = 8072
+; Required behind the host reverse proxy (docs/08 section 4) — without it
+; Odoo trusts its own guess at scheme/host instead of X-Forwarded-*.
+proxy_mode = True
+
+; (2 x cores) + 1, capped by RAM at ~600 MB/worker — see docs/08 section 3.
+; 4 is the conservative starting point for the 4-core minimum server; raise
+; it in step with docker-compose.prod.yml's cpu/memory limits on bigger boxes.
+workers = 4
+; Must stay >= 2: the backlog snapshot, carry-forward, preventive-maintenance
+; and alert crons all run overnight and would otherwise serialise.
+max_cron_threads = 2
+
+; Only enforced once workers > 0, i.e. exactly in production.
+limit_time_cpu = 600
+limit_time_real = 1200
+limit_memory_soft = 2147483648
+limit_memory_hard = 2684354560
+
+; No logfile: stdout, captured by the json-file driver configured in
+; docker-compose.prod.yml.
+log_level = warn

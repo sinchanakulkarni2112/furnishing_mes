@@ -1,0 +1,112 @@
+# Furnishing MES — development stack
+#
+# Two services only: Odoo 18 Community and PostgreSQL 15.
+# No Celery, Redis or Nginx — Odoo's own ir.cron and web server cover those roles.
+# Production overrides arrive in docker-compose.prod.yml (Phase 15).
+#
+# Usage:  cp .env.example .env  &&  docker compose up -d
+
+# The project name prefixes containers, volumes and the network. Override it
+# with COMPOSE_PROJECT_NAME to run a second, fully isolated instance from
+# another clone on the same machine.
+name: furnishing-mes
+
+services:
+
+  db:
+    # Pinned by digest, same reasoning as the web image below: so
+    # "postgres:15" cannot silently drift to a different build between two
+    # people's (or two days') `docker compose up`. Re-pin with
+    # `docker inspect postgres:15 --format '{{index .RepoDigests 0}}'`
+    # after a deliberate, tested upgrade, never as a side effect of a
+    # routine pull.
+    image: postgres@sha256:9b1d34adbce1dd07ee6e94b4a2cf698884b89bd44a6c9c12f5da8f3acbfe4957  # postgres:15
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env — copy .env.example and choose a strong value}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # So `make psql` does not prompt for a password.
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - fmes-db-data:/var/lib/postgresql/data
+    networks:
+      - fmes-net
+    restart: unless-stopped
+    # No published port: the database is reachable only on the internal network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    # Pinned by digest (Phase 14, docs/06 deliverable 8) so "odoo:18.0"
+    # cannot silently drift to a different build between two people's (or
+    # two days') `docker compose up` — the tag stays in the comment purely
+    # for a human to recognise which minor release this is; re-pin with
+    # `docker inspect odoo:18.0 --format '{{index .RepoDigests 0}}'` after
+    # a deliberate, tested upgrade, never as a side effect of a routine pull.
+    image: odoo@sha256:259fa933bf3ee7f3e375bd74d1e0bc28bd75955159723be477359e0fdb8acf67  # odoo:18.0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Consumed by the official Odoo image entrypoint, which turns these into
+      # --db_host / --db_port / --db_user / --db_password arguments for the
+      # main server process.
+      HOST: db
+      PORT: 5432
+      USER: ${POSTGRES_USER:-odoo}
+      PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      # Standard libpq variables, read directly by psycopg2.
+      #
+      # `docker compose exec` bypasses the image entrypoint, so an exec'd odoo
+      # (make upgrade / test / shell) never receives the --db_* arguments above
+      # and would fall back to a local unix socket that does not exist. These
+      # give it the connection instead, without writing any credential into the
+      # committed config/odoo.conf.
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-odoo}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    ports:
+      # Binds to localhost by default. Set ODOO_BIND=0.0.0.0 in .env to reach the
+      # instance from another device on the LAN (e.g. a shop-floor tablet).
+      - "${ODOO_BIND:-127.0.0.1}:${ODOO_PORT:-8069}:8069"
+      # Websocket / longpolling. Only used when workers > 0 (production).
+      - "${ODOO_BIND:-127.0.0.1}:${ODOO_LONGPOLL_PORT:-8072}:8072"
+    volumes:
+      - fmes-web-data:/var/lib/odoo          # filestore: attachments, report PDFs
+      - ./addons:/mnt/extra-addons:ro        # our module, live-editable from the host
+      - ./config:/etc/odoo                   # odoo.conf (writable: see note below)
+    networks:
+      - fmes-net
+    restart: unless-stopped
+    # /web/health is genuinely exposed by Odoo 18 (verified: returns
+    # {"status": "pass"}, HTTP 200) — docs/08 section 7 monitors it the
+    # same way externally. start_period is generous because a first boot
+    # runs module installation before the server starts answering.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+# ./config is mounted read-write because Odoo may rewrite odoo.conf when the
+# master password is verified through the database manager (it re-hashes the
+# stored value). A read-only mount would make that raise.
+
+# Volume and network names are deliberately NOT pinned. Compose prefixes them
+# with the project name, so two clones never fight over the same database
+# volume — a pinned name would let a second clone attach to the first one's
+# data directory with different credentials and fail authentication.
+volumes:
+  fmes-db-data:
+  fmes-web-data:
+
+networks:
+  fmes-net:
+    driver: bridge

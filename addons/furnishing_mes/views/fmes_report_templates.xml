@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        One shared QWeb body for all ten report types (Requirement 12,
+        deliverable 1). `report_data[doc.id]` is pre-computed by
+        `report.furnishing_mes.report_fmes_generic`'s own
+        `_get_report_values` (services/report_service.py) — the template
+        itself only renders the uniform {summary, columns, rows[, sections]}
+        shape `fmes.report.service.get_report_data` returns, so a new
+        report type needs a new `_data_<type>` method, never a template
+        change.
+
+        `web.external_layout` supplies the shared chrome docs/05 section 7
+        asks for: company logo, address, and native page-x-of-y / company
+        footer — nothing here reimplements that.
+    -->
+    <template id="report_fmes_section">
+        <h4 t-if="section.get('title')" t-out="section['title']"/>
+        <table class="table table-sm o_report_section_summary" style="width:auto;">
+            <tbody>
+                <tr t-foreach="section['summary']" t-as="entry">
+                    <td class="fw-bold pe-4" t-out="entry['label']"/>
+                    <td t-out="env['fmes.report.service'].format_value(entry['value'], entry['fmt'])"/>
+                </tr>
+            </tbody>
+        </table>
+        <table t-if="section['columns']" class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th t-foreach="section['columns']" t-as="column" t-out="column['label']"/>
+                </tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="section['rows']" t-as="row">
+                    <td t-foreach="section['columns']" t-as="column"
+                        t-out="env['fmes.report.service'].format_value(row.get(column['key']), column['fmt'])"/>
+                </tr>
+                <tr t-if="not section['rows']">
+                    <td t-att-colspan="len(section['columns'])" class="text-muted">
+                        No records for this period and filter selection.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </template>
+
+    <template id="report_fmes_generic_document">
+        <t t-call="web.external_layout">
+            <t t-set="data" t-value="report_data[doc.id]"/>
+            <div class="page">
+                <h2 t-out="data['title']"/>
+                <p class="text-muted">
+                    <span>Period: </span><span t-out="data['period_label']"/>
+                    <span> · </span><span t-out="data['filters_label']"/>
+                    <span> · Generated: </span><span t-out="data['generated_on']"/>
+                </p>
+
+                <t t-if="data['sections']">
+                    <t t-foreach="data['sections']" t-as="section">
+                        <t t-call="furnishing_mes.report_fmes_section"/>
+                        <div style="page-break-after: always;"/>
+                    </t>
+                </t>
+                <t t-else="">
+                    <t t-set="section" t-value="data"/>
+                    <t t-call="furnishing_mes.report_fmes_section"/>
+                </t>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_fmes_generic">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="furnishing_mes.report_fmes_generic_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_fmes_generic" model="ir.actions.report">
+        <field name="name">Furnishing MES Report</field>
+        <field name="model">fmes.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">furnishing_mes.report_fmes_generic</field>
+        <field name="print_report_name">'Furnishing MES Report'</field>
+    </record>
+
+</odoo>

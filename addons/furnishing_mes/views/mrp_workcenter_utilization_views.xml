@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Phase 6 addition to the Phase 2 machine kanban: rolling
+            utilisation % on the card, and an under-utilised badge using the
+            same threshold the utilisation report's own filter uses
+            (assumption A30).
+        -->
+        <record id="fmes_workcenter_view_kanban_utilization" model="ir.ui.view">
+            <field name="name">mrp.workcenter.kanban.utilization.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="inherit_id" ref="fmes_workcenter_view_kanban"/>
+            <field name="arch" type="xml">
+                <!-- Declare the fields at the kanban root, alongside the
+                     ones the Phase 2 view already declares there. -->
+                <xpath expr="//field[@name='fmes_is_bottleneck']" position="after">
+                    <field name="fmes_utilization_pct"/>
+                    <field name="fmes_is_under_utilized"/>
+                </xpath>
+
+                <!-- The display line, as its own sibling block after the
+                     existing manpower/capacity row, not nested inside it. -->
+                <xpath expr="//div[hasclass('mt-2')]" position="after">
+                    <div class="mt-1">
+                        <span class="text-muted small me-1">30-day utilisation:</span>
+                        <span t-attf-class="fw-bold #{
+                                record.fmes_is_under_utilized.raw_value ? 'text-danger' :
+                                record.fmes_utilization_pct.raw_value >= 90 ? 'text-success' :
+                                ''}">
+                            <t t-esc="Math.round(record.fmes_utilization_pct.raw_value)"/>%
+                        </span>
+                        <span t-if="record.fmes_is_under_utilized.raw_value"
+                              class="badge text-bg-danger ms-1">
+                            under-utilised
+                        </span>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+
+        <!--
+            List view: the same figure as a sortable column, for the "three
+            least-utilised machines" exit criterion.
+        -->
+        <record id="mrp_workcenter_view_list_utilization" model="ir.ui.view">
+            <field name="name">mrp.workcenter.list.utilization.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="inherit_id" ref="mrp_workcenter_view_list_fmes"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='fmes_std_manpower']" position="after">
+                    <field name="fmes_utilization_pct" widget="percentage"
+                           optional="show"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!--
+            "Suggest Bottlenecks" — a bulk server action, available from the
+            Action (gear) menu on the machine list/kanban. Select every
+            machine, or a department's worth, and apply; still adjustable by
+            hand afterward on any individual machine.
+        -->
+        <record id="action_fmes_suggest_bottlenecks_server" model="ir.actions.server">
+            <field name="name">Suggest Bottlenecks (30-day utilisation)</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter"/>
+            <field name="binding_model_id" ref="mrp.model_mrp_workcenter"/>
+            <field name="binding_view_types">list,kanban</field>
+            <field name="state">code</field>
+            <field name="code">action = records.action_fmes_suggest_bottlenecks()</field>
+        </record>
+
+    </data>
+</odoo>

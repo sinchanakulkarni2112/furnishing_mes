@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Live production status (Requirement 3.5)                    -->
+        <!--                                                              -->
+        <!--  A wall-display board: what every machine is doing right now  -->
+        <!--  and how it is tracking against today's target.              -->
+        <!-- ============================================================ -->
+        <record id="fmes_workcenter_view_kanban_live" model="ir.ui.view">
+            <field name="name">mrp.workcenter.kanban.live.fmes</field>
+            <field name="model">mrp.workcenter</field>
+            <field name="arch" type="xml">
+                <kanban class="fmes-live-board" sample="1"
+                        default_group_by="department_id" create="0">
+                    <field name="fmes_current_state"/>
+                    <field name="fmes_today_target"/>
+                    <field name="fmes_today_produced"/>
+                    <field name="fmes_today_achievement"/>
+                    <field name="fmes_is_bottleneck"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <field name="name" class="fw-bold fs-5"/>
+                                <span t-attf-class="badge #{
+                                    record.fmes_current_state.raw_value == 'running' ? 'text-bg-success' :
+                                    record.fmes_current_state.raw_value == 'maintenance' ? 'text-bg-danger' :
+                                    record.fmes_current_state.raw_value == 'blocked' ? 'text-bg-warning' :
+                                    'text-bg-secondary'}">
+                                    <field name="fmes_current_state"/>
+                                </span>
+                            </div>
+                            <div class="text-muted small">
+                                <field name="fmes_machine_code"/>
+                                <span t-if="record.fmes_is_bottleneck.raw_value"
+                                      class="ms-2 badge text-bg-warning">
+                                    bottleneck
+                                </span>
+                            </div>
+
+                            <div class="mt-2 d-flex justify-content-between">
+                                <div>
+                                    <div class="text-muted small">Target</div>
+                                    <div class="fs-5">
+                                        <field name="fmes_today_target"/>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-muted small">Produced</div>
+                                    <div class="fs-5 fw-bold">
+                                        <field name="fmes_today_produced"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div t-if="record.fmes_today_target.raw_value"
+                                 class="mt-2">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar"
+                                         t-attf-class="progress-bar #{
+                                            record.fmes_today_achievement.raw_value >= 95 ? 'bg-success' :
+                                            record.fmes_today_achievement.raw_value >= 80 ? 'bg-warning' :
+                                            'bg-danger'}"
+                                         t-attf-style="width: #{
+                                            record.fmes_today_achievement.raw_value > 100 ? 100 :
+                                            record.fmes_today_achievement.raw_value}%"/>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    <field name="fmes_today_achievement"/>% of today's target
+                                </div>
+                            </div>
+                            <div t-else="" class="mt-2 small text-muted">
+                                No target set for today
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="action_fmes_live_status" model="ir.actions.act_window">
+            <field name="name">Live Production Status</field>
+            <field name="res_model">mrp.workcenter</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="context">{'search_default_fmes_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No machines configured yet
+                </p>
+                <p>
+                    This board shows what every machine is doing right now and
+                    how it is tracking against today's target.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_fmes_live_status_kanban_view"
+                model="ir.actions.act_window.view">
+            <field name="sequence">1</field>
+            <field name="view_mode">kanban</field>
+            <field name="view_id" ref="fmes_workcenter_view_kanban_live"/>
+            <field name="act_window_id" ref="action_fmes_live_status"/>
+        </record>
+
+    </data>
+</odoo>

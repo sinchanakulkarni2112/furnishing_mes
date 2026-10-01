@@ -1,0 +1,170 @@
+// Executive Dashboard.
+//
+// Colour bands follow the shared visual language in docs/05-ui-ux-design.md,
+// the same token values `fmes_board.scss` uses for the scheduling board.
+
+.fmes-dashboard {
+    --fmes-success: #28a745;
+    --fmes-warning: #f0ad4e;
+    --fmes-danger: #dc3545;
+    --fmes-info: #3498db;
+    --fmes-idle: #95a5a6;
+
+    padding: 16px;
+    height: 100%;
+    overflow-y: auto;
+
+    .fmes-dashboard-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+
+        h2 {
+            margin: 0;
+        }
+    }
+
+    .fmes-dashboard-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        select, input {
+            width: auto;
+        }
+    }
+
+    .fmes-dashboard-loading {
+        padding: 40px;
+        text-align: center;
+        color: var(--fmes-idle);
+    }
+
+    .fmes-kpi-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .fmes-kpi-tile {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 12px;
+        text-align: center;
+        background: #fff;
+
+        &.fmes-kpi-ok {
+            border-color: var(--fmes-success);
+        }
+        &.fmes-kpi-warn {
+            border-color: var(--fmes-warning);
+        }
+    }
+
+    .fmes-kpi-value {
+        font-size: 1.6rem;
+        font-weight: 600;
+    }
+
+    .fmes-kpi-label {
+        color: #666;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+    }
+
+    .fmes-kpi-target {
+        font-size: 0.75rem;
+        color: #999;
+    }
+
+    .fmes-trend-up {
+        color: var(--fmes-success);
+    }
+    .fmes-trend-down {
+        color: var(--fmes-danger);
+    }
+
+    .fmes-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .fmes-panel {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 12px;
+        background: #fff;
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-size: 1rem;
+        }
+
+        &.fmes-panel-wide {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .fmes-chart-container {
+        position: relative;
+        height: 260px;
+    }
+
+    .fmes-capacity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .fmes-capacity-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .fmes-capacity-label {
+        width: 120px;
+        flex-shrink: 0;
+        font-size: 0.85rem;
+    }
+
+    .fmes-capacity-bar {
+        flex: 1;
+        height: 10px;
+        background: var(--fmes-idle);
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .fmes-capacity-bar-fill {
+        height: 100%;
+        background: var(--fmes-info);
+    }
+
+    .fmes-capacity-pct {
+        width: 44px;
+        text-align: right;
+        font-size: 0.85rem;
+    }
+
+    .fmes-maintenance-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+
+        .fmes-kpi {
+            text-align: center;
+        }
+    }
+}
+
+@media (max-width: 992px) {
+    .fmes-dashboard .fmes-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}

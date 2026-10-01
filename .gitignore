@@ -1,0 +1,43 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+config/odoo.prod.conf
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Odoo
+*.log
+filestore/
+sessions/
+.odoorc
+odoo.conf.local
+
+# Database dumps / backups
+*.dump
+*.sql
+*.sql.gz
+backups/
+
+# Node (OWL tooling, if ever added)
+node_modules/
+package-lock.json
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code local session state (not project content)
+.claude/

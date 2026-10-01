@@ -1,0 +1,491 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Record rules for Furnishing MES master data.
+
+            Project rule: every model carrying company_id gets a multi-company
+            rule in the same commit that introduces the model. One plant is
+            expected at go-live (assumption A48), but the rules are in place so
+            a second plant never requires a data migration.
+
+            Department-scoped rules for supervisors arrive in Phase 8, once
+            res.users.fmes_department_ids exists.
+        -->
+
+        <record id="fmes_shift_company_rule" model="ir.rule">
+            <field name="name">Shift: multi-company</field>
+            <field name="model_id" ref="model_fmes_shift"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_capacity_matrix_company_rule" model="ir.rule">
+            <field name="name">Capacity Matrix: multi-company</field>
+            <field name="model_id" ref="model_fmes_capacity_matrix"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_production_plan_company_rule" model="ir.rule">
+            <field name="name">Production Plan: multi-company</field>
+            <field name="model_id" ref="model_fmes_production_plan"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_production_plan_line_company_rule" model="ir.rule">
+            <field name="name">Production Plan Line: multi-company</field>
+            <field name="model_id" ref="model_fmes_production_plan_line"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_production_entry_company_rule" model="ir.rule">
+            <field name="name">Production Entry: multi-company</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_material_request_company_rule" model="ir.rule">
+            <field name="name">Material Request: multi-company</field>
+            <field name="model_id" ref="model_fmes_material_request"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_import_batch_company_rule" model="ir.rule">
+            <field name="name">Import Batch: multi-company</field>
+            <field name="model_id" ref="model_fmes_import_batch"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!--
+            Operator scoping on production entries.
+
+            Two rules, because reading and writing need different limits:
+
+            READ  — the machines the operator is assigned to, plus anything
+                    they recorded themselves. An operator with no machine
+                    assignment therefore sees only their own work rather than
+                    the whole plant.
+            WRITE — their own entries, and only while still draft. Once a shift
+                    is submitted it stops being theirs to change.
+
+            Supervisors and above are not subject to either: they hold their own
+            group's rules, and Odoo applies the union of the rules a user's
+            groups grant.
+        -->
+        <record id="fmes_entry_operator_read_rule" model="ir.rule">
+            <field name="name">Production Entry: operator sees own machines</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">
+                ['|',
+                 ('create_uid', '=', user.id),
+                 ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
+            </field>
+        </record>
+
+        <record id="fmes_entry_operator_write_rule" model="ir.rule">
+            <field name="name">Production Entry: operator edits own drafts</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+            <!--
+                Phase 14 audit finding: the workcenter scope was missing
+                here entirely, so any operator could write to any OTHER
+                operator's draft/submitted/rejected entry on any machine,
+                not just their own allocated ones — the read rule already
+                got this right (below); this one did not. create_uid=self
+                in the OR is what keeps an operator's own CREATE working
+                even with no machine scope configured at all (the model's
+                own "not locked out" default, res_users.py's docstring):
+                a record's create_uid is always the creating user, so that
+                branch is always true for something they just made,
+                regardless of workcenter — only a WRITE to someone ELSE's
+                entry is actually workcenter-gated by this change.
+            -->
+            <field name="domain_force">
+                [('state', 'in', ('draft', 'submitted', 'rejected')),
+                 '|', ('create_uid', '=', user.id),
+                      ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
+            </field>
+        </record>
+
+        <record id="fmes_entry_supervisor_rule" model="ir.rule">
+            <field name="name">Production Entry: supervisor sees everything</field>
+            <field name="model_id" ref="model_fmes_production_entry"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_downtime_report_company_rule" model="ir.rule">
+            <field name="name">Downtime Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_downtime_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!--
+            Operator scoping on downtime events, mirroring the two-rule split
+            used for fmes.production.entry in Phase 4: reading follows the
+            machines the operator is assigned to (or their own creation),
+            writing is limited to still-open records regardless of machine.
+
+            A Supervisor and a Plant Manager ALSO hold group_fmes_operator,
+            because Phase 1's role hierarchy is cumulative (implied_ids): a
+            Supervisor implies Operator, a Manager implies Supervisor. Odoo
+            evaluates a non-global ir.rule against every group a user belongs
+            to, including implied ones — so the operator rules below would
+            silently apply to supervisors and managers too, with no other
+            non-global rule on this model to OR against and widen it back
+            out. mrp.group_mrp_user's native ACL grants the base RWCD
+            permission, but that is a different layer (ACL, not ir.rule) and
+            does not exempt anyone from an ir.rule domain.
+            An explicit, unrestricted rule for group_fmes_supervisor is what
+            fixes this — found by a real AccessError when a Plant Manager
+            (who is also, transitively, an Operator) tried to reopen an
+            approved event and was refused read access to their own record.
+        -->
+        <record id="fmes_productivity_supervisor_rule" model="ir.rule">
+            <field name="name">Downtime Event: supervisor sees everything</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_productivity_operator_read_rule" model="ir.rule">
+            <field name="name">Downtime Event: operator sees own machines</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">
+                ['|',
+                 ('create_uid', '=', user.id),
+                 ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
+            </field>
+        </record>
+
+        <record id="fmes_productivity_operator_write_rule" model="ir.rule">
+            <field name="name">Downtime Event: operator edits own drafts</field>
+            <field name="model_id" ref="mrp.model_mrp_workcenter_productivity"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+            <!-- Phase 14 audit finding: same gap and same fix as
+                 fmes_entry_operator_write_rule above — see its comment. -->
+            <field name="domain_force">
+                [('fmes_state', 'in', ('draft', 'rejected')),
+                 '|', ('create_uid', '=', user.id),
+                      ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids)]
+            </field>
+        </record>
+
+        <record id="fmes_utilization_report_company_rule" model="ir.rule">
+            <field name="name">Utilisation Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_utilization_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_maintenance_schedule_company_rule" model="ir.rule">
+            <field name="name">Maintenance Schedule: multi-company</field>
+            <field name="model_id" ref="model_fmes_maintenance_schedule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_maintenance_report_company_rule" model="ir.rule">
+            <field name="name">Maintenance Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_maintenance_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!--
+            Department-scoped rules for supervisors, promised above since
+            Phase 1 and delivered here for this phase's own two new models
+            (res.users.fmes_department_ids has existed since Phase 4). Not
+            retrofitted onto earlier phases' models in this same commit —
+            that is a larger, separate exercise noted in MEMORY.md rather
+            than folded into this one.
+
+            An empty fmes_department_ids means "responsible for all
+            departments" (the field's own help text), so the domain is a
+            genuine Python conditional, not a domain clause — evaluated by
+            ir.rule the same way the existing rules already use `user` and
+            `company_ids`.
+
+            Both models need the SAME explicit-unrestricted-manager pattern
+            D5.3 established: group_fmes_manager implies group_fmes_supervisor,
+            so without its own unrestricted rule a Plant Manager would be
+            caught by the department-scoped supervisor rule too.
+        -->
+        <record id="fmes_manpower_log_company_rule" model="ir.rule">
+            <field name="name">Manpower Log: multi-company</field>
+            <field name="model_id" ref="model_fmes_manpower_log"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_manpower_log_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Manpower Log: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_manpower_log"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                [('department_id', 'in', user.fmes_department_ids.ids)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_manpower_log_manager_rule" model="ir.rule">
+            <field name="name">Manpower Log: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_manpower_log"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_operator_allocation_company_rule" model="ir.rule">
+            <field name="name">Operator Allocation: multi-company</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_operator_read_rule" model="ir.rule">
+            <field name="name">Operator Allocation: operator sees their own roster</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">
+                [('employee_id.user_id', '=', user.id)]
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Operator Allocation: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                [('department_id', 'in', user.fmes_department_ids.ids)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_operator_allocation_manager_rule" model="ir.rule">
+            <field name="name">Operator Allocation: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_operator_allocation"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_manpower_impact_report_company_rule" model="ir.rule">
+            <field name="name">Manpower Impact Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_manpower_impact_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_company_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: multi-company</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <!-- Operators now reach "Backlogs" (docs/`Product visualization`'s
+             Orders sub-tab), newly granted read access above. Without a
+             rule of their own, a plain Operator (not in group_fmes_supervisor,
+             which is where the rule above lives) would match no
+             group-scoped rule on this model at all and fall through to
+             the plain company rule — seeing every department's backlog,
+             MORE than a department-scoped Supervisor sees. Same
+             department-scoped domain as the Supervisor rule keeps that
+             from happening. -->
+        <record id="fmes_backlog_snapshot_operator_dept_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: operator sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_backlog_snapshot_manager_rule" model="ir.rule">
+            <field name="name">Backlog Snapshot: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_backlog_snapshot"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_production_report_company_rule" model="ir.rule">
+            <field name="name">Production Report: multi-company</field>
+            <field name="model_id" ref="model_fmes_production_report"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_production_report_supervisor_dept_rule" model="ir.rule">
+            <field name="name">Production Report: supervisor sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_production_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_production_report_manager_rule" model="ir.rule">
+            <field name="name">Production Report: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_production_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_alert_rule_company_rule" model="ir.rule">
+            <field name="name">Alert Rule: multi-company</field>
+            <field name="model_id" ref="model_fmes_alert_rule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_alert_company_rule" model="ir.rule">
+            <field name="name">Alert: multi-company</field>
+            <field name="model_id" ref="model_fmes_alert"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="fmes_report_schedule_company_rule" model="ir.rule">
+            <field name="name">Report Schedule: multi-company</field>
+            <field name="model_id" ref="model_fmes_report_schedule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!--
+            Phase 13 — Customer Portal. Both rules below are non-global,
+            attached only to base.group_portal: internal users (operator /
+            supervisor / manager) are never members of that group — a
+            completely separate branch of Odoo's own group tree from
+            group_fmes_* — so neither rule narrows what an internal user
+            can see (the D5.3 cumulative-hierarchy gotcha does not apply
+            here, unlike every other department-scoping rule in this file).
+        -->
+        <record id="fmes_support_ticket_portal_rule" model="ir.rule">
+            <field name="name">Support Ticket: portal customer sees own tickets only</field>
+            <field name="model_id" ref="model_fmes_support_ticket"/>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="domain_force">
+                [('partner_id', 'child_of', [user.commercial_partner_id.id])]
+            </field>
+        </record>
+
+        <record id="fmes_mrp_production_portal_rule" model="ir.rule">
+            <field name="name">Manufacturing Order: portal customer sees own orders only</field>
+            <field name="model_id" ref="mrp.model_mrp_production"/>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="domain_force">
+                [('sale_line_id.order_id.partner_id', 'child_of', [user.commercial_partner_id.id])]
+            </field>
+        </record>
+
+        <!--
+            Phase 14 audit finding. maintenance.equipment ships two native,
+            non-global rules: a follower-based one for base.group_user (any
+            internal user, unrestricted otherwise) and an unrestricted one
+            for group_equipment_manager. An Operator is neither a follower
+            of a machine's equipment record by default nor a member of
+            group_equipment_manager (only Supervisor+ is), so real machine
+            records were silently unreadable — the exact same class of gap
+            already documented once for this same model as D7.1 (a
+            targeted .sudo() fixed the health-score COMPUTE path back then;
+            this closes the same gap for direct read access generally,
+            matching docs/04-security-model.md's own permission matrix,
+            which promises Operator plain R on maintenance.equipment).
+        -->
+        <record id="fmes_maintenance_equipment_operator_rule" model="ir.rule">
+            <field name="name">Equipment: operator can read every machine's equipment record</field>
+            <field name="model_id" ref="maintenance.model_maintenance_equipment"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_sync_log_company_rule" model="ir.rule">
+            <field name="name">Sync Log: multi-company</field>
+            <field name="model_id" ref="model_fmes_sync_log"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+            </field>
+        </record>
+
+    </data>
+</odoo>

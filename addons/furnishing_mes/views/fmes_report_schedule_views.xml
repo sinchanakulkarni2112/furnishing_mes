@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="fmes_report_schedule_view_list" model="ir.ui.view">
+            <field name="name">fmes.report.schedule.list</field>
+            <field name="model">fmes.report.schedule</field>
+            <field name="arch" type="xml">
+                <list string="Report Schedules" decoration-muted="not active">
+                    <field name="name"/>
+                    <field name="report_type"/>
+                    <field name="frequency"/>
+                    <field name="run_time" widget="float_time"/>
+                    <field name="format"/>
+                    <field name="recipient_ids" widget="many2many_tags" optional="show"/>
+                    <field name="next_run" optional="show"/>
+                    <field name="last_run" optional="hide"/>
+                    <field name="active" optional="hide" widget="boolean_toggle"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_report_schedule_view_form" model="ir.ui.view">
+            <field name="name">fmes.report.schedule.form</field>
+            <field name="model">fmes.report.schedule</field>
+            <field name="arch" type="xml">
+                <form string="Report Schedule">
+                    <header>
+                        <button name="action_run_now" type="object"
+                                string="Run Now" class="oe_highlight"/>
+                    </header>
+                    <sheet>
+                        <widget name="web_ribbon" title="Archived"
+                                bg_color="text-bg-danger" invisible="active"/>
+                        <div class="oe_title">
+                            <h1><field name="name"/></h1>
+                        </div>
+                        <group>
+                            <group string="What">
+                                <field name="report_type"/>
+                                <field name="format"/>
+                                <field name="active"/>
+                            </group>
+                            <group string="When">
+                                <field name="frequency"/>
+                                <field name="run_time" widget="float_time"/>
+                                <field name="day_of_week"
+                                       invisible="frequency != 'weekly'"/>
+                                <field name="day_of_month"
+                                       invisible="frequency != 'monthly'"/>
+                                <field name="period_offset"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Scope">
+                                <field name="department_ids" widget="many2many_tags"/>
+                                <field name="workcenter_ids" widget="many2many_tags"/>
+                            </group>
+                            <group string="Delivery">
+                                <field name="recipient_ids" widget="many2many_tags"/>
+                                <field name="last_run" readonly="1"/>
+                                <field name="next_run" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_report_schedule" model="ir.actions.act_window">
+            <field name="name">Report Schedules</field>
+            <field name="res_model">fmes.report.schedule</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Schedule a report
+                </p>
+                <p>
+                    A report generates and emails itself on its own timing —
+                    no manual export needed once it is configured here.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

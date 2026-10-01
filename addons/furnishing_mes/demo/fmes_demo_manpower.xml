@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            A small demo roster (Requirement 8.1) so a fresh demo install
+            already shows today's operator allocation and a manpower
+            shortage worth looking at, not an empty screen.
+        -->
+
+        <record id="emp_operator_01" model="hr.employee">
+            <field name="name">Arjun Rao</field>
+            <field name="department_id" ref="dept_cutting"/>
+        </record>
+        <record id="emp_operator_02" model="hr.employee">
+            <field name="name">Divya Shetty</field>
+            <field name="department_id" ref="dept_cutting"/>
+        </record>
+        <record id="emp_operator_03" model="hr.employee">
+            <field name="name">Karthik Nair</field>
+            <field name="department_id" ref="dept_cnc"/>
+        </record>
+        <record id="emp_operator_04" model="hr.employee">
+            <field name="name">Meera Iyer</field>
+            <field name="department_id" ref="dept_finishing"/>
+        </record>
+        <record id="emp_operator_05" model="hr.employee">
+            <field name="name">Suresh Pillai</field>
+            <field name="department_id" ref="dept_assembly"/>
+        </record>
+        <record id="emp_operator_06" model="hr.employee">
+            <field name="name">Anita Menon</field>
+            <field name="department_id" ref="dept_finishing"/>
+        </record>
+
+        <record id="demo_roster_01" model="fmes.operator.allocation">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="employee_id" ref="emp_operator_01"/>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="role">operator</field>
+            <field name="state">present</field>
+        </record>
+        <record id="demo_roster_02" model="fmes.operator.allocation">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="employee_id" ref="emp_operator_02"/>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="role">helper</field>
+            <field name="state">present</field>
+        </record>
+        <record id="demo_roster_03" model="fmes.operator.allocation">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="employee_id" ref="emp_operator_03"/>
+            <field name="workcenter_id" ref="wc_cnc_01"/>
+            <field name="role">operator</field>
+            <field name="state">planned</field>
+        </record>
+        <record id="demo_roster_04" model="fmes.operator.allocation">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="employee_id" ref="emp_operator_04"/>
+            <field name="workcenter_id" ref="wc_spray_01"/>
+            <field name="role">operator</field>
+            <field name="state">present</field>
+        </record>
+        <record id="demo_roster_05" model="fmes.operator.allocation">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="employee_id" ref="emp_operator_05"/>
+            <field name="workcenter_id" ref="wc_assy_01"/>
+            <field name="role">operator</field>
+            <field name="state">absent</field>
+        </record>
+        <record id="demo_roster_06" model="fmes.operator.allocation">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="employee_id" ref="emp_operator_06"/>
+            <field name="workcenter_id" ref="wc_spray_02"/>
+            <field name="role">inspector</field>
+            <field name="state">present</field>
+        </record>
+
+        <!-- A machine-level log with no shortage, and a department-level
+             one showing today's assembly-line gap (emp_operator_05, above,
+             is out). -->
+        <record id="demo_manpower_log_01" model="fmes.manpower.log">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="workcenter_id" ref="wc_saw_01"/>
+            <field name="department_id" ref="dept_cutting"/>
+            <field name="std_manpower">2.0</field>
+            <field name="actual_manpower">2.0</field>
+        </record>
+        <record id="demo_manpower_log_02" model="fmes.manpower.log">
+            <field name="date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="shift_id" ref="shift_a"/>
+            <field name="department_id" ref="dept_assembly"/>
+            <field name="std_manpower">3.0</field>
+            <field name="actual_manpower">2.0</field>
+            <field name="absent_count">1</field>
+            <field name="reason">One assembly hand out sick; not backfilled this shift.</field>
+        </record>
+
+    </data>
+</odoo>
