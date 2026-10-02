@@ -31,9 +31,6 @@ from odoo import _, api, fields, models
 # per-company scheduling would need a real timezone field res.company does
 # not carry natively.
 NIGHT_QUEUE_HOUR = 8
-# Assumption A55: how long a critical alert may sit unacknowledged before
-# the Plant Manager is notified directly.
-ESCALATION_WINDOW_MINUTES = 30
 
 
 class FmesAlertEngine(models.AbstractModel):
@@ -327,28 +324,44 @@ class FmesAlertEngine(models.AbstractModel):
     # ==================================================================
     @api.model
     def _escalate_overdue_critical_alerts(self):
-        cutoff = fields.Datetime.now() - timedelta(
-            minutes=ESCALATION_WINDOW_MINUTES)
-        overdue = self.env['fmes.alert'].search([
-            ('severity', '=', 'critical'), ('state', '=', 'new'),
-            ('escalated', '=', False), ('triggered_on', '<=', cutoff),
-        ])
-        if not overdue:
+        """Notify Plant Managers about critical alerts nobody acknowledged.
+
+        The window is per rule (`fmes.alert.rule.escalation_window_minutes`,
+        defaulting to assumption A55's 30 minutes), so the candidate search
+        cannot apply a single time cutoff: any fixed cutoff would silently
+        skip every alert belonging to a rule whose own window is longer than
+        it. Search on the conditions that are genuinely selective on their
+        own — critical, still unacknowledged, not yet escalated, raised by a
+        rule that actually declares a window — then apply each alert's own
+        window here. Candidates are already bounded by that last condition,
+        since only an explicit positive window makes an alert escalable.
+        """
+        candidates = self.env['fmes.alert'].search([
+            ('severity', '=', 'critical'),
+            ('state', '=', 'new'),
+            ('escalated', '=', False),
+            ('rule_id.escalation_window_minutes', '>', 0),
+        ], order='triggered_on')
+        if not candidates:
             return
+        now = fields.Datetime.now()
         manager_group = self.env.ref('furnishing_mes.group_fmes_manager')
         managers = self.env['res.users'].search([
             ('groups_id', '=', manager_group.id)])
-        for alert in overdue:
+        for alert in candidates:
+            minutes = alert.rule_id.escalation_window_minutes
+            if alert.triggered_on > now - timedelta(minutes=minutes):
+                continue
             for manager in managers:
                 alert.activity_schedule(
                     'mail.mail_activity_data_todo',
                     summary=_("Escalated: %s", alert.subject),
                     note=_(
                         "Unacknowledged %(minutes)s minutes after it fired.",
-                        minutes=ESCALATION_WINDOW_MINUTES),
+                        minutes=minutes),
                     user_id=manager.id)
             alert.message_post(body=_(
                 "Escalated to the Plant Manager — unacknowledged "
                 "%(minutes)s minutes after it fired.",
-                minutes=ESCALATION_WINDOW_MINUTES))
+                minutes=minutes))
             alert.escalated = True

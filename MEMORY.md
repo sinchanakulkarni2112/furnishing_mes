@@ -2095,7 +2095,8 @@ of required changes, grouped into 4 sections. The user asked for a full
 walkthrough plan first (given, in chat, not yet copied here verbatim — the
 summary below is complete enough to act on without it) and said to proceed
 with whatever order seemed best, then asked to pause after exactly 2
-specific fixes. **Item 3.7 (the view-file split) is now done and pushed.
+specific fixes. **Item 3.7 (the view-file split, `7028d28`) and Section 2
+item 3 (the configurable escalation window) are now done and pushed.
 Everything else in Sections 2 and 3 is not started.** Do not re-investigate
 what is already documented here as "confirmed" — it was checked directly
 against this codebase, not assumed.
@@ -2135,7 +2136,7 @@ delete rights (reviewed and accepted as-is).
 | 3.4 | Postgres image not pinned by digest | **Done** — `9d4347a` | Pinned to the digest of the image already running/tested this session, not a freshly pulled one (deliberate — see gotcha above). |
 | 3.5 | Browser click-through + OWL tours unwritten | **Not started** | Screens needing a manual pass: Shop Floor Terminal, Scheduling Board, Executive Dashboard, the alert bell/systray, and the portal pages. "OWL tours for those three main screens" — the mentor's own note does not name which three; Terminal + Scheduling Board + Executive Dashboard is the reasonable reading (the three richest custom OWL components), but **confirm with the user before writing tours**, since guessing wrong means rewriting tour definitions, not just re-running a check. |
 | 3.6 | PDF report class inside report_service.py | **Done** — `0a38ee4` | Moved `ReportFmesGeneric` to `reports/report_fmes_generic.py`. |
-| 3.7 | View files not one-per-model | **Done** | Split into 7 new files, all `<record>` blocks moved verbatim with **no `id=` renamed** (verified: 153 view/action records in, 153 out, zero lost, zero added). Beyond the 3 files the mentor named, 4 more were needed to make the rule true rather than partial: `fmes.production.plan.line` and `fmes.plan.generator` were also sharing `fmes_production_plan_views.xml`, `fmes.import.batch` + `fmes.production.import` were in `fmes_production_entry_views.xml`, `fmes.alert.rule` was in `fmes_alert_views.xml`, `mrp.workcenter.productivity.loss` was in `maintenance_equipment_views.xml`, and the Phase 5 `fmes_entry_view_form_downtime` **inherited** view of `fmes.production.entry` was alone in `fmes_production_entry_downtime_views.xml` (that last file is deleted — see the `ir.model.data` gotcha below). |
+| 3.7 | View files not one-per-model | **Done** — `7028d28` | Split into 7 new files, all `<record>` blocks moved verbatim with **no `id=` renamed** (verified: 153 view/action records in, 153 out, zero lost, zero added). Beyond the 3 files the mentor named, 4 more were needed to make the rule true rather than partial: `fmes.production.plan.line` and `fmes.plan.generator` were also sharing `fmes_production_plan_views.xml`, `fmes.import.batch` + `fmes.production.import` were in `fmes_production_entry_views.xml`, `fmes.alert.rule` was in `fmes_alert_views.xml`, `mrp.workcenter.productivity.loss` was in `maintenance_equipment_views.xml`, and the Phase 5 `fmes_entry_view_form_downtime` **inherited** view of `fmes.production.entry` was alone in `fmes_production_entry_downtime_views.xml` (that last file is deleted — see the `ir.model.data` gotcha below). |
 | 3.8 | Alert data files missing `fmes_` prefix | **Done** — `022ad43` | `data/alert_rules.xml` → `data/fmes_alert_rules.xml`, `data/alert_automations.xml` → `data/fmes_alert_automations.xml`. `MEMORY.md`'s own historical entries describing the old filenames were deliberately left alone (a decision log is not rewritten retroactively) — do not "fix" those old mentions if you see them. |
 | 3.9 | No migrations/ folder | **Done** — `9d4347a` | `addons/furnishing_mes/migrations/README.md` documents the convention; genuinely empty otherwise since no schema change has needed one yet. |
 
@@ -2183,25 +2184,51 @@ and whether it needs the user's decision before building.
    model. If no native field exists, a new small Char field (hashed, not
    plaintext — check how Odoo itself stores `res.users.password` for the
    hashing convention to mirror) is the fallback.
-3. **Configurable critical-alert escalation window.** Fully scoped, no
-   decision needed, straightforward to build. Confirmed:
-   `ESCALATION_WINDOW_MINUTES = 30` is a module-level constant in
-   `services/alert_engine.py`, read at lines ~331, ~348, ~353 inside
-   `_escalate_overdue_critical_alerts`. **Plan:** add a field (e.g.
-   `escalation_window_minutes = fields.Integer(default=30, required=True)`)
-   to `fmes.alert.rule` (`models/fmes_alert_rule.py`), add a `_sql_
-   constraints` check it is positive (mirrors the existing `fmes_alert_rule_
-   cooldown_positive` constraint right next to where `cooldown_minutes`'s
-   own constraint already lives in that file), replace every read of the
-   global constant inside `_escalate_overdue_critical_alerts` with a read of
-   the specific alert's own `rule_id.escalation_window_minutes`. Add it to
-   the rule form view (`views/fmes_alert_views.xml` — confirmed exact
-   filename) next to `cooldown_minutes`. Add a test
-   mirroring the existing `test_unacknowledged_critical_alert_escalates_
-   after_the_window` / `test_not_yet_escalated_before_the_window` pair in
-   `tests/test_alerts.py`, parametrised on a non-default window value, to
-   prove the field is actually read rather than still falling back to the
-   constant.
+3. **Configurable critical-alert escalation window.** **Done and pushed.**
+   `fmes.alert.rule.escalation_window_minutes` (positive,
+   required, default 30 = assumption A55's value, checked by a new
+   `fmes_alert_rule_escalation_window_positive` CHECK next to the existing
+   cooldown one). The module constant `ESCALATION_WINDOW_MINUTES` is gone
+   from `services/alert_engine.py`, along with `A55`'s pointer to it in
+   `docs/15`. **The non-obvious part, and the reason this was not a
+   three-line find-and-replace:** the old code computed ONE global cutoff and
+   pushed it into the candidate `search()` domain as
+   `('triggered_on', '<=', cutoff)`. Swapping the constant for the rule's
+   field *inside* the loop would have left that domain in place, so a rule
+   configured with a window LONGER than the old 30 minutes could never
+   escalate anything — its alerts would have been filtered out by the search
+   before the loop ever ran. The domain now carries no time condition at all,
+   only genuinely selective ones (`severity='critical'`, `state='new'`,
+   `escalated=False`, and `rule_id.escalation_window_minutes > 0`, which is
+   itself the escalability test and keeps the candidate set bounded), and each
+   alert's own window is applied in Python against a single `now`. Ordering is
+   `order='triggered_on'` so the oldest escalates first.
+   Field added to `views/fmes_alert_rule_views.xml` (the alert-rule form,
+   which Task 1's split moved out of `fmes_alert_views.xml` — the plan's
+   recorded filename `views/fmes_alert_views.xml` was already stale by the
+   time this landed) in the Notification group, `invisible` unless
+   `severity == 'critical'`, since a warning or info alert never escalates
+   whatever the window says. Docs updated in the same commit: `A55`'s anchor
+   in `docs/15`, `L6` in `docs/17` flipped to Resolved, the field table and
+   the "not configurable" paragraph in `docs/16`, and `R10` in
+   `docs/01-requirements-traceability.md`.
+   **Tests (`tests/test_alerts.py::TestEscalation`, +5).** The load-bearing
+   one is `test_window_is_configurable_per_rule_not_a_fixed_constant`: a
+   5-minute rule must escalate a 10-minute-old alert (the old code would not
+   have) and a 120-minute rule must NOT escalate a 31-minute-old alert (the
+   old code would have). Plus `test_each_alert_judged_on_its_own_rule_window`
+   (three alerts, two windows, one pass), the note/body quoting the rule's
+   own number, the default matching A55, and the CHECK rejecting 0 and -1.
+   **Mutation-tested**: reintroducing the old global cutoff and `minutes = 30`
+   makes exactly the three behavioural tests fail (3 failed, 0 errors) and
+   nothing else — so they are real regression tests, not tautologies.
+   Live-verified with 16 assertions through the real engine against the dev
+   database, including both sides of both boundaries (5m: 4 old no / 6 old
+   yes; 120m: 115 old no / 125 old yes), a warning-severity rule with a
+   2-minute window never escalating a 500-minute-old alert, and a direct
+   check that the candidate search admits a 119-minute-old alert (the case a
+   global cutoff drops). Full suite on a fresh disposable database: **635
+   tests, 0 failed, 0 errors** (630 baseline + 5 new).
 4. **Self-service spreadsheet boards.** Mentor: build only after real plant
    data is loaded. **Ask the user: has real plant data been loaded yet?** If
    not, leave parked — do not build speculative boards against demo data.
@@ -2274,6 +2301,27 @@ user's answers above; do not build any of them speculatively.
 - **An inherited view of model M must live in M's file too**, even when it was
   deliberately split out when it was first written. A "Phase 5 addition"
   sitting alone in its own file still violates one-file-per-model.
+- **A search domain holding a time cutoff built from a soon-to-be-per-record
+  value cannot be fixed by reading that value inside the loop.** Turning a
+  module constant into per-record configuration means checking whether the
+  constant was ALSO used to build the *query*, not just the message. Here the
+  candidate `search()` filtered `triggered_on <= now - 30`, so simply swapping
+  the message text to read `alert.rule_id.<field>` would have left every
+  record on a rule configured with a longer window silently excluded — the
+  feature would look wired up and never fire for those rules. Prove this
+  class of test is real by mutating the code back to the old behaviour and
+  watching the new tests go red: here exactly the 3 behavioural ones failed
+  (3 failed, 0 errors) and the 2 structural ones (default, CHECK constraint)
+  correctly stayed green.
+- **`fmes.alert.engine._raise_alert()` returns an EMPTY recordset when an open
+  or recent alert already exists for that (rule, subject)** — dedup by design,
+  not a failure. Any verification script or test that raises several alerts
+  from ONE rule gets an empty recordset from the second call onward, and then
+  every assertion downstream passes or fails for the wrong reason (`bool()` of
+  an empty recordset is `False`, and `record.rule_id.window` on it reads as
+  `0`). Give each scenario its own rule, and assert the returned record is
+  non-empty immediately, so the mistake shows up as an explicit failure rather
+  than as plausible-looking wrong numbers.
 - **A field's default, inherited from a mixin, can silently change a
   DIFFERENT native computation that happens to read it.** `mrp.workcenter`'s
   default `resource_calendar_id` (from `resource.mixin`) made every downtime

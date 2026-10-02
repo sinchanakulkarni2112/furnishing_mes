@@ -18,9 +18,12 @@ wall clock and this codebase does not depend on a time-freezing library.
 
 from datetime import datetime, time, timedelta
 
+from psycopg2 import IntegrityError
+
 from odoo import fields
 from odoo.tests import tagged
 
+from ..models.fmes_alert_rule import DEFAULT_ESCALATION_WINDOW_MINUTES
 from .common import FmesTestCase
 
 
@@ -320,9 +323,13 @@ class TestDispatch(AlertCase):
 @tagged('post_install', '-at_install', 'fmes', 'fmes_phase11')
 class TestEscalation(AlertCase):
 
-    def _critical_alert(self):
-        rule = self._rule(alert_type='machine_breakdown', operator='gt',
-                           threshold=0, severity='critical')
+    def _critical_alert(self, window=None, name='Test Rule'):
+        vals = {'name': name,
+                'alert_type': 'machine_breakdown', 'operator': 'gt',
+                'threshold': 0, 'severity': 'critical'}
+        if window is not None:
+            vals['escalation_window_minutes'] = window
+        rule = self._rule(**vals)
         return self.engine._raise_alert(rule, self.wc_saw, 1.0)
 
     def test_unacknowledged_critical_alert_escalates_after_the_window(self):
@@ -345,6 +352,62 @@ class TestEscalation(AlertCase):
         alert.action_acknowledge()
         self.engine._escalate_overdue_critical_alerts()
         self.assertFalse(alert.escalated)
+
+    def test_window_is_configurable_per_rule_not_a_fixed_constant(self):
+        # The pair that fails if anything still reads a module-level
+        # constant. A 5-minute rule must escalate a 10-minute-old alert even
+        # though 10 is under the old hard-coded 30; a 120-minute rule must NOT
+        # escalate a 31-minute-old alert even though 31 is over it.
+        fast = self._critical_alert(window=5, name='Fast escalation')
+        slow = self._critical_alert(window=120, name='Slow escalation')
+        now = fields.Datetime.now()
+        fast.triggered_on = now - timedelta(minutes=10)
+        slow.triggered_on = now - timedelta(minutes=31)
+
+        self.engine._escalate_overdue_critical_alerts()
+
+        self.assertTrue(fast.escalated,
+                        'a 5-minute window must escalate a 10-minute-old alert')
+        self.assertFalse(
+            slow.escalated,
+            'a 120-minute window must not escalate a 31-minute-old alert')
+
+    def test_each_alert_judged_on_its_own_rule_window(self):
+        # One escalation pass, two critical rules with different windows,
+        # each alert overdue by its own rule's window and not by the other's.
+        fast = self._critical_alert(window=5, name='Fast escalation')
+        slow = self._critical_alert(window=120, name='Slow escalation')
+        too_early_for_slow = self._critical_alert(window=120, name='Slow 2')
+        now = fields.Datetime.now()
+        fast.triggered_on = now - timedelta(minutes=10)
+        slow.triggered_on = now - timedelta(minutes=150)
+        too_early_for_slow.triggered_on = now - timedelta(minutes=10)
+
+        self.engine._escalate_overdue_critical_alerts()
+
+        self.assertTrue(fast.escalated)
+        self.assertTrue(slow.escalated)
+        self.assertFalse(too_early_for_slow.escalated)
+
+    def test_escalation_message_reports_the_rules_own_window(self):
+        alert = self._critical_alert(window=7)
+        alert.triggered_on = fields.Datetime.now() - timedelta(minutes=8)
+        self.engine._escalate_overdue_critical_alerts()
+        self.assertTrue(alert.escalated)
+        notes = ' '.join(alert.activity_ids.mapped('note') or '')
+        self.assertIn('7', notes)
+
+    def test_default_window_matches_assumption_a55(self):
+        self.assertEqual(
+            self.env['fmes.alert.rule'].default_get(
+                ['escalation_window_minutes'])['escalation_window_minutes'],
+            DEFAULT_ESCALATION_WINDOW_MINUTES)
+
+    def test_non_positive_escalation_window_is_rejected(self):
+        for bad in (0, -1):
+            with self.assertRaises(IntegrityError):
+                with self.env.cr.savepoint():
+                    self._critical_alert(window=bad)
 
 
 @tagged('post_install', '-at_install', 'fmes', 'fmes_phase11')

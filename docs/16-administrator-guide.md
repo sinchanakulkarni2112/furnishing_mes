@@ -76,12 +76,12 @@ express an "or" condition on the threshold). For each rule:
 | Threshold + operator | The condition that raises the alert (e.g. downtime % > 15) |
 | Scope | Plant-wide, or specific departments/machines |
 | Cooldown (minutes) | How long before the same condition can raise a new alert — prevents an alert storm from a condition that stays true |
-| Severity | Drives the mail template's colour and the escalation timer |
+| Severity | Drives the mail template's colour and whether the escalation timer applies at all |
+| Escalation window (minutes) | Critical alerts only — how long one may sit unacknowledged before every Plant Manager is notified. Defaults to 30; set it per rule so a safety-critical rule can escalate faster than a routine one |
 
-A critical alert unacknowledged for 30 minutes escalates to every Plant
-Manager automatically — this window is not currently configurable per rule
-(a fixed constant; see the known-limitations register in
-`docs/17-handover-checklist.md` if this needs to become configurable).
+A critical alert unacknowledged for its rule's escalation window escalates to
+every Plant Manager automatically. The field is only shown on rules whose
+severity is Critical, because a warning or info alert never escalates.
 
 **Tuning approach:** start from the seeded defaults, run for a week or two
 against real data, then adjust thresholds with input from supervisors —

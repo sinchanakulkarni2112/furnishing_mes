@@ -58,6 +58,8 @@
                             <group>
                                 <field name="recipient_group_ids" widget="many2many_tags"/>
                                 <field name="recipient_user_ids" widget="many2many_tags"/>
+                                <field name="escalation_window_minutes"
+                                       invisible="severity != 'critical'"/>
                             </group>
                             <group>
                                 <field name="notify_activity"/>

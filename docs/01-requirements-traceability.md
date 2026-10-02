@@ -138,7 +138,7 @@ only, per assumption `A34`). Threshold types are evaluated by the
 and blocked-order conditions fire immediately via `base_automation`. Repeated
 conditions are suppressed by an open-alert check plus a per-rule cooldown
 (`A45`); an unacknowledged critical alert escalates to the Plant Manager after
-30 minutes (`A55`). Alert Center (list/kanban by severity, acknowledge/resolve,
+its own rule's escalation window (default 30 minutes, `A55`). Alert Center (list/kanban by severity, acknowledge/resolve,
 systray unread counter) and Alert Rules (Plant Manager only) are both native
 Odoo views, no separate frontend.
 

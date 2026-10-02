@@ -67,6 +67,12 @@ SEVERITIES = [
 # hundred alerts.
 DEFAULT_COOLDOWN_MINUTES = 60
 
+# Assumption A55 (docs/15) — thirty minutes unacknowledged before a critical
+# alert escalates to the Plant Manager. This is only the *default* now: the
+# window is per rule, so a plant can escalate one rule's critical alerts faster
+# than another's without a code change.
+DEFAULT_ESCALATION_WINDOW_MINUTES = 30
+
 
 class FmesAlertRule(models.Model):
     _name = 'fmes.alert.rule'
@@ -107,6 +113,12 @@ class FmesAlertRule(models.Model):
 
     cooldown_minutes = fields.Integer(
         default=DEFAULT_COOLDOWN_MINUTES, required=True)
+    escalation_window_minutes = fields.Integer(
+        default=DEFAULT_ESCALATION_WINDOW_MINUTES, required=True,
+        help="How long one of this rule's critical alerts may stay "
+             "unacknowledged before the Plant Manager is notified directly. "
+             "Read only for critical-severity rules; a warning or info rule "
+             "never escalates, whatever this is set to.")
     active = fields.Boolean(default=True)
     company_id = fields.Many2one(
         'res.company', default=lambda self: self.env.company)
@@ -115,6 +127,9 @@ class FmesAlertRule(models.Model):
         ('fmes_alert_rule_cooldown_positive',
          'CHECK(cooldown_minutes > 0)',
          'Cooldown must be a positive number of minutes.'),
+        ('fmes_alert_rule_escalation_window_positive',
+         'CHECK(escalation_window_minutes > 0)',
+         'Escalation window must be a positive number of minutes.'),
     ]
 
     # ------------------------------------------------------------------

@@ -174,7 +174,7 @@ most likely to need tuning, and the easiest to tune.
 | `A34` | In-app alerts for all; **email for critical only** | Prevents alert fatigue, the main reason alert systems get switched off | `fmes.alert.rule` channels |
 | `A35` | Critical alerts sent immediately at any hour; others queue to **08:00** | Respects night shift without suppressing genuine emergencies | Alert rule |
 | `A45` | Alert **cooldown 60 minutes** per rule per subject | Prevents one stuck machine generating a hundred alerts | `fmes.alert.rule.cooldown_minutes` |
-| `A55` | A **critical** alert unacknowledged for **30 minutes** escalates directly to the Plant Manager | Long enough that a supervisor mid-task is not paged for every critical alert, short enough that a genuinely stuck one does not sit all shift | `fmes.alert.engine.ESCALATION_WINDOW_MINUTES` |
+| `A55` | A **critical** alert unacknowledged for **30 minutes** escalates directly to the Plant Manager | Long enough that a supervisor mid-task is not paged for every critical alert, short enough that a genuinely stuck one does not sit all shift | `fmes.alert.rule.escalation_window_minutes` (per rule; 30 minutes is the default) |
 | `A26` | An order is **delayed** when past `date_deadline`, with no internal buffer | The strictest reading; a buffer can be added but not retroactively removed | Backlog service |
 | `A27` | Blocking reasons: material · machine · manpower · quality · customer hold · other | Covers the standard causes | `fmes.backlog.snapshot.block_reason` |
 
