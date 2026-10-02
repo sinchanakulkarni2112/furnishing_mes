@@ -2095,9 +2095,29 @@ of required changes, grouped into 4 sections. The user asked for a full
 walkthrough plan first (given, in chat, not yet copied here verbatim — the
 summary below is complete enough to act on without it) and said to proceed
 with whatever order seemed best, then asked to pause after exactly 2
-specific fixes. **Two of the fixes below are done and pushed. The rest are
-not started.** Do not re-investigate what is already documented here as
-"confirmed" — it was checked directly against this codebase, not assumed.
+specific fixes. **Item 3.7 (the view-file split) is now done and pushed.
+Everything else in Sections 2 and 3 is not started.** Do not re-investigate
+what is already documented here as "confirmed" — it was checked directly
+against this codebase, not assumed.
+
+**Item 3.7 as delivered (the split that just landed).** Files created:
+`fmes_downtime_report_views.xml`, `fmes_production_plan_line_views.xml`,
+`fmes_plan_generator_views.xml`, `fmes_import_batch_views.xml`,
+`fmes_production_import_views.xml`, `fmes_alert_rule_views.xml`,
+`mrp_workcenter_productivity_loss_views.xml`; one file
+(`fmes_production_entry_downtime_views.xml`) deleted. Two manifest bugs
+were found and fixed on the way: `views/fmes_alert_views.xml` was listed
+**twice** in `data` (a pre-existing duplicate, which Odoo only reports as a
+`WARN ... is imported twice` line — the upgrade still exits 0, so it must be
+grepped for explicitly), and the deleted file's entry was removed. Verified
+live, not assumed: all 26 moved records still resolve under their original
+`xml_id`; each `ir.ui.view` renders through `env[model].get_view(id, type)`
+and each window action through `env[model].get_views(action.views, ...)` —
+both the exact calls the web client makes — with zero exceptions; and a
+45-combination role×screen matrix (Operator / Supervisor / Plant Manager ×
+15 actions, including the five Orders sub-tabs Operators are allowed to see)
+passes with the menu-visibility gate asserted per role. Full suite on a fresh
+disposable DB: 630 tests, 0 failed, 0 errors, same count as baseline.
 
 ### Section 4 (mentor's list) — Do Not Build
 No action ever required; these are standing constraints, already respected
@@ -2115,7 +2135,7 @@ delete rights (reviewed and accepted as-is).
 | 3.4 | Postgres image not pinned by digest | **Done** — `9d4347a` | Pinned to the digest of the image already running/tested this session, not a freshly pulled one (deliberate — see gotcha above). |
 | 3.5 | Browser click-through + OWL tours unwritten | **Not started** | Screens needing a manual pass: Shop Floor Terminal, Scheduling Board, Executive Dashboard, the alert bell/systray, and the portal pages. "OWL tours for those three main screens" — the mentor's own note does not name which three; Terminal + Scheduling Board + Executive Dashboard is the reasonable reading (the three richest custom OWL components), but **confirm with the user before writing tours**, since guessing wrong means rewriting tour definitions, not just re-running a check. |
 | 3.6 | PDF report class inside report_service.py | **Done** — `0a38ee4` | Moved `ReportFmesGeneric` to `reports/report_fmes_generic.py`. |
-| 3.7 | View files not one-per-model | **Not started** | Confirmed exact locations: downtime-report views (`fmes_downtime_report_view_pivot`, `_graph`, etc.) are inside `views/mrp_workcenter_productivity_views.xml` — need their own `views/fmes_downtime_report_views.xml`. The plan-generator form lives inside `views/fmes_production_plan_views.xml`; the production-import (batch) form lives inside `views/fmes_production_entry_views.xml` — each needs its own file. Mechanical: move the `<record>` blocks, update nothing else (ids are unchanged, manifest just needs the new filenames added in the `data` list and, if the old file becomes empty of anything except unrelated content, nothing to remove from it beyond the moved blocks). Full upgrade + regression-suite verification still required — view `id=` collisions or a missed manifest entry would otherwise fail silently until someone opens the exact menu. |
+| 3.7 | View files not one-per-model | **Done** | Split into 7 new files, all `<record>` blocks moved verbatim with **no `id=` renamed** (verified: 153 view/action records in, 153 out, zero lost, zero added). Beyond the 3 files the mentor named, 4 more were needed to make the rule true rather than partial: `fmes.production.plan.line` and `fmes.plan.generator` were also sharing `fmes_production_plan_views.xml`, `fmes.import.batch` + `fmes.production.import` were in `fmes_production_entry_views.xml`, `fmes.alert.rule` was in `fmes_alert_views.xml`, `mrp.workcenter.productivity.loss` was in `maintenance_equipment_views.xml`, and the Phase 5 `fmes_entry_view_form_downtime` **inherited** view of `fmes.production.entry` was alone in `fmes_production_entry_downtime_views.xml` (that last file is deleted — see the `ir.model.data` gotcha below). |
 | 3.8 | Alert data files missing `fmes_` prefix | **Done** — `022ad43` | `data/alert_rules.xml` → `data/fmes_alert_rules.xml`, `data/alert_automations.xml` → `data/fmes_alert_automations.xml`. `MEMORY.md`'s own historical entries describing the old filenames were deliberately left alone (a decision log is not rewritten retroactively) — do not "fix" those old mentions if you see them. |
 | 3.9 | No migrations/ folder | **Done** — `9d4347a` | `addons/furnishing_mes/migrations/README.md` documents the convention; genuinely empty otherwise since no schema change has needed one yet. |
 
@@ -2225,6 +2245,35 @@ user's answers above; do not build any of them speculatively.
 
 ## Gotchas Worth Remembering
 
+- **Odoo 18 Community has no `BaseModel.fields_view_get()`.** It was removed
+  in favour of `get_view()` / `get_views()`, and in this image there is no
+  `def fields_view_get` anywhere under `odoo/` — a script that probes views
+  with it fails with `'fmes.x' object has no attribute 'fields_view_get'`,
+  which reads exactly like a broken model and is not one. Use
+  `env[model].get_view(view_id, view_type)` for a single view and
+  `env[model].get_views([(id, type), ...], options)` for an action's whole
+  stack; `action.views` is the server-computed resolution of `view_mode` /
+  `view_ids` / `view_id` precedence, so pass it straight through. Two traps in
+  the same area: `ir.actions.act_window.read()` as a normal user raises "not
+  allowed to access 'Action Window'" — the client never does that, it calls
+  `env['ir.actions.actions']._for_xml_id(xml_id)`, which reads `sudo()`; and
+  `ir.ui.view` records cannot validate their own arch via
+  `postprocess_and_fields(rec.arch)` (it wants an lxml **node**, and the view
+  belongs to a different model anyway — go through the model's `get_view`).
+- **`ir.ui.menu.action` stores `"model,id"`, not `"module,xmlid"`.** Searching
+  menus by `('action', '=', 'module.xmlid')` silently returns nothing, which
+  makes a perfectly good menu look absent. Resolve the action record first and
+  search `('action', '=', '%s,%s' % (record._name, record.id))`.
+- **Odoo 18 moved `login` off `res.partner` onto `res.users`.** Creating a test
+  user with `login` in the partner's vals raises
+  `ValueError: Invalid field 'login' on model 'res.partner'`. Let
+  `res.users.create` make the partner implicitly.
+- **A duplicate `views/*.xml` entry in `__manifest__.py` is a WARN, not an
+  error** — the upgrade exits 0 and every test still passes, so only reading
+  the upgrade output for `is imported twice` catches it.
+- **An inherited view of model M must live in M's file too**, even when it was
+  deliberately split out when it was first written. A "Phase 5 addition"
+  sitting alone in its own file still violates one-file-per-model.
 - **A field's default, inherited from a mixin, can silently change a
   DIFFERENT native computation that happens to read it.** `mrp.workcenter`'s
   default `resource_calendar_id` (from `resource.mixin`) made every downtime

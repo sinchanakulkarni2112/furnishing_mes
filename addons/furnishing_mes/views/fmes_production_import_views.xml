@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  fmes.production.import - TransientModel wizard for the    -->
+        <!--  three-step daily-output upload (file, column map, preview).-->
+        <!-- ============================================================ -->
+        <record id="fmes_production_import_view_form" model="ir.ui.view">
+            <field name="name">fmes.production.import.form</field>
+            <field name="model">fmes.production.import</field>
+            <field name="arch" type="xml">
+                <form string="Import Daily Production Output">
+                    <field name="state" invisible="1"/>
+
+                    <!-- Step 1 -->
+                    <group invisible="state != 'upload'">
+                        <div class="alert alert-info" colspan="2" role="status">
+                            Upload the plant's daily output workbook (.xlsx).
+                            The next step reads its column titles and lets you
+                            say which column means what, so the file does not
+                            have to be reformatted first.
+                        </div>
+                        <field name="file_data" filename="file_name"/>
+                        <field name="file_name" invisible="1"/>
+                        <field name="sheet_name"/>
+                        <field name="header_row"/>
+                        <field name="company_id"
+                               groups="base.group_multi_company"/>
+                    </group>
+
+                    <!-- Step 2 -->
+                    <div invisible="state != 'map'">
+                        <div class="alert alert-secondary" role="status">
+                            <strong>Columns found:</strong>
+                            <field name="detected_columns" readonly="1"
+                                   nolabel="1"/>
+                        </div>
+                        <group>
+                            <group string="Required">
+                                <field name="col_date"/>
+                                <field name="col_machine"/>
+                                <field name="col_product"/>
+                                <field name="col_actual"/>
+                            </group>
+                            <group string="Optional">
+                                <field name="col_shift"/>
+                                <field name="col_planned"/>
+                                <field name="col_rejected"/>
+                                <field name="col_run_hours"/>
+                                <field name="col_downtime"/>
+                                <field name="col_manpower"/>
+                                <field name="col_remarks"/>
+                            </group>
+                        </group>
+                        <group string="Matching">
+                            <field name="default_shift_id"/>
+                            <field name="create_missing_entries"/>
+                        </group>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div invisible="state != 'preview'">
+                        <group>
+                            <group>
+                                <field name="row_count"/>
+                                <field name="valid_count"/>
+                                <field name="error_count"/>
+                            </group>
+                        </group>
+                        <div class="alert alert-warning" role="alert"
+                             invisible="error_count == 0">
+                            Rows with a problem are highlighted below and will
+                            be skipped. Nothing is imported until you press
+                            Import.
+                        </div>
+                        <field name="preview_html" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <footer>
+                        <button name="action_read_headers" type="object"
+                                string="Read Columns" class="btn-primary"
+                                invisible="state != 'upload'"/>
+                        <button name="action_preview" type="object"
+                                string="Preview" class="btn-primary"
+                                invisible="state != 'map'"/>
+                        <button name="action_import" type="object"
+                                string="Import" class="btn-primary"
+                                invisible="state != 'preview'"/>
+                        <button name="action_back_to_mapping" type="object"
+                                string="Back to Mapping"
+                                invisible="state != 'preview'"/>
+                        <button string="Cancel" class="btn-secondary"
+                                special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_production_import" model="ir.actions.act_window">
+            <field name="name">Import Daily Output</field>
+            <field name="res_model">fmes.production.import</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+    </data>
+</odoo>

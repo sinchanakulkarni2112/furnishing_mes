@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  Loss analysis (Requirement 6.3) — the pre-aggregated report  -->
+        <!-- ============================================================ -->
+        <record id="fmes_downtime_report_view_pivot" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.pivot</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <pivot string="Downtime Loss Analysis" sample="1"
+                       disable_linking="0">
+                    <field name="fmes_category" type="row"/>
+                    <field name="workcenter_id" type="row"/>
+                    <field name="date" type="col" interval="week"/>
+                    <field name="downtime_hours" type="measure"/>
+                    <field name="event_count" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_view_graph" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.graph</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <graph string="Downtime by Reason" type="bar" sample="1">
+                    <field name="loss_id"/>
+                    <field name="downtime_hours" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_view_list" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.list</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <list string="Downtime Analysis" create="0" edit="0"
+                      delete="0" sample="1"
+                      decoration-danger="pct_of_available &gt; 20">
+                    <field name="date"/>
+                    <field name="shift_id"/>
+                    <field name="workcenter_id"/>
+                    <field name="department_id" optional="show"/>
+                    <field name="loss_id"/>
+                    <field name="fmes_category" optional="show"/>
+                    <field name="is_planned" optional="hide"/>
+                    <field name="downtime_hours" sum="Total"/>
+                    <field name="event_count" sum="Events"/>
+                    <field name="avg_event_duration" optional="hide"/>
+                    <field name="pct_of_available" widget="percentage"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_view_search" model="ir.ui.view">
+            <field name="name">fmes.downtime.report.search</field>
+            <field name="model">fmes.downtime.report</field>
+            <field name="arch" type="xml">
+                <search string="Downtime Analysis">
+                    <field name="workcenter_id"/>
+                    <field name="loss_id"/>
+                    <field name="fmes_category"/>
+                    <filter name="filter_this_month" string="This Month"
+                            domain="[('date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    <filter name="filter_unplanned" string="Unplanned"
+                            domain="[('is_planned', '=', False)]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_category" string="Category"
+                                context="{'group_by': 'fmes_category'}"/>
+                        <filter name="group_machine" string="Machine"
+                                context="{'group_by': 'workcenter_id'}"/>
+                        <filter name="group_department" string="Department"
+                                context="{'group_by': 'department_id'}"/>
+                        <filter name="group_shift" string="Shift"
+                                context="{'group_by': 'shift_id'}"/>
+                        <filter name="group_reason" string="Loss Reason"
+                                context="{'group_by': 'loss_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_fmes_downtime_report" model="ir.actions.act_window">
+            <field name="name">Loss Analysis</field>
+            <field name="res_model">fmes.downtime.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_downtime_report_view_search"/>
+            <field name="context">{'search_default_group_category': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No approved downtime yet
+                </p>
+                <p>
+                    Only approved, completed downtime events appear here —
+                    the same rule production reports follow, so what
+                    management sees is always reviewed.
+                </p>
+            </field>
+        </record>
+
+        <!--
+            Effect of rescheduling/absence of operators on production — the
+            third of the doc's own Department sub-items. No new model,
+            field or view: fmes.downtime.report already carries
+            fmes_category, and 'operator_absence' /
+            'manpower_rescheduling' are two of the plant's own existing
+            downtime-reason categories (docs/`Product visualization`'s own
+            WorkCentre Downtimes reason list) — a thin domain-filtered
+            window on the same downtime report Loss Analysis already uses,
+            scoped to just those two reasons, is exactly this question:
+            how much production time these two causes cost, by department.
+        -->
+        <record id="action_fmes_absence_reschedule_report" model="ir.actions.act_window">
+            <field name="name">Effect of Rescheduling / Absence</field>
+            <field name="res_model">fmes.downtime.report</field>
+            <field name="view_mode">graph,pivot,list</field>
+            <field name="search_view_id" ref="fmes_downtime_report_view_search"/>
+            <field name="domain">[('fmes_category', 'in', ('operator_absence', 'manpower_rescheduling'))]</field>
+            <field name="context">{'search_default_group_department': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No operator-absence or rescheduling downtime yet
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

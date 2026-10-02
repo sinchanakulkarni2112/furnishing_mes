@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!--  fmes.import.batch - one record per uploaded workbook, so a  -->
+        <!--  Plant Manager can see exactly what was imported and        -->
+        <!--  revert it.                                                  -->
+        <!-- ============================================================ -->
+        <record id="fmes_import_batch_view_list" model="ir.ui.view">
+            <field name="name">fmes.import.batch.list</field>
+            <field name="model">fmes.import.batch</field>
+            <field name="arch" type="xml">
+                <list string="Import Batches"
+                      decoration-muted="state == 'reverted'">
+                    <field name="name"/>
+                    <field name="source_filename"/>
+                    <field name="imported_by"/>
+                    <field name="imported_on"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                    <field name="row_count"/>
+                    <field name="entry_count"/>
+                    <field name="skipped_count"/>
+                    <field name="total_actual_qty" sum="Produced"/>
+                    <field name="state" widget="badge"
+                           decoration-success="state == 'imported'"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="fmes_import_batch_view_form" model="ir.ui.view">
+            <field name="name">fmes.import.batch.form</field>
+            <field name="model">fmes.import.batch</field>
+            <field name="arch" type="xml">
+                <form string="Import Batch">
+                    <header>
+                        <button name="action_revert" type="object"
+                                string="Revert Import"
+                                confirm="This deletes every entry this import created. Approved entries are kept. Continue?"
+                                invisible="state == 'reverted'"
+                                groups="furnishing_mes.group_fmes_manager"/>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_open_entries" type="object"
+                                    class="oe_stat_button" icon="fa-list">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">
+                                        <field name="entry_count"/>
+                                    </span>
+                                    <span class="o_stat_text">Entries</span>
+                                </div>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1><field name="name" readonly="1"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="source_filename"/>
+                                <field name="imported_by"/>
+                                <field name="imported_on"/>
+                                <field name="company_id"
+                                       groups="base.group_multi_company"/>
+                            </group>
+                            <group>
+                                <field name="row_count"/>
+                                <field name="skipped_count"/>
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="total_actual_qty"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Log" name="log">
+                                <field name="log" readonly="1"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_fmes_import_batch" model="ir.actions.act_window">
+            <field name="name">Import Batches</field>
+            <field name="res_model">fmes.import.batch</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+    </data>
+</odoo>

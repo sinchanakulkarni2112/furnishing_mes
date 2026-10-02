@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ================================================ -->
+        <!--  Plan generator wizard                            -->
+        <!--                                                  -->
+        <!--  fmes.plan.generator is a TransientModel, so it gets -->
+        <!--  its own file exactly like any other model.          -->
+        <!-- ================================================ -->
+
+        <record id="action_fmes_plan_generator" model="ir.actions.act_window">
+            <field name="name">Generate Plan</field>
+            <field name="res_model">fmes.plan.generator</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <record id="fmes_plan_generator_view_form" model="ir.ui.view">
+            <field name="name">fmes.plan.generator.form</field>
+            <field name="model">fmes.plan.generator</field>
+            <field name="arch" type="xml">
+                <form string="Generate Production Plan">
+                    <group>
+                        <group string="Period">
+                            <field name="plan_type"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="company_id"
+                                   groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Scope">
+                            <field name="department_ids"
+                                   widget="many2many_tags"
+                                   placeholder="All departments"/>
+                            <field name="demand_source"/>
+                            <field name="include_carry_forward"/>
+                        </group>
+                    </group>
+
+                    <separator string="Before you generate"/>
+                    <group>
+                        <group>
+                            <field name="demand_count"/>
+                            <field name="carry_forward_count"/>
+                            <field name="unrated_count"/>
+                        </group>
+                        <group>
+                            <field name="machine_shift_slots"/>
+                            <field name="required_hours" widget="float_time"/>
+                            <field name="available_hours" widget="float_time"/>
+                            <field name="utilization_pct" widget="percentage"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="not preview_warning">
+                        <field name="preview_warning" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <footer>
+                        <button name="action_generate" type="object"
+                                string="Generate Plan" class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary"
+                                special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+    </data>
+</odoo>
