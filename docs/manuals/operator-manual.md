@@ -1,8 +1,10 @@
 # Operator Manual
 
 For shop-floor operators using the **Shop-Floor Terminal**. You need a normal
-Odoo login (username and password) given to you by your supervisor — there is
-no separate PIN.
+Odoo login (username and password) given to you by your supervisor, and — if
+your supervisor has set one — your **PIN**. The PIN is a second, quick check
+that the person at the tablet is you. It is not a second account and it does
+not replace your password.
 
 ---
 
@@ -11,8 +13,23 @@ no separate PIN.
 1. Open the terminal's address on the shop-floor tablet (your supervisor sets
    this up once — it is the plant server's address followed by `/fmes/terminal`).
 2. Enter your username and password.
-3. You land directly on the terminal — you never see the regular Odoo desktop
+3. Enter your **PIN** on the keypad that appears. Tap the digits, use **⌫** to
+   correct a mistake, and tap **OK**. Your PIN never appears on screen — only
+   a dot per digit you have typed.
+4. You land directly on the terminal — you never see the regular Odoo desktop
    screen, and you don't need to.
+
+The PIN you type is **your own** and nobody else's. That means the keypad can
+confirm that you are you, but it cannot let the next shift start work under
+your name — to hand the tablet over, log out and log in as the next operator.
+
+**If the keypad says the PIN is not right:** check with your supervisor that
+the PIN in your Odoo employee record is the one you are using. After five
+wrong tries the keypad locks until you log in again.
+
+**If a notice says no PIN is set on your profile:** your supervisor has not
+assigned you one yet. You can carry on and record normally — your username is
+still what your entries are recorded against — but ask them to set a PIN.
 
 You only see machines you are assigned to: either today's roster (if your
 supervisor has scheduled you for the day) or your permanent machine

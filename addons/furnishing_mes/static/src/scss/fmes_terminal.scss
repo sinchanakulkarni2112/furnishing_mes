@@ -382,6 +382,127 @@
         color: var(--t-muted);
     }
 
+    // ------------------------------------------------------------- PIN gate
+    // The overlay reuses .fmes-t-keypad-backdrop below; only the gate's own
+    // parts live here, sized like the rest of the terminal (>=48px targets).
+    .fmes-t-pin-modal {
+        width: 340px;
+        max-width: 100%;
+        padding: 20px;
+        border-radius: 18px;
+        background: var(--t-panel);
+        border: 2px solid var(--t-line);
+        text-align: center;
+    }
+
+    .fmes-t-pin-title {
+        font-size: 22px;
+        font-weight: 700;
+    }
+
+    .fmes-t-pin-sub {
+        margin-top: 4px;
+        font-size: 15px;
+        color: var(--t-muted);
+    }
+
+    // One dot per entered digit. Only the count reaches the DOM, so the PIN
+    // itself is never written into the markup.
+    .fmes-t-pin-dots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        align-content: center;
+        min-height: 20px;
+        margin: 18px 0 6px;
+    }
+
+    .fmes-t-pin-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid var(--t-line);
+        background: transparent;
+
+        &.filled {
+            background: var(--t-accent);
+            border-color: var(--t-accent);
+        }
+    }
+
+    .fmes-t-pin-error {
+        min-height: 20px;
+        margin-top: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--t-bad);
+    }
+
+    .fmes-t-pin-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .fmes-t-pin-key {
+        min-height: 60px;
+        border-radius: 12px;
+        background: #1e3d5c;
+        font-size: 24px;
+        font-weight: 700;
+
+        &:active { background: var(--t-accent); color: #2b1d00; }
+        &[disabled] { opacity: 0.45; }
+    }
+
+    .fmes-t-pin-key-alt {
+        background: #4a5b6d;
+        font-size: 20px;
+    }
+
+    .fmes-t-pin-key-go {
+        background: var(--t-good);
+        color: #06301a;
+    }
+
+    .fmes-t-pin-reverify {
+        margin-left: auto;
+        min-height: 48px;
+        padding: 0 16px;
+        border-radius: 12px;
+        font-size: 15px;
+        color: var(--t-muted);
+        background: transparent;
+        border: 2px solid var(--t-line);
+    }
+
+    // Shown only when the account has no PIN set yet: the terminal still
+    // works, but the gap is on screen rather than silent.
+    .fmes-t-pin-advisory {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 15px;
+        color: var(--t-muted);
+        background: var(--t-panel);
+        border: 2px solid var(--t-line);
+    }
+
+    .fmes-t-pin-advisory-btn {
+        min-height: 48px;
+        padding: 0 16px;
+        border-radius: 12px;
+        font-size: 15px;
+        color: var(--t-muted);
+        background: transparent;
+        border: 2px solid var(--t-line);
+    }
+
     // ------------------------------------------------------------ keypad
     .fmes-t-keypad-backdrop {
         position: fixed;

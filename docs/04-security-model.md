@@ -230,9 +230,24 @@ the value is stripped server-side from `read()` — not merely hidden in the vie
 ### 5.5 Password and account policy
 
 - Minimum length enforced via Odoo's `auth_password_policy` settings.
-- Operators authenticate with a short PIN **only** inside the terminal, layered
-  on top of a normal session — the PIN is a convenience for machine handover, not
-  a replacement for login. It is stored hashed, never plaintext.
+- Operators may be asked for a short PIN **only** inside the terminal, layered
+  on top of a normal session. It is a **re-authentication** step, not a second
+  login and not an operator switch: the terminal accepts only the PIN belonging
+  to the account already signed in, so it can never be used to unlock the
+  terminal as somebody else. Handing a tablet to the next shift still means
+  logging out and logging in as that person — which is what keeps the audit
+  trail meaningful.
+- The PIN is **not** a new secret store. Odoo 18 Community already ships
+  `hr.employee.pin` (and `res.users.pin` as a non-stored
+  `related='employee_id.pin'` passthrough), validated by Odoo as digits-only,
+  and this module reuses it rather than adding a field. It is therefore stored
+  by Odoo as a plain `Char` — **not hashed**, and not by this module. That is
+  accepted because it is Odoo's own attendance/POS kiosk PIN with the same
+  exposure as any other employee attribute readable by `hr.group_hr_user`;
+  a shop-floor operator cannot read it (the field is
+  `groups='hr.group_hr_user'`), and the terminal's comparison runs with
+  `sudo()` purely to perform that check. The value is never returned to the
+  client, never logged, and never stored by `furnishing_mes`.
 - Portal users are created by invitation (Odoo's portal wizard), never
   self-registration; `auth_signup` invite-only mode.
 

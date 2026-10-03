@@ -37,6 +37,10 @@ export class FmesShopFloorTerminal extends Component {
     static template = "furnishing_mes.ShopFloorTerminal";
     static props = ["*"];
 
+    /** Long enough for a realistic plant PIN (Odoo allows any length), short
+     *  enough that the masked display stays readable on a tablet. */
+    static pinMaxLength = 12;
+
     setup() {
         this.notification = useService("notification");
 
@@ -61,6 +65,9 @@ export class FmesShopFloorTerminal extends Component {
             materialModal: null,   // { product, result } — on-demand check for a planned entry
             submitConfirm: null,   // { editableCount } — asks about downtime before submitting
             postSubmitPicker: null, // { entries } — "which product had downtime?" when more than one
+            pinGate: { open: true, value: "", dots: [], error: "", busy: false },
+            pinVerified: false,   // set once the server accepted this user's own PIN
+            pinProvisioned: true, // false when no PIN is set on the account yet
         });
 
         onWillStart(async () => {
@@ -68,6 +75,10 @@ export class FmesShopFloorTerminal extends Component {
             await this.loadShifts();
             await this.loadDowntimeReasons();
             this.state.loading = false;
+            // The gate is on top of the login the tablet already has, so it
+            // is a re-authentication step: verify on load, and again on
+            // demand from the header.
+            await this.verifyPin();
         });
 
         this.timer = setInterval(() => this.refreshQuietly(), REFRESH_MS);
@@ -78,6 +89,74 @@ export class FmesShopFloorTerminal extends Component {
             clearInterval(this.timer);
             clearInterval(this.tickTimer);
         });
+    }
+
+    // ------------------------------------------------------------------
+    // PIN gate
+    //
+    // This only ever asks the server "is this the PIN of the account you are
+    // already logged in as?". It cannot switch operator, and it does not
+    // decide who an entry belongs to — the server attributes every write to
+    // the session user, exactly as it did before this gate existed.
+    // ------------------------------------------------------------------
+
+    _setPinGate(patch) {
+        this.state.pinGate = { ...this.state.pinGate, ...patch };
+    }
+
+    /** Re-asked on demand from the terminal header. */
+    askPin() {
+        this._setPinGate({ open: true, value: "", dots: [], error: "", busy: false });
+    }
+
+    pinPress(digit) {
+        const gate = this.state.pinGate;
+        if (!gate.open || gate.busy) return;
+        if (gate.value.length >= FmesShopFloorTerminal.pinMaxLength) return;
+        const value = gate.value + digit;
+        // Only the *count* of digits reaches the DOM — never the digits.
+        this._setPinGate({ value, dots: value.split(""), error: "" });
+    }
+
+    pinBackspace() {
+        const gate = this.state.pinGate;
+        if (!gate.open || gate.busy) return;
+        const value = gate.value.slice(0, -1);
+        this._setPinGate({ value, dots: value.split(""), error: "" });
+    }
+
+    async verifyPin() {
+        const gate = this.state.pinGate;
+        if (gate.busy) return;
+        this._setPinGate({ busy: true, error: "" });
+        let result;
+        try {
+            // Sent even with nothing typed: on load this is how the terminal
+            // learns whether a PIN is provisioned at all, and the server
+            // answers "Enter your PIN." when there is one to enter.
+            result = await rpc("/fmes/terminal/pin_verify", { pin: gate.value });
+        } catch (e) {
+            result = { ok: false, provisioned: true, error: "Could not reach the server. Try again." };
+        }
+        if (result && result.ok) {
+            this.state.pinVerified = true;
+            this.state.pinProvisioned = result.provisioned !== false;
+            this._setPinGate({ open: false, value: "", dots: [], busy: false });
+        } else if (result && result.provisioned === false) {
+            // The account has no PIN at all, so there is nothing to guess
+            // and nothing to verify. Do not trap the operator in a keypad
+            // that can never succeed: close the gate and say so on screen.
+            // The server deliberately did not answer ok=True here.
+            this.state.pinProvisioned = false;
+            this._setPinGate({ open: false, value: "", dots: [], busy: false });
+        } else {
+            this._setPinGate({
+                busy: false,
+                value: "",
+                dots: [],
+                error: (result && result.error) || "That PIN is not right.",
+            });
+        }
     }
 
     // ------------------------------------------------------------------

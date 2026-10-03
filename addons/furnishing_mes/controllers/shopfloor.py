@@ -7,6 +7,8 @@ or a quantity because the client sent it: the terminal runs on a shared tablet
 on a factory floor, which is the least trustworthy client in the building.
 """
 
+import hmac
+
 from odoo import _, fields, http
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
@@ -21,9 +23,31 @@ _USER_FACING_ERRORS = (UserError, AccessError, ValidationError, ValueError)
 
 class FmesShopFloor(http.Controller):
 
+    # A 4-6 digit PIN is a low-entropy secret and the tablet is reachable by
+    # the whole shift, so guessing must not be unlimited. Five tries is
+    # forgiving enough that nobody locks themselves out over a typo and
+    # tight enough that a four-digit space cannot be walked overnight.
+    _PIN_MAX_ATTEMPTS = 5
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+    def _own_pin(self):
+        """The calling user's own native Odoo PIN, or '' if not set.
+
+        `hr`'s own `res.users.pin` is `related='employee_id.pin'` with
+        `related_sudo=False`, so `hr.employee.pin` is the single place the
+        value is actually stored and there is nothing else to fall back to.
+        That field is declared `groups='hr.group_hr_user'`, which means an
+        operator may not read it through the ORM at all -- verified: a
+        `read(['pin'])` as a shop-floor operator raises AccessError. The
+        `sudo()` here is therefore required, not lazy: comparing the typed
+        PIN against a value the caller is not permitted to read *is* the
+        endpoint's job. The value is never returned to the client, never
+        logged and never stored by this module.
+        """
+        return request.env.user.sudo().employee_id.pin or ''
+
     def _allowed_workcenters(self):
         """Machines the current user may record on.
 
@@ -310,6 +334,67 @@ class FmesShopFloor(http.Controller):
             'components': components,
             'all_available': all_available,
         }
+
+    @http.route('/fmes/terminal/pin_verify', type='json', auth='user')
+    def pin_verify(self, pin=None, **kwargs):
+        """Confirm the caller is the person holding the logged-in session.
+
+        This is *re-authentication*, not a second login: only the calling
+        user's own PIN is ever accepted, so the gate can never be used to
+        unlock the terminal as somebody else. Entries keep being attributed
+        to ``create_uid`` / ``submitted_by`` exactly as they were in Phase 4
+        (assumption A16, revised in Phase 4), so no audit field changes
+        meaning here.
+
+        Every answer carries the same three keys -- ``ok``, ``provisioned``
+        and ``error`` when there is something to say -- so the client can
+        branch on ``provisioned`` without guessing, and so no caller has to
+        wonder whether a missing key means ``False`` or means "not checked".
+        """
+        expected = self._own_pin()
+        provisioned = bool(expected)
+
+        def refuse(error, counted=True):
+            """A failed check. Wrong guesses count toward the lockout;
+            the "no PIN set" case does not, because there is no secret to
+            guess and counting it would brick the terminal for the shift.
+            """
+            if counted and provisioned:
+                request.session['fmes_pin_failures'] = \
+                    request.session.get('fmes_pin_failures', 0) + 1
+            return {'ok': False, 'provisioned': provisioned, 'error': error}
+
+        if request.session.get('fmes_pin_failures', 0) \
+                >= self._PIN_MAX_ATTEMPTS:
+            return refuse(_(
+                "Too many wrong attempts. Ask your supervisor to unlock "
+                "this tablet."), counted=False)
+        given = str(pin or '').strip()
+        if not provisioned:
+            # Nothing to check against, so nothing was verified. Deliberately
+            # NOT ok=True: this route must never claim a check it did not
+            # perform, or a future caller that gates a write on `ok` would
+            # wave through every unprovisioned account. The policy decision
+            # -- carry on with a visible notice rather than locking an
+            # operator out over a missing plant data task -- is the client's,
+            # and `provisioned` is what tells it to apply that. Checked
+            # before the empty-PIN case on purpose: "there is nothing to
+            # enter" is a truer answer than "enter your PIN", and the
+            # client asks with an empty value precisely to find out.
+            return refuse(_("No PIN is set on your profile yet."))
+        if not given:
+            return refuse(_("Enter your PIN."), counted=False)
+        # compare_digest, not ==: a 4-6 digit PIN is short enough that a
+        # timing difference is worth removing. Compared as bytes because
+        # compare_digest rejects non-ASCII str. Odoo validates the stored
+        # value as digits-only (hr.employee._verify_pin), so this cannot be
+        # hit today, but a 500 on a future relaxation of that rule would be
+        # a self-inflicted outage on the floor.
+        wanted = expected.encode('utf-8')
+        if hmac.compare_digest(wanted, given.encode('utf-8')):
+            request.session['fmes_pin_failures'] = 0
+            return {'ok': True, 'provisioned': True, 'error': None}
+        return refuse(_("That PIN is not right."))
 
     # ------------------------------------------------------------------
     # Downtime — reason picker, running timer (Requirement 6)

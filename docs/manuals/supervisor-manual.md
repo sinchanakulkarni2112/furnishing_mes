@@ -70,6 +70,24 @@ roster is not just an HR record, it changes tomorrow's plan.
 by department and shift, so you can see whether a bad day was a staffing
 problem.
 
+### Setting an operator's terminal PIN
+
+**This is a one-time setup job, and the terminal tells you when it is
+missing.** Each operator who uses a tablet should have a PIN on their Odoo
+employee record: open the employee, fill in the **PIN** field with digits, and
+save. It is Odoo's own field, the same one the attendance kiosk and Point of
+Sale use — there is nothing in *Furnishing MES* to configure.
+
+Two things worth knowing:
+
+- Until a PIN is set, that operator sees a notice at the top of the terminal
+  and can still record normally. They are recorded against their username, so
+  the audit trail is unaffected — the PIN is an extra check, not the login.
+- The terminal will only ever accept the PIN belonging to whoever is already
+  logged in. It is **not** a way for one operator to work under another
+  operator's name: to hand a tablet to the next shift, log out and log in as
+  that person.
+
 ## 5. Maintenance
 
 - **Maintenance → Schedules**: preventive-maintenance schedules for your

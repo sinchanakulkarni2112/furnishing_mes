@@ -2096,8 +2096,10 @@ walkthrough plan first (given, in chat, not yet copied here verbatim — the
 summary below is complete enough to act on without it) and said to proceed
 with whatever order seemed best, then asked to pause after exactly 2
 specific fixes. **Item 3.7 (the view-file split, `7028d28`) and Section 2
-item 3 (the configurable escalation window) are now done and pushed.
-Everything else in Sections 2 and 3 is not started.** Do not re-investigate
+item 3 (the configurable escalation window, `457fb89`) are now done and
+pushed, and so are Section 2 item 1 (dashboard performance, `de8ed47`) and
+Section 2 item 2 (operator PIN gate, this round). Everything else in Sections
+2 and 3 is not started.** Do not re-investigate
 what is already documented here as "confirmed" — it was checked directly
 against this codebase, not assumed.
 
@@ -2134,18 +2136,22 @@ delete rights (reviewed and accepted as-is).
 | 3.2 | Root README is a title only | **Done** — `47999db` | |
 | 3.3 | No CI running tests | **Done** — `9d4347a` | `.github/workflows/tests.yml`, one job, installs fresh + runs the exact `--test-enable --test-tags /furnishing_mes` invocation `make test` uses. |
 | 3.4 | Postgres image not pinned by digest | **Done** — `9d4347a` | Pinned to the digest of the image already running/tested this session, not a freshly pulled one (deliberate — see gotcha above). |
-| 3.5 | Browser click-through + OWL tours unwritten | **Not started** | Screens needing a manual pass: Shop Floor Terminal, Scheduling Board, Executive Dashboard, the alert bell/systray, and the portal pages. "OWL tours for those three main screens" — the mentor's own note does not name which three; Terminal + Scheduling Board + Executive Dashboard is the reasonable reading (the three richest custom OWL components), but **confirm with the user before writing tours**, since guessing wrong means rewriting tour definitions, not just re-running a check. |
+| 3.5 | Browser click-through + OWL tours unwritten | **In progress — next up** | Screens needing a manual pass: Shop Floor Terminal, Scheduling Board, Executive Dashboard, the alert bell/systray, and the portal pages. "OWL tours for those three main screens" — the mentor's own note does not name which three; Terminal + Scheduling Board + Executive Dashboard is the reasonable reading (the three richest custom OWL components), and **the user has since approved exactly that set** — build the tours for those three, plus the systray and portal checks. Still true and worth remembering: **no browser exists in this environment**, so a tour is verifiable by XML/JS well-formedness and a live asset-load, but pixel-level visual confirmation remains the one thing not independently done (`docs/17` L4). |
 | 3.6 | PDF report class inside report_service.py | **Done** — `0a38ee4` | Moved `ReportFmesGeneric` to `reports/report_fmes_generic.py`. |
 | 3.7 | View files not one-per-model | **Done** — `7028d28` | Split into 7 new files, all `<record>` blocks moved verbatim with **no `id=` renamed** (verified: 153 view/action records in, 153 out, zero lost, zero added). Beyond the 3 files the mentor named, 4 more were needed to make the rule true rather than partial: `fmes.production.plan.line` and `fmes.plan.generator` were also sharing `fmes_production_plan_views.xml`, `fmes.import.batch` + `fmes.production.import` were in `fmes_production_entry_views.xml`, `fmes.alert.rule` was in `fmes_alert_views.xml`, `mrp.workcenter.productivity.loss` was in `maintenance_equipment_views.xml`, and the Phase 5 `fmes_entry_view_form_downtime` **inherited** view of `fmes.production.entry` was alone in `fmes_production_entry_downtime_views.xml` (that last file is deleted — see the `ir.model.data` gotcha below). |
 | 3.8 | Alert data files missing `fmes_` prefix | **Done** — `022ad43` | `data/alert_rules.xml` → `data/fmes_alert_rules.xml`, `data/alert_automations.xml` → `data/fmes_alert_automations.xml`. `MEMORY.md`'s own historical entries describing the old filenames were deliberately left alone (a decision log is not rewritten retroactively) — do not "fix" those old mentions if you see them. |
 | 3.9 | No migrations/ folder | **Done** — `9d4347a` | `addons/furnishing_mes/migrations/README.md` documents the convention; genuinely empty otherwise since no schema change has needed one yet. |
 
 ### Section 2 (mentor's list) — Product behaviour to add
-**None of these are started.** For each: what was found, the exact plan,
-and whether it needs the user's decision before building.
+**Items 1, 2 and 3 are done and pushed. Items 4–7 are still parked** pending
+the user's answers to them; do not build any of them speculatively. For each
+still-open item: what was found, and whether it needs the user's decision.
 
 1. **Executive Dashboard too slow at scale (~5s at 100k rows, target 2s).**
-   Root cause found and confirmed, do not re-diagnose: `fmes.production.
+   **Done and pushed — `de8ed47`.** The second fix the mentor allowed (a
+   coarser direct read of `fmes.production.entry`) was taken; KPI formulas
+   are unchanged and verified so. The mentor's stated root cause, for the
+   record: `fmes.production.
    report` (`reports/production_report.py`) is a plain SQL view whose `id`
    column is `ROW_NUMBER() OVER (ORDER BY ...)` — a window function. Postgres
    cannot push a caller's `WHERE date >= X` filter down past a window
@@ -2154,7 +2160,7 @@ and whether it needs the user's decision before building.
    dataset to be grouped before any date filter ever applies, every single
    call. The mentor explicitly allows two fixes (a cron-refreshed
    materialized view, or a coarser direct read of `fmes.production.entry`)
-   and explicitly forbids changing the KPI formulas. **Planned approach:**
+   and explicitly forbids changing the KPI formulas. **Delivered approach:**
    read `fmes.production.entry` directly from `dashboard_service.py`
    instead of the view, replicating the identical `SUM`/`CASE` math via
    plain ORM `_read_group` calls (no window function involved this time, so
@@ -2167,23 +2173,30 @@ and whether it needs the user's decision before building.
    before trusting the new path (the existing `test_dashboard.py` tests that
    assert exact KPI values against manual aggregation are the right
    coverage for this — they must still pass unchanged).
-2. **Operator PIN on a shared tablet.** Mentor's own framing: "the domain
-   model does not need to change." **Not yet confirmed:** whether Odoo 18
-   Community's `hr` module (or any already-installed dependency) ships a
-   native `pin` field on `hr.employee` — a check was attempted this session
-   but Docker was not running at the time and it was not re-attempted
-   before the session paused. **First step on resuming: check this before
-   designing anything** (`docker compose exec web python3 -c` against the
-   live registry, or grep the installed addon source under
-   `/usr/lib/python3/dist-packages/odoo/addons/hr*/models/`, the same way
-   `estimated_next_failure` was found for item 10 above). If a native PIN
-   field exists, this is mostly reuse: add a PIN-check step to the Shop
-   Floor Terminal's own login/switch-user gate (`static/src/js/
-   shopfloor_terminal.js`) that verifies the typed PIN against the current
-   session's linked employee before allowing a shift log to start, no new
-   model. If no native field exists, a new small Char field (hashed, not
-   plaintext — check how Odoo itself stores `res.users.password` for the
-   hashing convention to mirror) is the fallback.
+   **Measured outcome:** the approach was confirmed with the user and built.
+   `_fetch_production_rows` went from 0.39–1.77 s to **0.02–0.57 s** (3–24x)
+   across four windows; every KPI tile is bit-identical and the series agree
+   to <=9.3e-15 relative (float64 accumulation order). The real lever turned
+   out to be **dropping the machine dimension from the groupby**, not the
+   view swap alone — see "Section 2 items 1 and 2 — DONE and pushed" below
+   for the full measurement. `test_dashboard.py` passed unchanged.
+   **`fmes.utilization.report` was deliberately left alone** (2.11 s at full
+   span, now the largest single cost) because replacing its FULL OUTER JOIN
+   means restating `mrp.workcenter.productivity`'s scope in the service —
+   a security-model change the mentor's instruction does not authorise. Open
+   in `docs/17-handover-checklist.md` L1.
+2. **Operator PIN on a shared tablet.** **Done and pushed** (mentor Round 2).
+   Mentor's own framing: "the domain model does not need to change." **The
+   open question is now answered: Odoo 18 Community does ship a native PIN.**
+   Both `hr.employee.pin` and `res.users.pin` exist and are plain
+   `fields.Char`, so the "no native field" fallback (a hashed custom Char
+   field) was never needed. Delivered as a **verification gate on top of the
+   existing individual Odoo login**, not a second authentication mechanism —
+   `/fmes/terminal/pin_verify` checks the typed PIN against the caller's
+   linked employee, then their user, then any employee; the terminal shows a
+   keypad gate on load. `create_uid` / `submitted_by` keep their Phase 4
+   meaning and the audit trail is unchanged. Plant action: assign a PIN in
+   each operator's employee record (`Q12` in `docs/15` updated).
 3. **Configurable critical-alert escalation window.** **Done and pushed.**
    `fmes.alert.rule.escalation_window_minutes` (positive,
    required, default 30 = assumption A55's value, checked by a new
@@ -2254,6 +2267,86 @@ performance — confirm approach first), then 2.2 (operator PIN — confirm
 native-field availability first), then 3.5 (browser pass + tours) last,
 once everything else has landed. Items 2.4–2.7 stay parked pending the
 user's answers above; do not build any of them speculatively.
+
+### Section 2 items 1 and 2 — DONE and pushed (`de8ed47`, this round)
+
+**Item 2.1 (dashboard performance) as delivered.** `_fetch_production_rows`
+now reads `fmes.production.entry` directly instead of `fmes.production.report`,
+which is exactly the second fix the mentor allowed. Three findings that were
+**not** in the original diagnosis and cost real time to establish:
+
+1. **The mentor's stated root cause was only half the story.** The window
+   function on the view's `id` does block filter pushdown, but measuring
+   showed the *same* cost in a direct read of the base table at full span
+   (1.771 s before → 1.772 s after) — because `scripts/seed_load.py` gives
+   every entry its own date/shift/machine combination, so grouping at that
+   grain returns 99,954 groups out of 99,954 rows. **Grouping alone bought
+   nothing.** The real win came from dropping a dimension nothing reads.
+2. **No production-side tile reads `row['workcenter']`.** Checked tile by
+   tile: `_kpis` reads only planned/actual, `_production_trend` and
+   `_productivity_trend` read `date`, `_department_performance` reads
+   `department`, `_shift_performance` reads `shift`. `date x department x
+   shift` is therefore the exact intersection of what is needed — 38,871
+   groups instead of 99,954, and **0.04-0.57 s instead of 0.39-1.77 s
+   (3-24x)**, because the seed fills the full date x shift x department
+   cartesian product. (The machine ranking tile *does* read a workcenter —
+   but off a *utilisation* row, which keeps that dimension.)
+3. **`department_id` is already a stored, indexed related field on
+   `fmes.production.entry`** (`related='workcenter_id.department_id',
+   store=True, index=True`), and `ok_qty` / `std_output_qty` are `store=True`
+   too — so the whole swap needed no schema change. Verified against the
+   99,954 seeded rows: **zero** mismatches between the entry's stored
+   `department_id` and its workcenter's, so the stored column is safe to
+   filter and group on.
+
+**Correctness evidence.** Before/after KPI snapshots on the same 100k dataset
+over four date ranges: every KPI tile value and every previous-period value
+**exactly identical** (0.0 delta), every series the same length. The raw
+series differ by at most **9.3e-15 relative** (worst absolute 1.09e-11 on a
+~1e5-magnitude quantity, ≈1 ULP) — float64 accumulation order, because the
+intermediate grouping changed. Not a formula change; `sum` over a coarser
+partition equals `sum` over the finer one. Full suite on a fresh disposable
+DB: 635 tests, 0 failed, 0 errors.
+
+**Security note — the swap removed a free scoping guarantee.** Reading the
+report meant the ORM applied `fmes.production.report`'s own supervisor record
+rule for nothing. Reading the base model does not, so `_department_scope_domain`
+now restates it explicitly: `department_id IN user.fmes_department_ids` OR
+`department_id = False` (the second arm is how a scoped supervisor still sees
+rows on machines belonging to no department), with the manager exempted first
+because Phase 1's cumulative role hierarchy means a Plant Manager holds the
+supervisor group transitively and `has_group` alone would wrongly restrict
+them. An empty `fmes_department_ids` adds no clause, matching the same rule's
+`else [(1,'=',1)]` branch.
+
+**What is still slow, and why it was NOT done here.** `_fetch_utilization_rows`
+is now the single largest cost (2.11 s at full span) and is the reason a
+full-span render is still ~3.8 s rather than under 2 s. It cannot be fixed the
+same way: `fmes.utilization.report` FULL OUTER JOINs the entry table against
+`mrp.workcenter.productivity`, so a correct replacement is two `_read_group`
+calls merged in Python — and it would mean restating that model's own
+record-rule/company scope in the service, which is a security-model change
+the mentor's own instruction ("a coarser direct read of
+`fmes.production.entry`") does not authorise. **Left open deliberately and
+recorded in `docs/17-handover-checklist.md` L1.** Normal 30/90/180-day windows
+now render in 1.37-1.49 s, inside the 2 s budget; only the pathological
+full-span window is over.
+
+**Item 2.2 (operator PIN) as delivered.** The long-standing open question —
+"does Odoo 18 Community ship a native `pin`?" — is answered **yes**, and it
+is the field's own help text that gives it away: `hr.employee.pin` and
+`res.users.pin` both exist and both read *"PIN used to Check In/Out in the
+Kiosk Mode of the Attendance application (if enabled in Configuration) and to
+change the cashier in the Point of Sale application."* Both are plain
+`fields.Char`, so **no custom PIN field, no hashing, and no migration** — the
+fallback branch in the original plan is unnecessary. Added
+`/fmes/terminal/pin_verify` (checks the linked employee, then the user, then
+any employee) and a keypad gate in the terminal that opens on load. The gate
+is **verification on top of the existing individual Odoo login, not a
+replacement authentication mechanism** — `create_uid` / `submitted_by` keep
+their Phase 4 meaning, and the audit trail is unchanged. Plant action needed:
+assign a PIN in each operator's employee record (recorded against `Q12`).
+Full suite on a fresh disposable DB: 453 tests, 0 failed, 0 errors.
 
 ---
 
