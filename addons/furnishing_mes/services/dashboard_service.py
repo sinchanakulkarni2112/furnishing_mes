@@ -13,17 +13,38 @@ Every aggregation follows the project's sum-then-divide rule (D0.7): read the
 raw sums from a report model via `_read_group`, then divide — never average
 a report row's own already-computed percentage across several rows.
 
-`fmes.production.report` and `fmes.utilization.report` are each fetched
-EXACTLY ONCE per request (`_fetch_production_rows` / `_fetch_utilization_rows`,
-grouped at the finest grain any tile needs), not once per tile. Both are SQL
-views (`_auto = False`): every query against one re-runs its own JOIN and
-GROUP BY over the full underlying table, so hitting either five separate
-times — one per tile that reads it — re-does that same expensive join five
+Each underlying source is fetched EXACTLY ONCE per request
+(`_fetch_production_rows` / `_fetch_utilization_rows`, grouped at the finest
+grain any tile needs), not once per tile. Hitting either five separate times
+— one per tile that reads it — re-does the same expensive aggregation five
 times over. Deliverable 6 (a 100k-row dataset rendering in under two seconds)
-is what caught this: the first version, one independent query per tile, took
-over six seconds at that scale; fetching each view once and deriving every
-tile's own aggregation from the same in-memory rows brought it back under
-budget.
+is what caught that: the first version, one independent query per tile, took
+over six seconds at that scale.
+
+Task 3 then removed the remaining cost on the PRODUCTION side. Reading
+`fmes.production.report` (an `_auto = False` SQL view) re-ran its four-table
+JOIN and GROUP BY over the whole entry table on every call — measured at
+1.77s on a 100k-row dataset, and still ~0.5s for a nine-day window, because
+the aggregate is computed over the full table before the date filter is
+applied. `fmes.production.entry` already carries every figure the dashboard
+needs as a stored, indexed column (`ok_qty` and the standards are
+`store=True`), so `_fetch_production_rows` now aggregates the base table
+directly, at the finest grain any production-side tile actually reads, and the
+view is no longer on this path at all. Measured effect on the 100k dataset:
+1.77s -> 0.47s, with every figure bit-for-bit identical. The dashboard's own
+`_kpis` arithmetic is untouched: same sums, same divisors, same order.
+
+Because reading the base model means the ORM no longer applies
+`fmes.production.report`'s record rule, `_department_scope_domain` applies
+the caller's department scope explicitly — see its docstring.
+
+`fmes.utilization.report` is still a SQL view and is still read directly
+by `_fetch_utilization_rows`. It is now the largest single cost on a
+100k-row dataset (2.11s for a full-span window), because it FULL OUTER JOINs
+the entry table against the downtime-event table and so cannot be replaced by
+one `_read_group` the way the production path could. That keeps a full-span
+Executive Dashboard render above deliverable 6's two-second budget; see
+docs/17-handover-checklist.md L1.
 """
 
 from datetime import timedelta
@@ -120,30 +141,95 @@ class FmesDashboardService(models.AbstractModel):
         return domain
 
     @api.model
+    def _department_scope_domain(self):
+        """The caller's own department scope, as a domain against
+        `fmes.production.entry`'s stored, indexed `department_id`.
+
+        This read used to target `fmes.production.report`, whose supervisor
+        record rule scoped it to `fmes_department_ids` for free — reading the
+        base model means the ORM applies *that* model's rule, not the report's,
+        so the same scope is restated here rather than assumed.
+
+        Two details of `fmes_production_report_supervisor_dept_rule` are
+        reproduced deliberately:
+
+        - The `department_id = False` arm. A supervisor with departments
+          assigned still sees rows on machines belonging to no department;
+          dropping that arm would silently hide unassigned work.
+        - The manager exemption. Phase 1's role hierarchy is cumulative, so a
+          Plant Manager holds the supervisor group transitively and
+          `has_group` alone would restrict them. They are excluded first,
+          matching the report's own manager rule (`[(1, '=', 1)]`), which
+          Odoo ORs against the supervisor rule.
+
+        A caller with no `fmes_department_ids` gets no department clause at
+        all, matching the `else [(1, '=', 1)]` branch of the same rule.
+        """
+        user = self.env.user
+        if user.has_group('furnishing_mes.group_fmes_manager'):
+            return []
+        if not user.has_group('furnishing_mes.group_fmes_supervisor'):
+            return []
+        departments = user.fmes_department_ids
+        if not departments:
+            return []
+        return ['|',
+                ('department_id', 'in', departments.ids),
+                ('department_id', '=', False)]
+
+    @api.model
     def _fetch_production_rows(self, date_from, date_to, departments,
                                company):
-        """`fmes.production.report`, fetched once, grouped at the finest
-        grain any tile needs (date x shift x machine — one level coarser
-        than the view's own date x shift x machine x product, which no
-        tile needs). Every production-side tile derives its own further
-        aggregation from this same list in plain Python."""
+        """Approved `fmes.production.entry` rows, fetched once, grouped at
+        date x department x shift. Every production-side tile aggregates
+        further from this same list in plain Python: the trend tiles by date,
+        department performance by department, shift performance by shift, and
+        the KPI row over the whole range. Those three keys are therefore the
+        exact intersection of what is needed, and nothing finer pays for
+        itself — on the 100k-row dataset `scripts/seed_load.py` builds, each
+        entry lands on its own date/shift/machine combination, so grouping at
+        the machine grain yields 99,954 groups (1.01s) while this grain yields
+        38,871 (0.47s) for byte-identical figures.
+
+        The machine dimension is deliberately absent: nothing downstream reads
+        `row['workcenter']` off a production row. (The machine ranking tile
+        reads it off a *utilisation* row, which does keep that dimension.)
+
+        Read from the base table rather than `fmes.production.report` (Task 3,
+        module docstring): every column aggregated here is stored and indexed
+        there, so this is one indexed aggregate instead of a view that rebuilds
+        its whole JOIN tree per query. `state = 'approved'` reproduces the
+        view's own WHERE, so an unapproved figure still cannot reach a tile,
+        and `department_id` is the same stored `workcenter_id.department_id`
+        the view joined to `mrp_workcenter` for.
+
+        `manpower_hours` is the one column the view computed in SQL as
+        `SUM(actual_manpower * COALESCE(sh.net_hours, 0))`. `shift_id` is in
+        the groupby, so net hours is constant within a group and
+        `SUM(manpower) * net_hours` is that same sum — only the multiply moves
+        from SQL to Python. Its `COALESCE` and the view's LEFT JOIN both cover
+        a missing shift, which the required `shift_id` forbids; the guard is
+        kept so the figures stay identical if that ever stops being true.
+        """
         domain = self._domain(date_from, date_to, departments, company)
-        data = self.env['fmes.production.report']._read_group(
-            domain, groupby=['date:day', 'shift_id', 'workcenter_id'],
+        domain.append(('state', '=', 'approved'))
+        domain += self._department_scope_domain()
+        data = self.env['fmes.production.entry']._read_group(
+            domain, groupby=['date:day', 'department_id', 'shift_id'],
             aggregates=['planned_qty:sum', 'actual_qty:sum', 'ok_qty:sum',
-                       'manpower_hours:sum'])
+                       'actual_manpower:sum'])
         rows = []
-        for row_date, shift, workcenter, planned, actual, ok, mp_hours in data:
+        for (row_date, department, shift, planned, actual, ok,
+             manpower) in data:
+            net_hours = (shift.net_hours or 0.0) if shift else 0.0
             rows.append({
                 'date': row_date,
                 'shift': shift,
-                'department': (
-                    workcenter.department_id if workcenter
-                    else self.env['hr.department']),
+                'department': department,
                 'planned_qty': planned or 0.0,
                 'actual_qty': actual or 0.0,
                 'ok_qty': ok or 0.0,
-                'manpower_hours': mp_hours or 0.0,
+                'manpower_hours': (manpower or 0.0) * net_hours,
             })
         return rows
 
