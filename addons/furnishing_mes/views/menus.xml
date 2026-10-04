@@ -13,69 +13,37 @@
             moved. Two exceptions, both pure read-only lookups into data
             Odoo already tracks natively: the four Inventory shortcuts.
 
-            Operators still see only Production Planning > Shift Logs >
-            Shop Floor Terminal. That path is deliberately left without a
-            `groups` restriction at every level from the root down to the
-            Terminal leaf — Production Planning itself carries none, so an
-            Operator can descend into it at all; Production Schedule,
-            Output Tracking and Manpower (the other three Planning
-            sub-folders) each carry their own `groups="...supervisor"` so
-            an Operator sees only the one sub-folder meant for them. The
-            `groups` attribute is a usability filter; actual access control
-            lives in ir.model.access.csv and ir.rule.
-        -->
+            Operators land on the Shop Floor Terminal (the Shift Logs >
+            Shop Floor Terminal path is deliberately free of any `groups`
+            restriction all the way from the root). They may also browse
+            every top-level tab: Production Planning and Orders carry no
+            group at all, and Monitoring / WorkCentre Downtimes /
+            Maintenance / Inventory / Analytics / Notifications carry
+            `groups="...group_fmes_operator"` so the tabs render in the
+            purple bar — a folder only shows when at least one of its own
+            descendant tabs is visible to the user (Odoo 18
+            menu-visibility semantics), and the read ACLs below decide
+            which of those open on a model an Operator can actually read.
+            Support Tickets stays Supervisor-and-above and Configuration
+            stays Plant-Manager-only (explicit user decision), so neither
+            renders for an Operator. The `groups` attribute is a usability
+            filter; actual access control lives in ir.model.access.csv and
+            ir.rule.
 
-        <!-- ============================================================ -->
-        <!--  Root                                                        -->
-        <!-- ============================================================ -->
-        <!--
-            action= here matters beyond "what happens if you click the app
-            icon itself": Odoo's webclient picks a user's default app on
-            login by calling menuService.selectMenu() on their FIRST root
-            app menu, and that method is a silent no-op if the root menu
-            has no actionID of its own — every native Odoo app (Discuss,
-            Settings, ...) sets one for exactly this reason. A single
-            hardcoded client action here does not work, though: it would
-            apply to EVERYONE who clicks the app icon directly, not just
-            an Operator landing for the first time — a Supervisor or Plant
-            Manager clicking the app tile itself (not a specific tab) would
-            also get dropped straight into the Shop Floor Terminal, which
-            is wrong for them. A server action picks the right one per
-            role instead: Operator gets the Terminal (their only screen
-            anyway), Supervisor and Plant Manager get the Executive
-            Dashboard. sudo() on the lookups is deliberate and safe — this
-            only reads which ACTION record to hand back, never any
-            business data, and an Operator has no read access to
-            ir.actions.client themselves to even look this up unsudo'd.
+            no action= on the root menu itself, by design: Odoo's webclient
+            picks a user's default app on login by calling
+            menuService.selectMenu() on their FIRST root app menu, and a
+            hardcoded action there would drop EVERYONE who clicks the app
+            tile into the same screen — a Supervisor or Plant Manager would
+            get the Shop Floor Terminal instead of their own start point.
+            Leaving the root actionless restores Odoo's native "first valid
+            tab" behaviour, which lands each role on the tab that is
+            actually valid for them.
         -->
-        <!--
-            model_id below is not about what the action operates on: this
-            code touches no records at all, but Odoo's own run() still
-            gates a server action on write access to that model, so it has
-            to be something every one of our three roles can genuinely
-            write to. res.users (the obvious "no real model" choice) was
-            tried first and failed for all three roles with an AccessError
-            (only Administration/Access Rights can write res.users);
-            fmes.production.entry is a model every role already has write
-            access to for real, unrelated reasons, so it costs nothing
-            extra to reuse here as the gate.
-        -->
-        <record id="action_fmes_root_landing" model="ir.actions.server">
-            <field name="name">Furnishing MES Landing</field>
-            <field name="model_id" ref="model_fmes_production_entry"/>
-            <field name="state">code</field>
-            <field name="code">
-if env.user.has_group('furnishing_mes.group_fmes_supervisor'):
-    action = env.ref('furnishing_mes.action_fmes_executive_dashboard').sudo().read()[0]
-else:
-    action = env.ref('furnishing_mes.action_fmes_shopfloor_terminal').sudo().read()[0]
-            </field>
-        </record>
 
         <menuitem id="menu_fmes_root"
                   name="Furnishing MES"
                   web_icon="furnishing_mes,static/description/icon.png"
-                  action="action_fmes_root_landing"
                   sequence="10"/>
 
         <!-- ============================================================ -->
@@ -148,7 +116,7 @@ else:
                   name="Monitoring"
                   parent="menu_fmes_root"
                   sequence="30"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+                  groups="furnishing_mes.group_fmes_operator"/>
 
         <!--
             3. Orders (renamed from "Backlog"). No group restriction, same
@@ -176,7 +144,7 @@ else:
                   name="WorkCentre Downtimes"
                   parent="menu_fmes_root"
                   sequence="50"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+                  groups="furnishing_mes.group_fmes_operator"/>
 
         <menuitem id="menu_fmes_downtime_events"
                   name="Downtime Events"
@@ -213,18 +181,19 @@ else:
                   name="Maintenance"
                   parent="menu_fmes_root"
                   sequence="60"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+                  groups="furnishing_mes.group_fmes_operator"/>
 
-        <!-- 6. Inventory — new tab, but every action below already existed
+        <!-- 6. Inventory — but every action below already existed
              in Odoo core; these are read-only reference lookups, not new
-             data entry. Visible to Supervisor and above, same as the
-             other operational tabs (Operators work through the Terminal,
-             not general inventory browsing). -->
+             data entry. Visible to Operators and above: the terminal asks
+             for the same reference data (machines, products, employees'
+             public card), so hiding it from the operators who need it at
+             the machine would force a supervisor to read it out to them. -->
         <menuitem id="menu_fmes_inventory"
                   name="Inventory"
                   parent="menu_fmes_root"
                   sequence="70"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+                  groups="furnishing_mes.group_fmes_operator"/>
 
         <menuitem id="menu_fmes_inventory_materials"
                   name="Materials"
@@ -250,12 +219,17 @@ else:
                   action="product.product_template_action_all"
                   sequence="40"/>
 
-        <!-- 7. Analytics (renamed from "Reports") -->
+        <!-- 7. Analytics (renamed from "Reports"). Operators may view their
+             department's figures: the report-dashboard actions are client
+             actions (no model ACL to trip on) and the SQL-view reports
+             they read via the cross-listed actions below carry the
+             operator read rows in ir.model.access.csv, scoped to their
+             department by record rule. -->
         <menuitem id="menu_fmes_reports"
                   name="Analytics"
                   parent="menu_fmes_root"
                   sequence="80"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+                  groups="furnishing_mes.group_fmes_operator"/>
 
         <menuitem id="menu_fmes_analytics_production"
                   name="Production"
@@ -408,12 +382,14 @@ else:
                   action="action_fmes_report_dashboard_monthly_mis"
                   sequence="10"/>
 
-        <!-- 8. Notifications (renamed from "Alerts") -->
+        <!-- 8. Notifications (renamed from "Alerts"). Operators see the Alert
+             Center (fmes.alert carries an operator read ACL); Alert Rules
+             stays Plant Manager only, one level down. -->
         <menuitem id="menu_fmes_alerts"
                   name="Notifications"
                   parent="menu_fmes_root"
                   sequence="90"
-                  groups="furnishing_mes.group_fmes_supervisor"/>
+                  groups="furnishing_mes.group_fmes_operator"/>
 
         <menuitem id="menu_fmes_alert_center"
                   name="Alert Center"
@@ -745,6 +721,91 @@ else:
                   parent="menu_fmes_configuration"
                   action="action_fmes_report_schedule"
                   sequence="70"/>
+
+        <!-- ============================================================ -->
+        <!--  Upgrade drift repair — clearing stale child-menu groups      -->
+        <!-- ============================================================ -->
+        <!--
+            A previous load left supervisor+manager groups_id on several
+            child menus (DB verifier: Monitoring, WorkCentre Downtimes,
+            Maintenance and Configuration children carry an extra [68,69]).
+            A <menuitem> tag without a `groups` attribute does NOT clear an
+            already-set groups_id on upgrade — Odoo's XML loader only
+            applies fields present in the tag — and an Operator (group 67)
+            has no intersection with [68,69], so each drifted child stays
+            invisible to them however the tab above it is widened. These
+            <record> forms clear the stored groups explicitly; the affected
+            children then inherit their (already-correct) parent restriction,
+            exactly as their tags intend. Worst case for Configuration:
+            the cleared leaves fall back to the Plant Manager gateway of
+            menu_fmes_configuration, which is their intended restriction.
+        -->
+        <record id="menu_fmes_executive_dashboard" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_live_status" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_utilization_report" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_department_monitoring" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_downtime_events" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_downtime_approval_queue" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_downtime_loss_analysis" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_report_downtime" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_material_request" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_maintenance_schedules" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_maintenance_requests" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_maintenance_kpis" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_machine_health" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_report_maintenance" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_maintenance_staff" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_shifts" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_machines" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_capacity" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_equipment" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_departments" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_loss_reasons" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
+        <record id="menu_fmes_config_report_schedules" model="ir.ui.menu">
+            <field name="groups_id" eval="[(5, 0, 0)]"/>
+        </record>
 
     </data>
 </odoo>

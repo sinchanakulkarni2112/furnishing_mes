@@ -81,12 +81,15 @@ Sale use — there is nothing in *Furnishing MES* to configure.
 Two things worth knowing:
 
 - Until a PIN is set, that operator sees a notice at the top of the terminal
-  and can still record normally. They are recorded against their username, so
-  the audit trail is unaffected — the PIN is an extra check, not the login.
-- The terminal will only ever accept the PIN belonging to whoever is already
-  logged in. It is **not** a way for one operator to work under another
-  operator's name: to hand a tablet to the next shift, log out and log in as
-  that person.
+  and can still record normally — records are kept against the Odoo account
+  they logged in with.
+- The terminal accepts the PIN of **any** active employee, so one operator can
+  hand a shared tablet to the next person without logging out: tap **Switch
+  Operator (PIN)** in the header and enter the next operator's PIN. Every
+  record made from then on is attributed to that operator, and the machine
+  list narrows to their own workcentres. Make sure each operator who uses the
+  tablet has **their own** PIN and never lets anyone else record under it —
+  that is what keeps the audit trail honest.
 
 ## 5. Maintenance
 

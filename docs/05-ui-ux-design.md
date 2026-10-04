@@ -49,34 +49,34 @@ Furnishing MES
 │   └── Manpower                    (Supervisor+)
 │       ├── Operator Roster
 │       └── Manpower Logs
-├── Monitoring                      (Supervisor+)
+├── Monitoring                      (Operator+)
 │   ├── Executive Dashboard
 │   ├── Live Production Status
 │   └── Machine-wise Monitoring
-├── Orders                          (Supervisor+, renamed from "Backlog")
+├── Orders                          (Operator+, renamed from "Backlog")
 │   ├── Backlog Overview
 │   ├── Blocked Orders
 │   ├── Delayed Orders
 │   ├── Carry Forward Orders
 │   └── Backlog & Carry Forward Report
-├── WorkCentre Downtimes            (Supervisor+, renamed from "Downtime")
+├── WorkCentre Downtimes            (Operator+, renamed from "Downtime")
 │   ├── Downtime Events
 │   ├── Approval Queue
 │   ├── Loss Analysis
 │   └── Downtime Reports
-├── Maintenance                     (Supervisor+)
+├── Maintenance                     (Operator+)
 │   ├── Preventive Schedules
 │   ├── Maintenance Requests
 │   ├── Maintenance KPIs
 │   └── Maintenance Report
-├── Inventory                       (Supervisor+, new — read-only lookups
+├── Inventory                       (Operator+, new — read-only lookups
 │   │                                into data Odoo already tracks, no new
 │   │                                models or data entry)
 │   ├── Materials                   (stock.product_template_action_product)
 │   ├── Machines / Work Centres     (same action as Configuration > Machines)
 │   ├── Employees                   (hr.employee.public — directory, not HR files)
 │   └── Products Catalogue          (product.product_template_action_all)
-├── Analytics                       (Supervisor+, renamed from "Reports")
+├── Analytics                       (Operator+, renamed from "Reports")
 │   ├── Production
 │   │   ├── Daily Production
 │   │   ├── Productivity
@@ -87,7 +87,7 @@ Furnishing MES
 │   │   └── Manpower Impact
 │   └── MIS Report
 │       └── Monthly MIS
-├── Notifications                   (Supervisor+, renamed from "Alerts")
+├── Notifications                   (Operator+, renamed from "Alerts")
 │   ├── Alert Center
 │   └── Alert Rules                 (Manager only)
 ├── Support Tickets                 (Supervisor+)
@@ -101,12 +101,17 @@ Furnishing MES
     └── Report Schedules
 ```
 
-Operators see only **Production Planning → Shift Logs → Shop Floor
-Terminal**. The Production Planning root itself deliberately carries no
-`groups=` restriction — only its Production Schedule / Output Tracking /
-Manpower sub-folders do — so an Operator can still descend into it to reach
-Shift Logs. Menu visibility uses `groups=`, but the real enforcement is the
-ACLs and record rules in [`04-security-model.md`](04-security-model.md).
+Operators see the **Shop Floor Terminal** (Production Planning → Shift Logs)
+plus every top-level tab except **Support Tickets** and **Configuration**
+(which stay Supervisor+/Manager-only by user decision). The root **Furnishing
+MES** menu carries no `groups=` and no `action=` — Odoo's webclient opens each
+role's first valid descendant tab, so an Operator lands on a tab they may
+actually use rather than being forced into the terminal or bounced by an
+unreadable action. Menu visibility uses `groups=`, but the real enforcement is
+the ACLs and record rules in [`04-security-model.md`](04-security-model.md):
+a folder renders only when at least one of its own descendant tabs is visible,
+and a menu whose action model the user cannot read is hidden regardless of
+`groups=`.
 
 ---
 

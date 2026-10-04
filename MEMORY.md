@@ -2259,6 +2259,61 @@ still-open item: what was found, and whether it needs the user's decision.
    production_import.py` per earlier phases); this item is about a one-time
    bulk load through it, not building new import machinery.
 
+### Shared-tablet operator switch + operator-visible top tabs — DONE (this round)
+
+Follow-on to Section 2 item 2 (the PIN gate), requested directly by the
+user after the pause. Two related changes, verified and pushed together:
+
+**A. The PIN gate became a real shared-tablet *switch*, not a
+re-authentication of the shared login.** `pin_verify` now accepts ANY active
+employee's PIN (own employee tried first on a collision) and stores the
+matched operator in the session (`fmes_active_employee_id` /
+`fmes_active_user_id`), so the terminal keeps working under the shared Odoo
+login while every write is attributed to the switched employee:
+`fmes.production.entry.fmes_operator_id` and
+`mrp.workcenter.productivity.fmes_operator_id` (new m2o `hr.employee`
+fields, stamped via `sudo()` — an operator cannot read `hr.employee`
+through the ORM, `pin` is `groups='hr.group_hr_user'`),
+`submitted_by`/`fmes_reported_by` follow the switched user, and the machine
+list + header name scope to the switched employee's own workcentres. New
+`/fmes/terminal/pin_status` route tells the client whose tablet it is. The
+lockout (5 failures, `fmes_pin_failures`) and the
+"no PIN provisioned anywhere → refuse, `pin_provisioned=False`" policy are
+unchanged; no state now ever counts "no PIN set" toward the lockout. The PIN
+modal/advisory moved out of the `pick`/`work` screens to the terminal root —
+it rendered on both anyway and the duplicate caused a template parse error
+on older cached assets (the crash Task item 1 asked to fix). Both header
+buttons now read "Switch Operator (PIN)".
+
+**B. Operators can browse the top-level tabs.** `action_fmes_root_landing`
+(which hard-redirected every role into the terminal on opening the app) is
+deleted and `menu_fmes_root` is actionless, restoring Odoo's "first valid
+tab" per role; Monitoring / WorkCentre Downtimes / Maintenance / Inventory /
+Analytics / Notifications now carry `groups="...group_fmes_operator"`.
+**Decision recorded from the user: Configuration stays Plant-Manager only**
+(asked explicitly, answered explicitly) — the 5 new operator-read ACL rows
+and record rules therefore cover the three SQL-view reports
+(production/utilization/downtime, dept-scoped), `fmes.material.request`
+(machine/dept-scoped) and `fmes.alert` (rule's machines/departments), NOT
+capacity-matrix or report-schedule. Every operator-scoped rule was paired
+with an explicit unrestricted supervisor+manager rule (the D5.3 pattern:
+groups are cumulative, group rules OR, so an operator rule without its own
+supervisor rule narrows the supervisor). A live DB verifier had previously
+found stale [supervisor,manager] groups on ~21 child menus (a `<menuitem>`
+without `groups` does not clear an already-set `groups_id` on upgrade), so
+explicit `<record>` clears were added for those children.
+
+**Verified, not assumed:** live post-upgrade check that a demo operator's
+`_visible_menu_ids` includes all six widened tabs + the already-unrestricted
+Production Planning / Orders, still excludes Configuration and Support
+Tickets, and `Shop Floor Terminal` is reachable — plus browser restart and
+port 8169 serving `/web/login` 200. Full module suite on a fresh disposable
+DB: **477 tests, 0 failed, 0 errors**. Three pre-existing tests that
+asserted "operator cannot read <report>" (Phase 5/6/10 fixtures hard-coding
+the old read-denied matrix for `fmes.downtime.report`,
+`fmes.utilization.report`, `fmes.production.report`) were updated to the
+new, dept-scoped operator-read expectation rather than left failing.
+
 ### Suggested resumption order (not yet re-confirmed with the user this
 round, carried over from the plan given before the pause)
 Finish the remaining mechanical fixes first (3.7 view-file split), then

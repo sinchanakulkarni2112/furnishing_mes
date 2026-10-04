@@ -70,6 +70,14 @@ export class FmesExecutiveDashboard extends Component {
     static template = "furnishing_mes.ExecutiveDashboard";
     static props = ["*"];
 
+    pctBarWidth(pct) {
+        return Math.min(pct, 100);
+    }
+
+    pctLabel(pct) {
+        return Math.round(pct);
+    }
+
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");

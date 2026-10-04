@@ -399,6 +399,133 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
 
+        <!--
+            Phase 15 — Operators can now open the Analytics / Monitoring /
+            WorkCentre / Notifications tabs (the top-level menus carry
+            group_fmes_operator), so the report and action models behind
+            those tabs get Operator read ACLs (ir.model.access.csv) AND a
+            group-scoped read rule of their own. Two things keep the pairing
+            honest:
+              - without a rule of their own, an Operator with a department
+                assignment would match the model's (global) company rule and
+                see EVERY department's figures — strictly more than a
+                department-scoped Supervisor sees (same gap closed on
+                fmes.backlog.snapshot in Phase 8);
+              - each model below also gains an EXPLICIT unrestricted
+                Supervisor/Manager rule (the D5.3 pattern), because
+                group_fmes_manager implies group_fmes_supervisor implies
+                group_fmes_operator and group rules OR together: once the
+                operator rule exists, a Supervisor without its own rule
+                would be caught by it and silently narrowed to their
+                departments where they used to see everything.
+        -->
+        <record id="fmes_production_report_operator_dept_rule" model="ir.rule">
+            <field name="name">Production Report: operator sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_production_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_utilization_report_operator_dept_rule" model="ir.rule">
+            <field name="name">Utilisation Report: operator sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_utilization_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_utilization_report_supervisor_rule" model="ir.rule">
+            <field name="name">Utilisation Report: supervisor sees everything</field>
+            <field name="model_id" ref="model_fmes_utilization_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_utilization_report_manager_rule" model="ir.rule">
+            <field name="name">Utilisation Report: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_utilization_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_downtime_report_operator_dept_rule" model="ir.rule">
+            <field name="name">Downtime Report: operator sees assigned departments</field>
+            <field name="model_id" ref="model_fmes_downtime_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', ('department_id', 'in', user.fmes_department_ids.ids), ('department_id', '=', False)] if user.fmes_department_ids else [(1, '=', 1)]
+            </field>
+        </record>
+
+        <record id="fmes_downtime_report_supervisor_rule" model="ir.rule">
+            <field name="name">Downtime Report: supervisor sees everything</field>
+            <field name="model_id" ref="model_fmes_downtime_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_downtime_report_manager_rule" model="ir.rule">
+            <field name="name">Downtime Report: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_downtime_report"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_material_request_operator_rule" model="ir.rule">
+            <field name="name">Material Request: operator sees requests for their machines</field>
+            <field name="model_id" ref="model_fmes_material_request"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', '|',
+                 ('workcenter_id', 'in', user.fmes_allowed_workcenter_ids.ids),
+                 ('workcenter_id.department_id', 'in', user.fmes_department_ids.ids),
+                 ('workcenter_id', '=', False)]
+            </field>
+        </record>
+
+        <record id="fmes_material_request_supervisor_rule" model="ir.rule">
+            <field name="name">Material Request: supervisor sees everything</field>
+            <field name="model_id" ref="model_fmes_material_request"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_material_request_manager_rule" model="ir.rule">
+            <field name="name">Material Request: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_material_request"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_alert_operator_rule" model="ir.rule">
+            <field name="name">Alert: operator sees alerts for their machines/departments</field>
+            <field name="model_id" ref="model_fmes_alert"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_operator'))]"/>
+            <field name="domain_force">
+                ['|', '|',
+                 ('rule_id.workcenter_ids', 'in', user.fmes_allowed_workcenter_ids.ids),
+                 ('rule_id.department_ids', 'in', user.fmes_department_ids.ids),
+                 ('rule_id.department_ids', '=', False)]
+            </field>
+        </record>
+
+        <record id="fmes_alert_supervisor_rule" model="ir.rule">
+            <field name="name">Alert: supervisor sees everything</field>
+            <field name="model_id" ref="model_fmes_alert"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_supervisor'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="fmes_alert_manager_rule" model="ir.rule">
+            <field name="name">Alert: manager sees everything</field>
+            <field name="model_id" ref="model_fmes_alert"/>
+            <field name="groups" eval="[(4, ref('furnishing_mes.group_fmes_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
         <record id="fmes_alert_rule_company_rule" model="ir.rule">
             <field name="name">Alert Rule: multi-company</field>
             <field name="model_id" ref="model_fmes_alert_rule"/>

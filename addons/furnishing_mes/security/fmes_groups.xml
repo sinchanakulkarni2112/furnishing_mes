@@ -39,13 +39,14 @@
             <field name="name">Operator</field>
             <field name="category_id" ref="module_category_furnishing_mes"/>
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-            <field name="comment">Shop-floor access only. Sees the Shop-Floor
-Terminal and the work orders for the work centers they are allocated to today.
-Records production output and logs work-center downtime. Also reads five of
-the Orders tab's sub-tabs (New, Backlogs, Delayed, Carry Forward, Existing),
-scoped to their own department — never Blocked Orders, Completed Orders, or
-any report/analytics screen. Cannot see costs, planning reports, or other
-departments' data.</field>
+            <field name="comment">Shop-floor access. Records production output and logs work-center
+downtime from the Shop-Floor Terminal (including switching between operators
+on a shared tablet by PIN), and browses the watch-only top-level tabs —
+Monitoring, WorkCentre Downtimes, Maintenance, Inventory, Analytics and
+Notifications — each scoped to their own department/machines by record rule.
+Also reads the Orders tab's open sub-tabs (New, Backlogs, Delayed, Carry
+Forward, Existing). Never Blocked/Completed Orders, never master data
+(Configuration), and never other departments' figures.</field>
         </record>
 
         <!-- ============================================================ -->

@@ -66,8 +66,9 @@ export class FmesShopFloorTerminal extends Component {
             submitConfirm: null,   // { editableCount } — asks about downtime before submitting
             postSubmitPicker: null, // { entries } — "which product had downtime?" when more than one
             pinGate: { open: true, value: "", dots: [], error: "", busy: false },
-            pinVerified: false,   // set once the server accepted this user's own PIN
-            pinProvisioned: true, // false when no PIN is set on the account yet
+            pinVerified: false,   // set once the server accepted a PIN
+            pinProvisioned: true, // false when no operator has a PIN at all
+            activeEmployeeId: null, // the employee the tablet is switched to
         });
 
         onWillStart(async () => {
@@ -92,12 +93,14 @@ export class FmesShopFloorTerminal extends Component {
     }
 
     // ------------------------------------------------------------------
-    // PIN gate
+    // PIN gate — shared-tablet operator switch
     //
-    // This only ever asks the server "is this the PIN of the account you are
-    // already logged in as?". It cannot switch operator, and it does not
-    // decide who an entry belongs to — the server attributes every write to
-    // the session user, exactly as it did before this gate existed.
+    // The tablet may sit between two operators in the same shift. Entering a
+    // PIN switches which *operator* the tablet is recording for, without
+    // logging the Odoo session out — the shared account stays logged in, the
+    // header, machine list and write attribution follow the switched
+    // operator. The server decides everything; this client only displays
+    // what pin_verify returns (employee_id / employee_name).
     // ------------------------------------------------------------------
 
     _setPinGate(patch) {
@@ -142,9 +145,10 @@ export class FmesShopFloorTerminal extends Component {
             this.state.pinVerified = true;
             this.state.pinProvisioned = result.provisioned !== false;
             this._setPinGate({ open: false, value: "", dots: [], busy: false });
+            await this._applyPinSwitch(result);
         } else if (result && result.provisioned === false) {
-            // The account has no PIN at all, so there is nothing to guess
-            // and nothing to verify. Do not trap the operator in a keypad
+            // No operator profile has a PIN at all, so there is nothing to
+            // guess and nothing to verify. Do not trap anyone in a keypad
             // that can never succeed: close the gate and say so on screen.
             // The server deliberately did not answer ok=True here.
             this.state.pinProvisioned = false;
@@ -156,6 +160,21 @@ export class FmesShopFloorTerminal extends Component {
                 dots: [],
                 error: (result && result.error) || "That PIN is not right.",
             });
+        }
+    }
+
+    /** Reflect a successful PIN switch: whose tablet is this now. */
+    async _applyPinSwitch(result) {
+        this.state.activeEmployeeId = result.employee_id || null;
+        // The machine list is scoped per operator (their own workcentres),
+        // so a switch may add or remove machines — reload before relabeling
+        // the header, because loadMachines() also sets userName.
+        await this.loadMachines();
+        if (result.employee_name) {
+            this.state.userName = result.employee_name;
+        }
+        if (this.state.machine) {
+            await this.loadBoard();
         }
     }
 

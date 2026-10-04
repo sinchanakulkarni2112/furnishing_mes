@@ -2,9 +2,9 @@
 
 For shop-floor operators using the **Shop-Floor Terminal**. You need a normal
 Odoo login (username and password) given to you by your supervisor, and — if
-your supervisor has set one — your **PIN**. The PIN is a second, quick check
-that the person at the tablet is you. It is not a second account and it does
-not replace your password.
+your supervisor has set one — your **PIN**. The PIN tells the tablet who is
+working, so a tablet shared across a shift always records the right person. It
+is not an account and it does not replace your password.
 
 ---
 
@@ -19,9 +19,12 @@ not replace your password.
 4. You land directly on the terminal — you never see the regular Odoo desktop
    screen, and you don't need to.
 
-The PIN you type is **your own** and nobody else's. That means the keypad can
-confirm that you are you, but it cannot let the next shift start work under
-your name — to hand the tablet over, log out and log in as the next operator.
+The PIN you type is your own, and so is every record you make under it. When
+you hand the tablet to someone else, they press **Switch Operator (PIN)** in
+the header and enter **their** PIN. The tablet stays logged into the shared
+account, but from then on every entry is recorded against the switched-in
+operator and the machine list narrows to their own workcentres — so the audit
+trail always says who was actually at the machine.
 
 **If the keypad says the PIN is not right:** check with your supervisor that
 the PIN in your Odoo employee record is the one you are using. After five

@@ -32,24 +32,71 @@ class FmesShopFloor(http.Controller):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-    def _own_pin(self):
-        """The calling user's own native Odoo PIN, or '' if not set.
+    def _active_employee(self):
+        """The employee the shared tablet is currently recording for.
 
-        `hr`'s own `res.users.pin` is `related='employee_id.pin'` with
-        `related_sudo=False`, so `hr.employee.pin` is the single place the
-        value is actually stored and there is nothing else to fall back to.
-        That field is declared `groups='hr.group_hr_user'`, which means an
-        operator may not read it through the ORM at all -- verified: a
-        `read(['pin'])` as a shop-floor operator raises AccessError. The
-        `sudo()` here is therefore required, not lazy: comparing the typed
-        PIN against a value the caller is not permitted to read *is* the
-        endpoint's job. The value is never returned to the client, never
-        logged and never stored by this module.
+        A successful PIN switch (see `pin_verify`) stores the operator's
+        employee id in the session, so subsequent terminal calls can attribute
+        this tablet's writes to that employee without logging the Odoo session
+        out. Falls back to the logged-in user's own employee, which is exactly
+        the pre-switch behaviour.
+
+        `hr.employee` is not readable by a shop-floor operator (its `pin`
+        field is `groups='hr.group_hr_user'` -- verified: a `read(['pin'])` as
+        an operator raises AccessError), so the lookup is `sudo()`ed. That is
+        deliberate, not lazy: this endpoint's whole job is to re-read the
+        operator id the PIN gate itself stored. The employee's PIN is never
+        returned to the client, never logged and never stored by this module.
         """
-        return request.env.user.sudo().employee_id.pin or ''
+        emp_id = request.session.get('fmes_active_employee_id')
+        if emp_id:
+            emp = request.env['hr.employee'].sudo().browse(emp_id).exists()
+            if emp and emp.active:
+                return emp
+        return request.env.user.sudo().employee_id
 
-    def _allowed_workcenters(self):
-        """Machines the current user may record on.
+    def _active_user(self):
+        """The `res.users` to stamp as acting when the PIN is switched.
+
+        The PIN gate stores the switched operator's user id when that employee
+        has one (`fmes_active_user_id`). A factory worker may have a PIN but no
+        Odoo login at all -- then the shared login keeps acting, and only the
+        employee-level attribution fields record who was on the tablet.
+        """
+        uid = request.session.get('fmes_active_user_id')
+        if uid:
+            return request.env['res.users'].sudo().browse(uid).exists()
+        return request.env.user
+
+    def _pin_employees(self):
+        """Every active employee with a PIN, most likely to be ours first.
+
+        A shared tablet must accept any active employee's PIN (the whole point
+        of the switch), but on the 4-digit collision -- two employees happen
+        to share a PIN -- the calling user's own employee is tried first, so
+        the tablet favours "same person" over "startled colleague". `pin` is
+        `groups='hr.group_hr_user'` and the operator may not read it through
+        the ORM, hence `sudo()`; the values are compared on the server and
+        never exposed.
+        """
+        employees = request.env['hr.employee'].sudo().search([
+            ('active', '=', True),
+            ('pin', '!=', False),
+        ])
+        own = request.env.user.sudo().employee_id
+        if own in employees:
+            return own | (employees - own)
+        return employees
+
+    def _allowed_workcenters(self, employee=None):
+        """Machines the current operator may record on.
+
+        `employee` is the PIN-switched operator when the tablet has switched
+        (see `pin_verify`); the machine list is then scoped by *that*
+        employee's own user scope (their `fmes_allowed_workcenter_ids`, which
+        itself reflects `fmes_workcenter_ids` / `fmes_department_ids`) rather
+        than the shared Odoo login's. With no switch, `employee` falls back to
+        the session user's own employee and the scope is unchanged.
 
         Phase 8 adds the daily roster as a second source; this method is the
         only place that has to change.
@@ -58,7 +105,9 @@ class FmesShopFloor(http.Controller):
         if user.has_group('furnishing_mes.group_fmes_supervisor'):
             return request.env['mrp.workcenter'].search(
                 [('active', '=', True)])
-        allowed = user.fmes_allowed_workcenter_ids
+        employee = employee or self._active_employee()
+        scoped_user = employee.user_id if employee and employee.user_id else user
+        allowed = scoped_user.fmes_allowed_workcenter_ids
         if allowed:
             return allowed
         # Unscoped operator: may record anywhere, but the record rules still
@@ -89,14 +138,28 @@ class FmesShopFloor(http.Controller):
     # ------------------------------------------------------------------
     @http.route('/fmes/terminal/machines', type='json', auth='user')
     def machines(self, **kwargs):
-        """Machines the operator may pick from, with today's status."""
-        machines = self._allowed_workcenters()
+        """Machines the operator may pick from, with today's status.
+
+        After a PIN switch the tablet reads as the switched employee: the
+        header name is theirs and the machine list is scoped by their own
+        access, not the shared Odoo login's. Without a switch nothing changes.
+        """
+        employee = self._active_employee()
+        scoped_user = (employee.user_id if employee and employee.user_id
+                       else request.env.user)
+        machines = self._allowed_workcenters(employee)
+        # The header name on a switched tablet is the operator's, so the
+        # machine picker shows who is about to record, not who is logged in.
+        emp_id = request.session.get('fmes_active_employee_id')
+        user_name = (employee.name if (emp_id and employee)
+                     else request.env.user.display_name)
         return {
-            'user': request.env.user.display_name,
-            'scoped': request.env.user.fmes_has_machine_scope,
+            'user': user_name,
+            'scoped': scoped_user.fmes_has_machine_scope,
             # sudo() only for the live-status computes, and only for machines
-            # already established as this user's. Operators hold no rights on
-            # mrp.workorder or maintenance.request, which those computes read.
+            # already established as this operator's. Operators hold no rights
+            # on mrp.workorder or maintenance.request, which those computes
+            # read.
             'machines': [{
                 'id': m.id,
                 'name': m.name,
@@ -237,6 +300,13 @@ class FmesShopFloor(http.Controller):
             if not payload:
                 return {'ok': False, 'error': _("Nothing to save.")}
             entry.write(payload)
+            # When the tablet has a PIN-switched operator, record who was on
+            # it (fmes_operator_id). The stamp is a separate sudo() write
+            # because attaching an hr.employee record requires reading it,
+            # which operators may not do through the ORM.
+            operator = self._active_employee()
+            if operator:
+                entry.sudo().write({'fmes_operator_id': operator.id})
             result = {'ok': True, 'entry': self._entry_payload(entry)}
         except _USER_FACING_ERRORS as exc:
             return {'ok': False, 'error': str(exc)}
@@ -250,7 +320,12 @@ class FmesShopFloor(http.Controller):
                 [int(i) for i in entry_ids]).exists()
             for entry in entries:
                 self._entry_for_user(entry.id)
-            entries.action_submit()
+            # A PIN-switched operator submits as themselves (submitted_by is
+            # the native audit field), so their supervisor sees who actually
+            # signed the shift off.
+            operator_user_id = (self._active_employee().user_id.id
+                                or request.env.uid)
+            entries.action_submit(operator_user_id=operator_user_id)
         except _USER_FACING_ERRORS as exc:
             return {'ok': False, 'error': str(exc)}
         return {'ok': True, 'submitted': len(entries)}
@@ -269,6 +344,9 @@ class FmesShopFloor(http.Controller):
                 'workcenter_id': machine.id,
                 'product_id': int(product_id),
             })
+            operator = self._active_employee()
+            if operator:
+                entry.sudo().write({'fmes_operator_id': operator.id})
             result = {'ok': True, 'entry': self._entry_payload(entry)}
         except _USER_FACING_ERRORS as exc:
             return {'ok': False, 'error': str(exc)}
@@ -337,64 +415,144 @@ class FmesShopFloor(http.Controller):
 
     @http.route('/fmes/terminal/pin_verify', type='json', auth='user')
     def pin_verify(self, pin=None, **kwargs):
-        """Confirm the caller is the person holding the logged-in session.
+        """Confirm a typed PIN and switch the tablet's active operator.
 
-        This is *re-authentication*, not a second login: only the calling
-        user's own PIN is ever accepted, so the gate can never be used to
-        unlock the terminal as somebody else. Entries keep being attributed
-        to ``create_uid`` / ``submitted_by`` exactly as they were in Phase 4
-        (assumption A16, revised in Phase 4), so no audit field changes
-        meaning here.
+        Shared-tablet multi-operator switch: any active employee whose PIN
+        matches becomes the operator this tablet records for, without logging
+        the Odoo session out (the shared login stays whoever logged the tablet
+        into Odoo; the *operator* changes). When two employees share a PIN the
+        calling user's own employee is preferred, so the tablet never hijacks
+        somebody's session by accident on a 4-digit collision.
 
-        Every answer carries the same three keys -- ``ok``, ``provisioned``
-        and ``error`` when there is something to say -- so the client can
-        branch on ``provisioned`` without guessing, and so no caller has to
-        wonder whether a missing key means ``False`` or means "not checked".
+        Nothing else about the gate loosens:
+          - five wrong attempts lock the gate until the next login
+            (`fmes_pin_failures`), because a four-digit space must not be
+            walkable on a tablet the whole shift can reach;
+          - `pin_provisioned` means "some active employee has a PIN to check
+            at all" — with no PIN provisioned anywhere the route refuses
+            rather than pretending a check happened.
+
+        Every answer carries the same keys — `ok`, `provisioned` (alias kept
+        for the existing client), `pin_provisioned`, `locked`,
+        `remaining_attempts` and `error` — so the client can branch without
+        guessing which key missing means what. On success it also carries the
+        switched operator's `employee_id`, `employee_name` and `user_id`.
+
+        The PINs compared here are Odoo's own `hr.employee.pin` / the related
+        `res.users.pin`; there is exactly one stored value (verified: the
+        `res.users.pin` field is `related='employee_id.pin'`). This module
+        stores no PIN of its own. `hr.employee.pin` is `groups='hr.group_hr_user'`,
+        which an operator may not read through the ORM (verified: a direct
+        read raises AccessError), so the search is `sudo()`ed — comparing the
+        typed digits against a value the caller could not read is the endpoint's
+        job, and the value never leaves the server.
         """
-        expected = self._own_pin()
-        provisioned = bool(expected)
+        employees = self._pin_employees()
+        provisioned = bool(employees)
+        attempts = request.session.get('fmes_pin_failures', 0)
+
+        def remaining(attempts):
+            return max(0, self._PIN_MAX_ATTEMPTS - attempts)
 
         def refuse(error, counted=True):
-            """A failed check. Wrong guesses count toward the lockout;
-            the "no PIN set" case does not, because there is no secret to
-            guess and counting it would brick the terminal for the shift.
-            """
+            failures = attempts
             if counted and provisioned:
-                request.session['fmes_pin_failures'] = \
-                    request.session.get('fmes_pin_failures', 0) + 1
-            return {'ok': False, 'provisioned': provisioned, 'error': error}
+                failures = request.session['fmes_pin_failures'] = attempts + 1
+            return {
+                'ok': False,
+                'provisioned': provisioned,
+                'pin_provisioned': provisioned,
+                'locked': False,
+                'remaining_attempts': remaining(failures),
+                'error': error,
+            }
 
-        if request.session.get('fmes_pin_failures', 0) \
-                >= self._PIN_MAX_ATTEMPTS:
-            return refuse(_(
-                "Too many wrong attempts. Ask your supervisor to unlock "
-                "this tablet."), counted=False)
+        if attempts >= self._PIN_MAX_ATTEMPTS:
+            return {
+                'ok': False,
+                'provisioned': provisioned,
+                'pin_provisioned': provisioned,
+                'locked': True,
+                'remaining_attempts': 0,
+                'error': _("Too many wrong attempts. Ask your supervisor to "
+                           "unlock this tablet."),
+            }
         given = str(pin or '').strip()
         if not provisioned:
             # Nothing to check against, so nothing was verified. Deliberately
             # NOT ok=True: this route must never claim a check it did not
             # perform, or a future caller that gates a write on `ok` would
-            # wave through every unprovisioned account. The policy decision
-            # -- carry on with a visible notice rather than locking an
-            # operator out over a missing plant data task -- is the client's,
-            # and `provisioned` is what tells it to apply that. Checked
-            # before the empty-PIN case on purpose: "there is nothing to
-            # enter" is a truer answer than "enter your PIN", and the
-            # client asks with an empty value precisely to find out.
-            return refuse(_("No PIN is set on your profile yet."))
+            # wave every unprovisioned plant through. Checked before the
+            # empty-PIN case on purpose: "there is nothing to enter" is a
+            # truer answer than "enter your PIN".
+            return {
+                'ok': False,
+                'provisioned': provisioned,
+                'pin_provisioned': provisioned,
+                'locked': False,
+                'remaining_attempts': remaining(attempts),
+                'error': _("No PIN is set on any operator profile yet."),
+            }
         if not given:
-            return refuse(_("Enter your PIN."), counted=False)
+            # No secret was even attempted, so nothing was guessed: not
+            # counted toward the lockout.
+            return {
+                'ok': False,
+                'provisioned': provisioned,
+                'pin_provisioned': provisioned,
+                'locked': False,
+                'remaining_attempts': remaining(attempts),
+                'error': _("Enter your PIN."),
+            }
         # compare_digest, not ==: a 4-6 digit PIN is short enough that a
         # timing difference is worth removing. Compared as bytes because
         # compare_digest rejects non-ASCII str. Odoo validates the stored
         # value as digits-only (hr.employee._verify_pin), so this cannot be
         # hit today, but a 500 on a future relaxation of that rule would be
         # a self-inflicted outage on the floor.
-        wanted = expected.encode('utf-8')
-        if hmac.compare_digest(wanted, given.encode('utf-8')):
+        wanted = given.encode('utf-8')
+        matched = request.env['hr.employee']
+        for emp in employees:
+            if hmac.compare_digest(str(emp.pin).encode('utf-8'), wanted):
+                matched = emp
+                break
+        if matched:
             request.session['fmes_pin_failures'] = 0
-            return {'ok': True, 'provisioned': True, 'error': None}
+            request.session['fmes_active_employee_id'] = matched.id
+            request.session['fmes_active_user_id'] = (
+                matched.user_id.id or request.env.uid)
+            return {
+                'ok': True,
+                'provisioned': True,
+                'pin_provisioned': True,
+                'locked': False,
+                'remaining_attempts': self._PIN_MAX_ATTEMPTS,
+                'error': None,
+                'employee_id': matched.id,
+                'employee_name': matched.name,
+                'user_id': matched.user_id.id or False,
+            }
         return refuse(_("That PIN is not right."))
+
+    @http.route('/fmes/terminal/pin_status', type='json', auth='user')
+    def pin_status(self, **kwargs):
+        """Which employee the shared tablet is currently switched to."""
+        emp_id = request.session.get('fmes_active_employee_id')
+        if emp_id:
+            emp = request.env['hr.employee'].sudo().browse(emp_id).exists()
+            if emp and emp.active:
+                return {
+                    'ok': True,
+                    'active': True,
+                    'employee_id': emp.id,
+                    'employee_name': emp.name,
+                }
+        return {
+            'ok': True,
+            'active': False,
+            'employee_id': False,
+            'employee_name': False,
+        }
 
     # ------------------------------------------------------------------
     # Downtime — reason picker, running timer (Requirement 6)
@@ -440,9 +598,18 @@ class FmesShopFloor(http.Controller):
         rather than relying solely on api.constrains, so this try/except is
         guaranteed to actually catch it — see that method's docstring for why
         api.constrains alone was not reliable enough here (Phase 5, D5.4).
+
+        Attribution: when the tablet has a PIN-switched operator, the event is
+        recorded against that operator — fmes_operator_id (the employee whose
+        PIN is active) and fmes_reported_by (their user, when they have one),
+        the same field the chatter uses to notify the reporter. The stamp is
+        written via the session login + sudo because an operator cannot read
+        hr.employee through the ORM; the event record rules still protect it
+        the same way as before.
         """
         try:
             entry = self._entry_for_user(entry_id)
+            operator = self._active_employee()
             event = request.env['mrp.workcenter.productivity'].create({
                 'workcenter_id': entry.workcenter_id.id,
                 'loss_id': int(loss_id),
@@ -450,6 +617,12 @@ class FmesShopFloor(http.Controller):
                 'fmes_remarks': remarks or False,
                 'date_start': fields.Datetime.now(),
             })
+            if operator:
+                reporter = operator.user_id or request.env.user
+                event.sudo().write({
+                    'fmes_operator_id': operator.id,
+                    'fmes_reported_by': reporter.id,
+                })
             result = {'ok': True, 'event': self._downtime_payload(event),
                      'entry': self._entry_payload(entry)}
         except _USER_FACING_ERRORS as exc:

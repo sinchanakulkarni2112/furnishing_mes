@@ -97,10 +97,10 @@
                                 <span class="fmes-capacity-label"><t t-esc="row.department"/></span>
                                 <div class="fmes-capacity-bar">
                                     <div class="fmes-capacity-bar-fill"
-                                         t-attf-style="width: #{Math.min(row.utilization_pct, 100)}%"/>
+                                         t-attf-style="width: #{pctBarWidth(row.utilization_pct)}%"/>
                                 </div>
                                 <span class="fmes-capacity-pct">
-                                    <t t-esc="Math.round(row.utilization_pct)"/>%
+                                    <t t-esc="pctLabel(row.utilization_pct)"/>%
                                 </span>
                             </div>
                         </div>

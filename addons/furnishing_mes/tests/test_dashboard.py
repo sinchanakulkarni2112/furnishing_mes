@@ -303,12 +303,36 @@ class TestDashboardTiles(DashboardCase):
 @tagged('post_install', '-at_install', 'fmes', 'fmes_phase10')
 class TestDashboardAndProductionReportSecurity(DashboardCase):
 
-    def test_operator_cannot_read_the_production_report(self):
+    def test_operator_with_assigned_department_reads_scoped(self):
         operator = self._create_user(
             'fmes_dash_op', 'furnishing_mes.group_fmes_operator')
-        with self.assertRaises(AccessError):
-            self.env['fmes.production.report'].with_user(
-                operator).search([])
+        operator.fmes_department_ids = [(6, 0, [self.dept_cutting.id])]
+        self._approve(self._entry(workcenter=self.wc_saw, run_hours=1.0,
+                                  actual_qty=10.0))
+        self._approve(self._entry(workcenter=self.wc_spray,
+                                  shift=self.shift_b, run_hours=1.0,
+                                  actual_qty=10.0, planned_qty=50.0))
+        self.env.flush_all()
+        visible = self.env['fmes.production.report'].with_user(
+            operator).search([('date', '=', REFERENCE_DATE)])
+        self.assertTrue(visible)
+        self.assertTrue(
+            all(row.department_id == self.dept_cutting for row in visible))
+
+    def test_operator_without_department_sees_everything(self):
+        operator = self._create_user(
+            'fmes_dash_op2', 'furnishing_mes.group_fmes_operator')
+        self._approve(self._entry(workcenter=self.wc_saw, run_hours=1.0,
+                                  actual_qty=10.0))
+        self._approve(self._entry(workcenter=self.wc_spray,
+                                  shift=self.shift_b, run_hours=1.0,
+                                  actual_qty=10.0, planned_qty=50.0))
+        self.env.flush_all()
+        visible = self.env['fmes.production.report'].with_user(
+            operator).search([('date', '=', REFERENCE_DATE)])
+        self.assertTrue(visible)
+        self.assertIn(self.dept_cutting, visible.mapped('department_id'))
+        self.assertIn(self.dept_finishing, visible.mapped('department_id'))
 
     def test_supervisor_with_assigned_department_is_scoped(self):
         supervisor = self._create_user(

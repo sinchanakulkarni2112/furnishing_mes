@@ -349,12 +349,20 @@ class TestUnderUtilizedAndBottleneck(UtilizationCase):
 @tagged('post_install', '-at_install', 'fmes', 'fmes_phase6')
 class TestUtilizationReportAccess(UtilizationCase):
 
-    def test_operator_cannot_read_the_utilization_report(self):
+    def test_operator_reads_only_assigned_departments(self):
         operator = self._create_user(
             'fmes_util_op', 'furnishing_mes.group_fmes_operator')
-        with self.assertRaises(AccessError):
-            self.env['fmes.utilization.report'].with_user(
-                operator).search([])
+        operator.fmes_department_ids = [(6, 0, [self.dept_cutting.id])]
+        self._approve(self._entry(run_hours=2.0, actual_qty=90.0))
+        self._approve(self._entry(workcenter=self.wc_spray,
+                                  shift=self.shift_b, run_hours=1.0,
+                                  actual_qty=10.0, planned_qty=50.0))
+        self.env.flush_all()
+        rows = self.env['fmes.utilization.report'].with_user(
+            operator).search([('date', '=', REFERENCE_DATE)])
+        self.assertTrue(rows)
+        self.assertTrue(
+            all(r.department_id == self.dept_cutting for r in rows))
 
     def test_supervisor_can_read_the_utilization_report(self):
         self._approve(self._entry(run_hours=2.0, actual_qty=90.0))

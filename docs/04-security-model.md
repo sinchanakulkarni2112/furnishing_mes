@@ -94,18 +94,29 @@ portal never trusts an id from the URL without an ownership check.
 | `mrp.workcenter.productivity.loss` | R | R | RWCD | — |
 | `fmes.manpower.log` | — | RWC | RWCD | — |
 | `fmes.operator.allocation` | R (own) | RWCD | RWCD | — |
-| `fmes.backlog.snapshot` | — | R | R | — |
-| `fmes.maintenance.schedule` | — | R | RWCD | — |
+| `fmes.backlog.snapshot` | R (own departments) | R | R | — |
+| `fmes.maintenance.schedule` | R | RWC | RWCD | — |
 | `maintenance.request` | RC (report a breakdown) | RWC | RWCD | — |
 | `fmes.alert.rule` | — | R | RWCD | — |
-| `fmes.alert` | — | RW (acknowledge) | RWCD | — |
+| `fmes.alert` | R | RW (acknowledge) | RWCD | — |
+| `fmes.material.request` | R (own machines) | RWCD | RWCD | — |
 | `fmes.support.ticket` | — | RW | RWCD | RC (own) |
-| `fmes.*.report` (SQL views) | — | R | R | — |
+| `fmes.*.report` (SQL views) | R (own departments) | R | R | — |
 | `sale.order` | — | R | R | R (own, via portal) |
 | `mrp.production` | R (own WC) | RW | RWCD | R (own, via portal) |
 
 Backlog snapshots are cron-written and therefore never writable by a UI user —
 not even the Plant Manager — which preserves the integrity of the trend series.
+
+Widening a top-level tab to Operators grants **menu visibility only**, not model
+access: Odoo hides any menu whose action model the user cannot read, so e.g. the
+Maintenance KPIs and Maintenance Staff items (models `fmes.maintenance.report`,
+`maintenance.team`) stay invisible to a pure Operator while the rest of the
+Maintenance tab renders. The **Configuration** tab (capacity matrix, report
+schedules, alert rules) remains Plant-Manager-only by explicit user decision —
+the Operator read rows above cover exactly the production/utilisation/downtime
+reports, `fmes.material.request` and `fmes.alert`, each scoped by the record
+rules in §3.
 
 ---
 
@@ -231,12 +242,16 @@ the value is stripped server-side from `read()` — not merely hidden in the vie
 
 - Minimum length enforced via Odoo's `auth_password_policy` settings.
 - Operators may be asked for a short PIN **only** inside the terminal, layered
-  on top of a normal session. It is a **re-authentication** step, not a second
-  login and not an operator switch: the terminal accepts only the PIN belonging
-  to the account already signed in, so it can never be used to unlock the
-  terminal as somebody else. Handing a tablet to the next shift still means
-  logging out and logging in as that person — which is what keeps the audit
-  trail meaningful.
+  on top of a normal session. On a **shared tablet** the PIN is the handover:
+  the terminal accepts the PIN of any active employee, keeps the shared Odoo
+  login, and attributes everything recorded afterwards to the switched-in
+  operator (`fmes.production.entry.fmes_operator_id`,
+  `mrp.workcenter.productivity.fmes_operator_id`, and `submitted_by` tracking
+  the switched user), with the machine list narrowing to that person's own
+  workcentres. The PIN of the account already signed in is tried first, but it
+  is **not** a second login and never unlocks anything the shared account could
+  not do. Every employee using the tablet needs their own PIN so the operator
+  recorded is always the person physically at the machine.
 - The PIN is **not** a new secret store. Odoo 18 Community already ships
   `hr.employee.pin` (and `res.users.pin` as a non-stored
   `related='employee_id.pin'` passthrough), validated by Odoo as digits-only,
@@ -245,8 +260,9 @@ the value is stripped server-side from `read()` — not merely hidden in the vie
   accepted because it is Odoo's own attendance/POS kiosk PIN with the same
   exposure as any other employee attribute readable by `hr.group_hr_user`;
   a shop-floor operator cannot read it (the field is
-  `groups='hr.group_hr_user'`), and the terminal's comparison runs with
-  `sudo()` purely to perform that check. The value is never returned to the
+  `groups='hr.group_hr_user'`), and the terminal's comparison of the typed PIN
+  against each active eligible operator runs with `sudo()` purely to read the
+  group-restricted field. The value is never returned to the
   client, never logged, and never stored by `furnishing_mes`.
 - Portal users are created by invitation (Odoo's portal wizard), never
   self-registration; `auth_signup` invite-only mode.

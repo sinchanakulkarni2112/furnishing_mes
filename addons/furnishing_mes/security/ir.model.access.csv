@@ -65,3 +65,8 @@ access_product_product_portal,product.product.portal,product.model_product_produ
 access_fmes_sync_log_manager,fmes.sync.log.manager,model_fmes_sync_log,furnishing_mes.group_fmes_manager,1,0,0,0
 access_fmes_material_request_supervisor,fmes.material.request.supervisor,model_fmes_material_request,furnishing_mes.group_fmes_supervisor,1,1,1,0
 access_fmes_material_request_manager,fmes.material.request.manager,model_fmes_material_request,furnishing_mes.group_fmes_manager,1,1,1,1
+access_fmes_production_report_operator,fmes.production.report.operator,model_fmes_production_report,furnishing_mes.group_fmes_operator,1,0,0,0
+access_fmes_utilization_report_operator,fmes.utilization.report.operator,model_fmes_utilization_report,furnishing_mes.group_fmes_operator,1,0,0,0
+access_fmes_downtime_report_operator,fmes.downtime.report.operator,model_fmes_downtime_report,furnishing_mes.group_fmes_operator,1,0,0,0
+access_fmes_material_request_operator,fmes.material.request.operator,model_fmes_material_request,furnishing_mes.group_fmes_operator,1,0,0,0
+access_fmes_alert_operator,fmes.alert.operator,model_fmes_alert,furnishing_mes.group_fmes_operator,1,0,0,0

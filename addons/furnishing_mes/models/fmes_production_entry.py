@@ -145,6 +145,13 @@ class FmesProductionEntry(models.Model):
         help="Standard minus actual. Feeds the manpower impact analysis.")
     operator_ids = fields.Many2many(
         'hr.employee', string='Operators')
+    fmes_operator_id = fields.Many2one(
+        'hr.employee', string='Operator (PIN Gate)', index=True,
+        copy=False, ondelete='set null',
+        help="The shop-floor operator whose PIN is active on the shared "
+             "tablet that entered this data, set by the terminal's PIN gate. "
+             "Empty on entries recorded before the gate existed or without a "
+             "switch — those are attributed by submitted_by instead.")
 
     # -------------------------------------------------------------- workflow
     state = fields.Selection(
@@ -376,7 +383,18 @@ class FmesProductionEntry(models.Model):
     # ==================================================================
     # Workflow
     # ==================================================================
-    def action_submit(self):
+    def action_submit(self, operator_user_id=None):
+        """Submit entries for supervisor approval.
+
+        `operator_user_id` lets the shop-floor terminal stamp `submitted_by`
+        with the PIN-switched operator (whoever the shared tablet is recording
+        for) instead of the Odoo login itself. Callers that do not pass it —
+        the Odoo UI, imports, tests — fall back to the acting user, exactly
+        as before.
+        """
+        stamping_user = (
+            self.env['res.users'].sudo().browse(operator_user_id).exists()
+            if operator_user_id else self.env.user)
         for entry in self:
             if entry.state not in ('draft', 'rejected'):
                 raise UserError(_(
@@ -400,7 +418,7 @@ class FmesProductionEntry(models.Model):
             # something that should depend on the caller's own field-level
             # rights to the audit columns themselves.
             entry.sudo().write({
-                'submitted_by': self.env.user.id,
+                'submitted_by': stamping_user.id,
                 'submitted_on': fields.Datetime.now(),
             })
 

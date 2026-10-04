@@ -78,6 +78,12 @@ class MrpWorkcenterProductivity(models.Model):
     fmes_reported_by = fields.Many2one(
         'res.users', string='Reported By', default=lambda self: self.env.user,
         readonly=True)
+    fmes_operator_id = fields.Many2one(
+        'hr.employee', string='Operator (PIN Gate)', index=True,
+        copy=False, ondelete='set null',
+        help="The shop-floor operator whose PIN is active on the shared "
+             "tablet that logged this event, set by the terminal's PIN gate. "
+             "Empty when logged before a switch or not from the terminal.")
     fmes_state = fields.Selection(
         DOWNTIME_STATES, string='Review Status', default='draft',
         required=True, index=True, tracking=True)

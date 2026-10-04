@@ -4,6 +4,63 @@
     <t t-name="furnishing_mes.ShopFloorTerminal">
         <div class="fmes-terminal">
 
+            <!-- ================= PIN gate =================
+                 Sits over the whole terminal, on load and on demand, on BOTH
+                 screens (machine picker and shift entry). It is a shared-
+                 tablet operator switch: any active employee whose PIN matches
+                 becomes the operator this tablet is recording for, without
+                 logging the Odoo session out. The PINs compared here are
+                 Odoo's own hr.employee.pin / res.users.pin, entered by a
+                 supervisor on the standard employee form; this module stores
+                 no PIN of its own. -->
+            <div t-if="state.pinGate.open"
+                 class="fmes-t-keypad-backdrop"
+                 t-on-click="() => {}">
+                <div class="fmes-t-pin-modal" t-on-click.stop="() => {}">
+                    <div class="fmes-t-pin-title">Enter your PIN</div>
+                    <div class="fmes-t-pin-sub">
+                        Which operator is recording?
+                    </div>
+                    <div class="fmes-t-pin-dots">
+                        <t t-foreach="state.pinGate.dots" t-as="dot"
+                           t-key="dot_index">
+                            <span class="fmes-t-pin-dot filled"/>
+                        </t>
+                    </div>
+                    <div t-if="state.pinGate.error"
+                         class="fmes-t-pin-error"
+                         t-esc="state.pinGate.error"/>
+                    <div class="fmes-t-pin-grid">
+                        <t t-foreach="[1,2,3,4,5,6,7,8,9]" t-as="n"
+                           t-key="n">
+                            <button class="fmes-t-pin-key"
+                                    t-esc="n"
+                                    t-on-click="() => this.pinPress('' + n)"/>
+                        </t>
+                        <button class="fmes-t-pin-key fmes-t-pin-key-alt"
+                                t-on-click="pinBackspace">⌫</button>
+                        <button class="fmes-t-pin-key"
+                                t-esc="0"
+                                t-on-click="() => this.pinPress('0')"/>
+                        <button class="fmes-t-pin-key fmes-t-pin-key-go"
+                                t-att-disabled="state.pinGate.busy"
+                                t-on-click="verifyPin"
+                                t-esc="state.pinGate.busy ? '…' : 'OK'"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shown only when no active employee has a PIN set yet. The
+                 terminal still works (the shared Odoo login remains the audit
+                 trail) but the gap is on screen, not silent. -->
+            <div t-if="!state.pinGate.open and !state.pinProvisioned"
+                 class="fmes-t-pin-advisory">
+                No PIN is set on any operator profile — ask your supervisor to
+                add one before switching operators.
+                <button class="fmes-t-pin-advisory-btn"
+                        t-on-click="askPin">Retry</button>
+            </div>
+
             <!-- ================= machine picker ================= -->
             <t t-if="state.step === 'pick'">
                 <div class="fmes-t-header">
@@ -14,7 +71,7 @@
                         </div>
                     </div>
                     <button class="fmes-t-pin-reverify"
-                            t-on-click="askPin">Verify PIN</button>
+                            t-on-click="askPin">Switch Operator (PIN)</button>
                 </div>
 
                 <div t-if="state.loading" class="fmes-t-loading">Loading…</div>
@@ -68,7 +125,7 @@
                         </div>
                     </div>
                     <button class="fmes-t-pin-reverify"
-                            t-on-click="askPin">Verify PIN</button>
+                            t-on-click="askPin">Switch Operator (PIN)</button>
                     <div class="fmes-t-shifts">
                         <button t-foreach="state.shifts" t-as="shift"
                                 t-key="shift.id"
@@ -233,62 +290,6 @@
                     </div>
                 </div>
                 </t>
-
-                <!-- ================= PIN gate =================
-                     Sits over the whole terminal, on load and on demand.
-                     It is a re-authentication step on top of the individual
-                     Odoo login the tablet already has — never a way to
-                     unlock the terminal as somebody else. The PINs compared
-                     here are Odoo's own hr.employee.pin / res.users.pin,
-                     entered by a supervisor on the standard employee form;
-                     this module stores no PIN of its own. -->
-                <div t-if="state.pinGate.open"
-                     class="fmes-t-keypad-backdrop"
-                     t-on-click="() => {}">
-                    <div class="fmes-t-pin-modal" t-on-click.stop="() => {}">
-                        <div class="fmes-t-pin-title">Enter your PIN</div>
-                        <div class="fmes-t-pin-sub">
-                            Confirm it is you before recording
-                        </div>
-                        <div class="fmes-t-pin-dots">
-                            <t t-foreach="state.pinGate.dots" t-as="dot"
-                               t-key="dot_index">
-                                <span class="fmes-t-pin-dot filled"/>
-                            </t>
-                        </div>
-                        <div t-if="state.pinGate.error"
-                             class="fmes-t-pin-error"
-                             t-esc="state.pinGate.error"/>
-                        <div class="fmes-t-pin-grid">
-                            <t t-foreach="[1,2,3,4,5,6,7,8,9]" t-as="n"
-                               t-key="n">
-                                <button class="fmes-t-pin-key"
-                                        t-esc="n"
-                                        t-on-click="() => this.pinPress(String(n))"/>
-                            </t>
-                            <button class="fmes-t-pin-key fmes-t-pin-key-alt"
-                                    t-on-click="pinBackspace">⌫</button>
-                            <button class="fmes-t-pin-key"
-                                    t-esc="0"
-                                    t-on-click="() => this.pinPress('0')"/>
-                            <button class="fmes-t-pin-key fmes-t-pin-key-go"
-                                    t-att-disabled="state.pinGate.busy"
-                                    t-on-click="verifyPin"
-                                    t-esc="state.pinGate.busy ? '…' : 'OK'"/>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Shown only when the account has no PIN set yet. The
-                     terminal still works (Phase 4's individual login is the
-                     audit trail) but the gap is on screen, not silent. -->
-                <div t-if="!state.pinGate.open and not state.pinProvisioned"
-                     class="fmes-t-pin-advisory">
-                    No PIN is set on your profile — ask your supervisor to add
-                    one.
-                    <button class="fmes-t-pin-advisory-btn"
-                            t-on-click="askPin">Retry</button>
-                </div>
 
                 <!-- footer -->
                 <div class="fmes-t-footer">

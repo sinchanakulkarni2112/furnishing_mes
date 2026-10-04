@@ -138,6 +138,7 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
             'furnishing_mes/static/src/js/executive_dashboard.js',
             'furnishing_mes/static/src/js/report_dashboard.js',
             'furnishing_mes/static/src/js/alert_systray.js',
+            'furnishing_mes/static/src/js/tours/fmes_tours.js',
             'furnishing_mes/static/src/xml/scheduling_board.xml',
             'furnishing_mes/static/src/xml/shopfloor_terminal.xml',
             'furnishing_mes/static/src/xml/executive_dashboard.xml',

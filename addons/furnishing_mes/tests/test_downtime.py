@@ -428,10 +428,27 @@ class TestDowntimeAccess(DowntimeCase):
         with self.assertRaises(AccessError):
             event.with_user(self.operator).write({'fmes_remarks': 'edit'})
 
-    def test_operator_cannot_read_the_loss_analysis_report(self):
-        with self.assertRaises(AccessError):
-            self.env['fmes.downtime.report'].with_user(
-                self.operator).search([])
+    def test_operator_reads_loss_analysis_scoped_by_department(self):
+        supervisor = self._create_user(
+            'fmes_dt_access_sup2', 'furnishing_mes.group_fmes_supervisor')
+        cutting = self._closed_event()  # wc_saw, dept_cutting
+        finishing_entry = self.env['fmes.production.entry'].create({
+            'date': self.reference_date,
+            'shift_id': self.shift_a.id,
+            'workcenter_id': self.wc_spray.id,
+            'product_id': self.product_wardrobe.id,
+            'planned_qty': 50.0,
+        })
+        finishing = self._closed_event(entry=finishing_entry)  # dept_finishing
+        cutting.with_user(supervisor).action_approve()
+        finishing.with_user(supervisor).action_approve()
+        self.operator.fmes_department_ids = [(6, 0, [self.dept_cutting.id])]
+        self.env.flush_all()
+        rows = self.env['fmes.downtime.report'].with_user(
+            self.operator).search([])
+        self.assertTrue(rows)
+        self.assertTrue(
+            all(r.department_id == self.dept_cutting for r in rows))
 
 
 @tagged('post_install', '-at_install', 'fmes', 'fmes_phase5')
