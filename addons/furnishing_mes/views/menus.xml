@@ -13,32 +13,41 @@
             moved. Two exceptions, both pure read-only lookups into data
             Odoo already tracks natively: the four Inventory shortcuts.
 
-            Operators land on the Shop Floor Terminal (the Shift Logs >
-            Shop Floor Terminal path is deliberately free of any `groups`
-            restriction all the way from the root). They may also browse
+            Operators reach the Shop Floor Terminal through Shift Logs >
+            Shop Floor Terminal, a path deliberately free of any `groups`
+            restriction all the way from the root. They may also browse
             every top-level tab: Production Planning and Orders carry no
             group at all, and Monitoring / WorkCentre Downtimes /
             Maintenance / Inventory / Analytics / Notifications carry
-            `groups="...group_fmes_operator"` so the tabs render in the
-            purple bar — a folder only shows when at least one of its own
-            descendant tabs is visible to the user (Odoo 18
-            menu-visibility semantics), and the read ACLs below decide
-            which of those open on a model an Operator can actually read.
-            Support Tickets stays Supervisor-and-above and Configuration
-            stays Plant-Manager-only (explicit user decision), so neither
-            renders for an Operator. The `groups` attribute is a usability
-            filter; actual access control lives in ir.model.access.csv and
-            ir.rule.
+            `groups="...group_fmes_operator"`, so those tabs are offered to
+            them — as tiles on the dashboard rather than as navbar tabs: the
+            tab bar itself is dropped while this app is on show (see
+            static/src/xml/menu_dashboard.xml). Odoo 18 menu visibility is
+            decided in two steps: a
+            menu that HAS an action shows as soon as its own `groups` allow
+            (the action decides what it opens), while a menu WITHOUT an
+            action — the root app and the folders below the tabs — shows
+            only when at least one of its descendants does. Since every
+            child tab now carries the tile-dashboard client action (see
+            fmes_menus.xml), each tab stands on its own groups rather than
+            on its children's, and the read ACLs below decide which of
+            those open on a model an Operator can actually read. Support
+            Tickets stays Supervisor-and-above and Configuration stays
+            Plant-Manager-only (explicit user decision), so neither renders
+            for an Operator. The `groups` attribute is a usability filter;
+            actual access control lives in ir.model.access.csv and ir.rule.
 
-            no action= on the root menu itself, by design: Odoo's webclient
+            no action= on the root menu itself, by design: the webclient
             picks a user's default app on login by calling
             menuService.selectMenu() on their FIRST root app menu, and a
             hardcoded action there would drop EVERYONE who clicks the app
             tile into the same screen — a Supervisor or Plant Manager would
             get the Shop Floor Terminal instead of their own start point.
-            Leaving the root actionless restores Odoo's native "first valid
-            tab" behaviour, which lands each role on the tab that is
-            actually valid for them.
+            Leaving the root actionless keeps that call harmless. What the
+            app tile actually opens is Odoo's derived app action, i.e. the
+            action of the app's first visible child menu — which is now the
+            tile dashboard's home screen, a menu of that role's own tiles
+            rather than a fixed screen no role can leave.
         -->
 
         <menuitem id="menu_fmes_root"

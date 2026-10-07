@@ -2403,6 +2403,140 @@ their Phase 4 meaning, and the audit trail is unchanged. Plant action needed:
 assign a PIN in each operator's employee record (recorded against `Q12`).
 Full suite on a fresh disposable DB: 453 tests, 0 failed, 0 errors.
 
+### Top-level tabs open a touch tile dashboard — DONE (this round)
+
+Direct follow-on to item B above ("Operators can browse the top-level tabs"):
+the dropdown behaviour behind those tabs is gone. Every top-level tab except
+Support Tickets now carries an `ir.actions.client` record with tag
+`fmes_menu_dashboard` (action `action_fmes_menu_dashboard`), and one generic
+OWL component (`MenuDashboard`, `static/src/js/menu_dashboard.js`) renders the
+active menu's own children as large cards that run the normal
+`actionService.doAction()`; a card that is only a folder drills deeper and
+offers Back. Three template extensions of core navbar templates suppress the
+dropdown and make the tab itself the link; `views/fmes_menus.xml` wires the
+nine tabs with full `<record>` blocks (a `<menuitem>` with `action=` would
+rename the menu). Naming follows the two existing conventions at once: the
+action/registry tag is `fmes_menu_dashboard` (`fmes_*`, as for every other
+action tag), while the templates keep the module-name form
+(`furnishing_mes.MenuDashboard`). Manifest bumped `18.0.15.1.0`, three assets
+registered, `views/fmes_menus.xml` listed after `views/menus.xml`.
+
+**Behaviour changes to remember (all now written into `docs/05`):**
+
+- The root RECORD stays actionless, but `load_web_menus` writes the *derived*
+  app action into the root's PAYLOAD entry — the first action found by
+  walking the first child chain. That is now action 625, the dashboard, so
+  the app tile and "open the app" land on the dashboard home overview rather
+  than the Scheduling Board. First login still opens Discuss (menu seq 5)
+  then FMES (seq 10) — unchanged, and it means a fresh browser does NOT land
+  on FMES.
+- With an action on each tab, `_visible_menu_ids` shows a menu from its own
+  `groups=` alone (the "ancestor of a visible action menu" leg no longer
+  decides anything for them) → the seven groupless tabs are visible to every
+  role that can see the root, while the root and the actionless folders still
+  need a visible descendant. Configuration stays manager-only and Support
+  Tickets supervisor-only, by explicit `groups=`. Still not a second security
+  surface: the cards are read from the same group/model-filtered payload the
+  navbar renders, and the ActionError on an unreadable model surfaces as
+  Odoo's own AccessError dialog.
+- The tab on show is `sessionStorage["fmes_menu_dashboard.active_menu_id"]`,
+  written by ONE wrapper around `menuService.selectMenu` (Odoo's own
+  `menu_id` key stores only the app id, and only on app change). Selecting
+  the app tile clears it; `setup()` re-reads the key because the
+  ActionContainer remounts the component on every action.
+- Support Tickets is the documented exception: a leaf with nothing to list,
+  it keeps `action_fmes_support_ticket`.
+
+**Verified, not assumed (established cycle, steps 1–7):** XML/JS/py
+well-formedness plus all three navbar-template XPaths resolving to exactly one
+core node; dev upgrade + restart; assets over HTTP on host port **8169** (the
+host has no `make`, and 8069 is not published) — CSS carries 11
+`o_fmes_menu_dashboard` hits and no `CSS error message`, JS carries
+`registerTemplate("furnishing_mes.MenuDashboard"`, both
+`registerTemplateExtension` calls including `MoreDropdown`, and
+`add("fmes_menu_dashboard"`; a throwaway persona walk
+(`scripts/_verify_navigation.py`, recreated this round and **deleted before
+commit**) → **0 failures**: manager 10/10 tabs, supervisor 9/10, operator 8/10
+(all policy-correct), 72 / 62 / 48 action-carrying menus opened respectively
+with client tags asserted only on the ten tabs, root record actionless with
+the app opening action 625, all three users cleaned up; three new tests in
+`tests/test_ui_and_tours.py` (tab wiring + derived app action, template
+extensions against the real core XML, and a bundle test that compiles
+`web.assets_backend` and greps the output for the template/registry markers
+and the SCSS selector); full suite on fresh disposable DB `fmes_menudash_check`:
+**0 failed, 0 errors of 480 tests (666 collected)**, database dropped. The
+dev database's own run reported 19 failures (dashboard tiles, report access,
+PIN gate) — all pre-existing data pollution in that long-lived DB, proven
+irrelevant by the clean fresh-DB run; do not chase them here.
+
+**Gotchas from this round:**
+
+- **Assert an actionless root against the RECORD
+  (`ir_ui_menu.action IS NULL`), never against the `load_web_menus` payload
+  entry** — Odoo deliberately writes the derived app action there, and the
+  first run of the verifier failed on exactly that confusion.
+- `load_web_menus` payload keys are not uniformly typed; `sorted(items())`
+  raises `TypeError: '<' not supported between instances of 'str' and 'int'`.
+  Always pass `key=lambda kv: str(kv[0])`.
+- **A role cannot read `ir.actions.act_window` rows** — verification scripts
+  must `.sudo()` the action definition (the webclient does the same) and keep
+  the real permission check on the target model, otherwise every menu reports
+  "did not open" for a reason that has nothing to do with the menu.
+- Non-tab menus legitimately carry other client tags
+  (`fmes_report_dashboard`, `fmes_scheduling_board`,
+  `fmes_executive_dashboard`, `fmes_shopfloor_terminal`); asserting
+  `fmes_menu_dashboard` on every client action is wrong — restrict it to the
+  ten tabs.
+- `docs/05` §5 named SCSS files that do not exist (`fmes_variables.scss`,
+  `fmes_backend.scss`); corrected to the eight files actually in
+  `static/src/scss/` in the same commit, per the doc-fidelity rule.
+
+**Docs updated with the code:** `docs/05-ui-ux-design.md` §2's paragraph
+rewritten (the "first valid descendant tab" and "a folder renders only when a
+descendant is visible" claims are gone, replaced by the two-step visibility
+rule), §3's intro now says four components, and a new **§3.4 Tile Dashboard**
+carries the sketch, the drill/Back behaviour, the sessionStorage key and the
+derived-action change.
+
+### Tile dashboard refinement — tab bar dropped, in-place drill, card styling
+
+User-requested follow-on to the tile dashboard above; amended into the same
+commit rather than stacked on it.
+
+- **The desktop tab bar is gone while this app is on show.** One attribute on
+  one node does it: `web.NavBar.SectionsMenu`'s container (the div carrying
+  `t-ref="appSubMenus"`) gets `t-if="!this.isFmesApp()"`, so the purple bar
+  keeps only the app name and the systray. That node was chosen deliberately —
+  `navbar.adapt()` starts with `const sectionsMenu = this.appSubMenus.el;
+  if (!sectionsMenu) return;`, so a hidden ref makes it exit instead of
+  measuring an empty menu, while putting the guard on the inner `DropdownGroup`
+  would have left an empty div in the layout. Because SectionsMenu only ever
+  renders the *current* app's sections, the earlier per-tab `t-elif` branches
+  and the whole `MoreDropdown` extension became dead code and were deleted;
+  two extensions remain (SectionsMenu guard, `web.SectionMenu` sidebar rows)
+  and the template test now asserts both the count and the guard.
+- **Tile clicks are state-based, not action-based.** A tile with children, or
+  one whose client action IS the dashboard (every tab resolves to it), only
+  moves `this.state.menuId` — running `doAction` there would replace the
+  component and lose the drill. Client actions are resolved first through
+  `actionService.loadAction` precisely because they are the only kind that can
+  be the dashboard; `act_window` tiles (Support Tickets, native views) go
+  straight to `doAction`. Back walks the payload from the state.
+- **Cards restyled to a touchscreen surface**: grid `gap: 24px` / `padding:
+  32px`, cards `min-height: 150px`, `border-radius: 16px`, `border: none`,
+  shadow `0 4px 12px rgba(0,0,0,.1)`, centred white bold `1.25rem` text, and
+  `:nth-child(5n+1..5)` cycling indigo `#4f46e5`, teal `#0d9488`, rose
+  `#e11d48`, amber `#d97706`, emerald `#059669`, with `translateY(-4px)` on
+  hover. The palette is positional rather than per-menu on purpose: a menu
+  renamed or reordered must not silently change colour.
+- **Verified:** XML/JS/SCSS/py syntax; targeted
+  `--test-tags /furnishing_mes:TestUiAndTours` → **0 failed of 7** (that class
+  includes the bundle-compile test, so the new extension and the new SCSS were
+  really built); web container restarted and the assets re-fetched on port 8169
+  — CSS contains `nth-child(5n + 1)`, `translateY(-4px)` and `#4f46e5` with no
+  `CSS error message`, JS contains `isFmesApp`, both
+  `registerTemplateExtension` markers and no `MoreDropdown`.
+
 ---
 
 ## Conventions Established

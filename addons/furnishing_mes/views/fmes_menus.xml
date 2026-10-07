@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!--
+            Tile dashboard behind the top-level Furnishing MES tabs
+            (static/src/js/menu_dashboard.js).
+
+            A tab that has children points at the dashboard instead of
+            dropping down those children: on a touch screen a dropdown entry
+            is a precision target, a 112px tile is not. The dashboard lists
+            exactly the children the navbar would have dropped down, so
+            nothing is gained or lost but the pointing device.
+
+            <record> rather than <menuitem>: an <menuitem> tag carrying only
+            action= would also copy the action's name onto the menu (the XML
+            loader defaults a menu's name to its action's name when the tag
+            has none), silently renaming "Monitoring" to "Furnishing MES".
+            Assigning one field to an existing <record> changes nothing else
+            about it.
+
+            Support Tickets is deliberately left out: it is a leaf with no
+            children to show, so it keeps its own act_window action.
+
+            The root menu itself stays actionless — see the comment at the top
+            of menus.xml.
+        -->
+        <record id="action_fmes_menu_dashboard" model="ir.actions.client">
+            <field name="name">Furnishing MES</field>
+            <field name="tag">fmes_menu_dashboard</field>
+        </record>
+
+        <record id="menu_fmes_planning" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_dashboard" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_backlog" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_downtime" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_maintenance" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_inventory" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_reports" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_alerts" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+        <record id="menu_fmes_configuration" model="ir.ui.menu">
+            <field name="action" ref="action_fmes_menu_dashboard"/>
+        </record>
+
+    </data>
+</odoo>

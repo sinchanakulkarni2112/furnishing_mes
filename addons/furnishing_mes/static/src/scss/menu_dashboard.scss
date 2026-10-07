@@ -1,0 +1,128 @@
+// Tile dashboard behind every top-level Furnishing MES menu
+// (static/src/js/menu_dashboard.js): one card per screen, sized for a finger
+// rather than a pointer. The grid fills its column with
+// `repeat(auto-fill, minmax(220px, 1fr))`, so a phone shows one or two cards
+// and a tablet as many as fit, without a single media query. Cards cycle
+// through five background colours by position (`:nth-child(5n+…)`) so the
+// tiles read as a deliberate palette rather than one repeated chip.
+
+.o_fmes_menu_dashboard {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: #f4f6fb;
+
+    .o_fmes_menu_dashboard_header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 0 0 auto;
+        min-height: 56px;
+        padding: 8px 20px;
+        background-color: #fff;
+        border-bottom: 1px solid #e4e7ee;
+    }
+
+    .o_fmes_menu_dashboard_back {
+        min-height: 40px;
+        border-radius: 8px;
+    }
+
+    .o_fmes_menu_dashboard_title {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1f1f1f;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .o_fmes_menu_dashboard_grid {
+        flex: 1 1 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 24px;
+        padding: 32px;
+        align-content: start;
+        overflow: auto;
+    }
+
+    .o_fmes_menu_dashboard_tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 150px;
+        padding: 24px;
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.3;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+        &:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        &:active {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
+        }
+
+        &:focus-visible {
+            outline: 3px solid #0176b3;
+            outline-offset: 3px;
+        }
+
+        // Indigo, teal, rose, amber, emerald — repeating by position.
+        &:nth-child(5n + 1) {
+            background-color: #4f46e5;
+        }
+
+        &:nth-child(5n + 2) {
+            background-color: #0d9488;
+        }
+
+        &:nth-child(5n + 3) {
+            background-color: #e11d48;
+        }
+
+        &:nth-child(5n + 4) {
+            background-color: #d97706;
+        }
+
+        &:nth-child(5n + 5) {
+            background-color: #059669;
+        }
+    }
+
+    .o_fmes_menu_dashboard_tile_name {
+        overflow-wrap: anywhere;
+    }
+
+    .o_fmes_menu_dashboard_tile_icon {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .o_fmes_menu_dashboard_empty {
+        grid-column: 1 / -1;
+        padding: 48px 0;
+        text-align: center;
+        color: #6b7280;
+
+        .fa {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 2rem;
+        }
+    }
+}

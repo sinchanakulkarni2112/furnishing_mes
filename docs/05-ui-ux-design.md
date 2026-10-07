@@ -104,20 +104,27 @@ Furnishing MES
 Operators see the **Shop Floor Terminal** (Production Planning → Shift Logs)
 plus every top-level tab except **Support Tickets** and **Configuration**
 (which stay Supervisor+/Manager-only by user decision). The root **Furnishing
-MES** menu carries no `groups=` and no `action=` — Odoo's webclient opens each
-role's first valid descendant tab, so an Operator lands on a tab they may
-actually use rather than being forced into the terminal or bounced by an
-unreadable action. Menu visibility uses `groups=`, but the real enforcement is
-the ACLs and record rules in [`04-security-model.md`](04-security-model.md):
-a folder renders only when at least one of its own descendant tabs is visible,
-and a menu whose action model the user cannot read is hidden regardless of
-`groups=`.
+MES** menu carries no `groups=` and no `action=` — an action there would drop
+every role onto one fixed screen the moment the app tile is clicked. Menu
+visibility uses `groups=`, but the real enforcement is the ACLs and record
+rules in [`04-security-model.md`](04-security-model.md): a menu that HAS an
+action renders as soon as its own `groups=` allow, a menu WITHOUT one (the
+root, and the folders below the tabs) renders only when at least one of its
+descendants does, and a menu whose action model the user cannot read is
+hidden regardless of `groups=`.
+
+Every tab that has children opens a **tile dashboard** instead of dropping
+down those children — see [§3.4](#34-tile-dashboard--fmes_menu_dashboard).
+The one exception is **Support Tickets**, a leaf with nothing to list, which
+keeps its own window action.
 
 ---
 
 ## 3. Custom OWL Components
 
-Three screens are built as OWL 2 client actions. Everything else uses native views.
+Four components are built as OWL 2 client actions: the three screens below,
+and the tile dashboard every top-level tab opens (§3.4). Everything else uses
+native views.
 
 ### 3.1 Shop-Floor Terminal — `fmes_shopfloor_terminal` *(Phase 4)*
 
@@ -204,6 +211,67 @@ DRILL-03  ▓▓▓ ░░░ ░░   ███ ███ ▓▓   ███ �
 - Supervisor variant is identical but pre-filtered to their departments
 - Charts follow one categorical palette, applied consistently across the app
 
+### 3.4 Tile Dashboard — `fmes_menu_dashboard`
+
+What every top-level tab opens instead of a dropdown: the tab's own children,
+one large card each — 150 px minimum card height, 24 px gap, 32 px padding,
+`repeat(auto-fill, minmax(220px, 1fr))`, so one or two columns on a phone and
+as many as fit on a desktop with no media query. Cards are centred, bold and
+white on a background cycling through five colours by position
+(`:nth-child(5n+1..5)` — indigo, teal, rose, amber, emerald) and lift 4 px on
+hover.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ← Back   Production Planning                                 │
+├──────────────────────────────────────────────────────────────┤
+│ ┌───────────────┐  ┌───────────────┐  ┌───────────────┐      │
+│ │ Production    │  │ Output        │  │ Shift Logs    │      │
+│ │ Schedule      │  │ Tracking      │  │               │      │
+│ │            ↗  │  │            ↗  │  │            ↗  │      │
+│ └───────────────┘  └───────────────┘  └───────────────┘      │
+│ ┌───────────────┐                                             │
+│ │ Manpower      │                                             │
+│ │            ↗  │                                             │
+│ └───────────────┘                                             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- Clicking a card that has children — or one carrying the dashboard's own
+  action, which is what every top-level tab resolves to — only moves the
+  component's state, so the tiles re-render in place and no action is
+  swapped out from under the component; only a genuine leaf (Support Tickets,
+  a native view) calls `doAction` with `clearBreadcrumbs`. The Back button
+  walks up from the state, finding the menu that lists the current one (the
+  payload carries no parent id).
+- The cards are read from the very `load_web_menus` payload the navbar
+  renders, so a user is only ever offered menus they may already see: Odoo's
+  group and model-read filtering happens before that payload is built, and
+  this component adds no second security surface.
+- The tab on show is remembered in `sessionStorage` under
+  `fmes_menu_dashboard.active_menu_id`, written by a single wrapper around
+  `menuService.selectMenu` (every route into a menu goes through it: sidebar,
+  command palette, app tile) and by each drill. Odoo's own `menu_id` key
+  only ever stores the *app*, never the tab, and the ActionContainer
+  remounts the component on every action, so `setup()` re-reads the key on
+  each mount. Selecting the app tile clears it — that is the home overview.
+  Missing or stale key falls back to the app's home overview, never to
+  another application's menus.
+- The desktop **tab bar is dropped entirely while this app is on show** —
+  the purple bar keeps only the app name on the left and the systray on the
+  right, because the tiles are the way in. That is a template extension
+  guarding `web.NavBar.SectionsMenu`'s own container with `!isFmesApp()`
+  (on the node carrying `t-ref="appSubMenus"`, so `navbar.adapt()` finds no
+  sections menu and returns). The mobile sidebar keeps the tabs, rendered as
+  clickable rows, through an extension of `web.SectionMenu`. Both live in
+  `static/src/xml/menu_dashboard.xml`; every other app is untouched.
+- **Support Tickets** is the exception: a leaf with no children to list, it
+  keeps its own window action.
+- Because each tab now carries an action, Odoo's derived app action — what
+  the app tile opens — becomes this dashboard's home overview instead of the
+  Scheduling Board it used to resolve to. Every role lands on a menu of its
+  own tiles rather than on one fixed screen.
+
 ---
 
 ## 4. Native View Conventions
@@ -238,8 +306,10 @@ Typography follows Odoo's own scale so the module never looks bolted on. The
 terminal overrides only sizing (minimum 18 px body, 48 px touch targets), not the
 typeface.
 
-Custom SCSS lives in `static/src/scss/`, split into `fmes_variables.scss`,
-`fmes_backend.scss`, `fmes_terminal.scss` and `fmes_portal.scss`. No inline
+Custom SCSS lives in `static/src/scss/`, one file per surface —
+`fmes_terminal.scss`, `fmes_dashboard.scss`, `fmes_board.scss`,
+`fmes_report_dashboard.scss`, `fmes_alert.scss`, `fmes_ticket.scss`,
+`fmes_portal.scss` and `menu_dashboard.scss`. No inline
 styles in XML; no `!important` unless overriding Odoo core, and then with a comment.
 
 ---

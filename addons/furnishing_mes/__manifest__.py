@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Furnishing MES',
-    'version': '18.0.15.0.0',
+    'version': '18.0.15.1.0',
     'category': 'Manufacturing/Manufacturing',
     'summary': 'Manufacturing Execution System for furnishing production',
     'description': """
@@ -110,6 +110,9 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
         'views/fmes_alert_rule_views.xml',
         'views/portal_templates.xml',
         'views/menus.xml',
+        # Loads after menus.xml: it assigns the tile-dashboard client action
+        # to the top-level menu records menus.xml declares.
+        'views/fmes_menus.xml',
     ],
 
     'demo': [
@@ -133,17 +136,20 @@ ERP 10.8 integration is deferred; the integration seam is present but dormant.
             'furnishing_mes/static/src/scss/fmes_report_dashboard.scss',
             'furnishing_mes/static/src/scss/fmes_alert.scss',
             'furnishing_mes/static/src/scss/fmes_ticket.scss',
+            'furnishing_mes/static/src/scss/menu_dashboard.scss',
             'furnishing_mes/static/src/js/scheduling_board.js',
             'furnishing_mes/static/src/js/shopfloor_terminal.js',
             'furnishing_mes/static/src/js/executive_dashboard.js',
             'furnishing_mes/static/src/js/report_dashboard.js',
             'furnishing_mes/static/src/js/alert_systray.js',
+            'furnishing_mes/static/src/js/menu_dashboard.js',
             'furnishing_mes/static/src/js/tours/fmes_tours.js',
             'furnishing_mes/static/src/xml/scheduling_board.xml',
             'furnishing_mes/static/src/xml/shopfloor_terminal.xml',
             'furnishing_mes/static/src/xml/executive_dashboard.xml',
             'furnishing_mes/static/src/xml/report_dashboard.xml',
             'furnishing_mes/static/src/xml/alert_systray.xml',
+            'furnishing_mes/static/src/xml/menu_dashboard.xml',
         ],
         'web.assets_frontend': [
             'furnishing_mes/static/src/scss/fmes_portal.scss',

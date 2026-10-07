@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The dashboard itself: one tile per screen below the menu on show. -->
+    <t t-name="furnishing_mes.MenuDashboard">
+        <div class="o_fmes_menu_dashboard o_action">
+            <div class="o_fmes_menu_dashboard_header">
+                <button t-if="canGoBack" type="button" title="Back"
+                        class="btn btn-light border d-inline-flex align-items-center gap-1 o_fmes_menu_dashboard_back"
+                        t-on-click="goBack">
+                    <i class="fa fa-arrow-left" aria-hidden="true"/>
+                    <span>Back</span>
+                </button>
+                <h2 class="o_fmes_menu_dashboard_title" t-esc="title"/>
+            </div>
+            <div class="o_fmes_menu_dashboard_grid">
+                <t t-if="tiles.length">
+                    <t t-foreach="tiles" t-as="tile" t-key="tile.id">
+                        <button type="button" class="o_fmes_menu_dashboard_tile"
+                                t-att-data-menu-xmlid="tile.xmlid"
+                                t-on-click="() => this.onTileClick(tile)">
+                            <span class="o_fmes_menu_dashboard_tile_name" t-esc="tile.name"/>
+                            <i class="o_fmes_menu_dashboard_tile_icon fa"
+                               t-att-class="tile.actionID ? 'fa-arrow-up-right-from-square' : 'fa-chevron-right'"
+                               aria-hidden="true"/>
+                        </button>
+                    </t>
+                </t>
+                <p t-else="" class="o_fmes_menu_dashboard_empty">
+                    <i class="fa fa-inbox" aria-hidden="true"/>
+                    <span>No screens here yet.</span>
+                </p>
+            </div>
+        </div>
+    </t>
+
+    <!--
+        Desktop tab bar. Furnishing MES navigates through the tile dashboard
+        instead of through tabs, so while that app is on show the whole
+        sections menu is dropped: the purple bar keeps only the app name on
+        the left and the systray on the right, and the dashboard's tiles are
+        the only way in. The guard sits on the container that carries
+        t-ref="appSubMenus" rather than on the inner dropdown, so
+        navbar.adapt() finds no sections menu and returns instead of trying
+        to measure entries that are not there. Every other application
+        renders exactly as Odoo ships it.
+    -->
+    <t t-inherit="web.NavBar.SectionsMenu" t-inherit-mode="extension">
+        <xpath expr="//div[@t-ref='appSubMenus']" position="attributes">
+            <attribute name="t-if">!this.isFmesApp()</attribute>
+        </xpath>
+    </t>
+
+    <!--
+        Mobile sidebar. The tab header becomes the clickable entry (the leaf
+        branch of this very template, one line below), so the nested list of
+        its children goes away — the dashboard shows them instead.
+    -->
+    <t t-inherit="web.SectionMenu" t-inherit-mode="extension">
+        <xpath expr="//li[@t-if]" position="attributes">
+            <attribute name="t-if">section.childrenTree.length and !this.isFmesMenuDashboardTab(section)</attribute>
+        </xpath>
+    </t>
+
+</templates>
