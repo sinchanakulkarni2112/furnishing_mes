@@ -47,8 +47,11 @@
                         <div t-attf-class="fmes-kpi-tile #{this.kpiStatusClass(tile.kpi)}">
                             <div class="fmes-kpi-value">
                                 <t t-esc="tile.kpi.value"/><t t-esc="tile.suffix"/>
-                                <span t-if="tile.kpi.value >= tile.kpi.previous" class="fmes-trend-up">▲</span>
-                                <span t-else="" class="fmes-trend-down">▼</span>
+                            <!-- Incoming Demand has no previous window
+                                 (previous: null) — no arrow beats no
+                                 trend. -->
+                            <span t-if="tile.kpi.previous != null and tile.kpi.value >= tile.kpi.previous" class="fmes-trend-up">▲</span>
+                            <span t-elif="tile.kpi.previous != null" class="fmes-trend-down">▼</span>
                             </div>
                             <div class="fmes-kpi-label"><t t-esc="tile.label"/></div>
                             <div t-if="tile.kpi.target" class="fmes-kpi-target">

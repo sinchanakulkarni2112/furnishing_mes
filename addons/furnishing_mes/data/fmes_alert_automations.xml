@@ -57,6 +57,29 @@
             <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_new_order_received')])]"/>
         </record>
 
+        <!-- Same alert type, other half of the story: the manufacturing
+             order above fires when production is started for an order; this
+             one fires the moment the CUSTOMER places one through the portal
+             (/my/orders/new), so supervisors hear about incoming work
+             before any MO exists. filter_domain keeps it honest — only
+             orders flagged fmes_from_portal (the form's own marker) count,
+             orders the sales team types into the backend are not a
+             customer "new order received" event. -->
+        <record id="alert_action_portal_order_received" model="ir.actions.server">
+            <field name="name">Furnishing MES: raise portal order received alerts</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="state">code</field>
+            <field name="code">env['fmes.alert.engine']._on_event(records, 'new_order_received')</field>
+        </record>
+
+        <record id="alert_automation_portal_order_received" model="base.automation">
+            <field name="name">Furnishing MES: new portal order alert</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="trigger">on_create</field>
+            <field name="filter_domain">[('fmes_from_portal', '=', True)]</field>
+            <field name="action_server_ids" eval="[(6, 0, [ref('alert_action_portal_order_received')])]"/>
+        </record>
+
         <record id="alert_action_material_request_raised" model="ir.actions.server">
             <field name="name">Furnishing MES: raise material-request alerts</field>
             <field name="model_id" ref="model_fmes_material_request"/>

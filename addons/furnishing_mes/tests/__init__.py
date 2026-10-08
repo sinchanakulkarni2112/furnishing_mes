@@ -16,5 +16,6 @@ from . import test_dashboard
 from . import test_alerts
 from . import test_reports
 from . import test_portal
+from . import test_portal_order
 from . import test_security
 from . import test_ui_and_tours

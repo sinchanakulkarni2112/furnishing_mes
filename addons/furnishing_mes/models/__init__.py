@@ -23,5 +23,6 @@ from . import fmes_alert_rule
 from . import fmes_alert
 from . import fmes_report_schedule
 from . import fmes_support_ticket
+from . import sale_order
 from . import sale_order_line
 from . import res_users
