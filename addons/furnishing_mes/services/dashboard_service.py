@@ -293,6 +293,11 @@ class FmesDashboardService(models.AbstractModel):
             'backlog_qty': self._kpi_tile(
                 current['backlog_qty'], previous['backlog_qty'], None,
                 higher_is_better=False),
+            # Live, unlike every other figure in this dict: no previous
+            # window and no target, hence _kpi_tile's None tolerance below.
+            'incoming_demand_qty': self._kpi_tile(
+                self._incoming_demand(company), None, None,
+                higher_is_better=False),
             'pm_due_count': self._kpi_tile(
                 current['pm_due_count'], previous['pm_due_count'], None,
                 higher_is_better=False),
@@ -302,7 +307,7 @@ class FmesDashboardService(models.AbstractModel):
     def _kpi_tile(self, value, previous, target, higher_is_better):
         return {
             'value': round(value, 1),
-            'previous': round(previous, 1),
+            'previous': round(previous, 1) if previous is not None else None,
             'target': target,
             'higher_is_better': higher_is_better,
         }
@@ -368,6 +373,58 @@ class FmesDashboardService(models.AbstractModel):
             domain.append(('department_id', 'in', departments.ids))
         data = Snapshot._read_group(domain, aggregates=['pending_qty:sum'])
         return (data[0][0] or 0.0) if data else 0.0
+
+    @api.model
+    def _incoming_demand(self, company):
+        """Open customer demand no manufacturing order covers yet.
+
+        The backlog tile next door reads last night's snapshot — what
+        production already owes. This one is the other side of the ledger:
+        what CUSTOMERS have ordered that production has not started at all,
+        computed live so an order placed through the portal at 14:00 is on
+        the dashboard at 14:01 instead of waiting for the 23:30 snapshot
+        cron.
+
+        Line-for-line the same demand `_collect_sale_order_demand` hands
+        the planner (same order state, same company, same `type !=
+        'service'`, same covering-MO set — draft/confirmed/progress — and
+        the same per-line `ordered − delivered > 0` rule), so this tile
+        and a `demand_source='mo_and_so'` plan run never disagree about
+        what is still open. The per-line cap cannot be expressed as a
+        domain (Odoo domains cannot compare two fields to each other) or
+        as an aggregate (an over-delivered line would cancel a different
+        line's open qty), hence the Python loop over the search.
+
+        sudo(): `sale.order.line` grants read only to Salesmen and the
+        portal group (sale/security/ir.model.access.csv), so operators,
+        supervisors and Plant Managers would otherwise hit AccessError the
+        moment this tile rendered. What leaves here is one number: the
+        domain pins `order_id.company_id` explicitly (sudo bypasses the
+        record rules that would have pinned it for us), and no partner,
+        order reference or price travels with the figure.
+
+        No department clause, deliberately — and that IS the department
+        rule, applied: these lines have no department, because no
+        manufacturing order exists yet to name one, which is exactly the
+        `department_id = False` arm `_department_scope_domain` documents
+        as always-visible for a scoped supervisor. Unassigned work is
+        still work, and the covered half of demand is already on the
+        department-scoped backlog tiles.
+        """
+        covered = self.env['mrp.production'].sudo().search([
+            ('company_id', '=', company.id),
+            ('state', 'in', ('draft', 'confirmed', 'progress')),
+        ]).mapped('product_id')
+        domain = [
+            ('order_id.state', '=', 'sale'),
+            ('order_id.company_id', '=', company.id),
+            ('product_id.type', '!=', 'service'),
+        ]
+        if covered:
+            domain.append(('product_id', 'not in', covered.ids))
+        lines = self.env['sale.order.line'].sudo().search(domain)
+        return sum(max(line.product_uom_qty - line.qty_delivered, 0.0)
+                   for line in lines)
 
     @api.model
     def _pm_due_count(self, departments, company):

@@ -182,6 +182,8 @@ export class FmesExecutiveDashboard extends Component {
               kpi: kpis.oee_pct },
             { key: "backlog_qty", label: _t("Backlog"), suffix: "",
               kpi: kpis.backlog_qty },
+            { key: "incoming_demand_qty", label: _t("Incoming Demand"),
+              suffix: "", kpi: kpis.incoming_demand_qty },
             { key: "pm_due_count", label: _t("PM Due"), suffix: "",
               kpi: kpis.pm_due_count },
         ];

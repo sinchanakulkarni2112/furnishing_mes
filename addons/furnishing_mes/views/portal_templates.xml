@@ -275,4 +275,107 @@
         </t>
     </template>
 
+    <!-- ================================================================
+         /my/home — a "Place an Order" tile. Unlike the tiles above it
+         this is an ACTION entry, not a document list, so there is no
+         counter to wait for: config_card is the portal component's own
+         "show this without a counter" switch (portal_docs_entry hides
+         counterless cards behind d-none until an /my/counters RPC says
+         otherwise, which would leave a customer with no orders with no
+         way to place one).
+         ================================================================ -->
+    <template id="portal_my_home_new_order" name="Place an Order"
+              customize_show="True" inherit_id="portal.portal_my_home"
+              priority="32">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <t t-set="portal_client_category_enable" t-value="True"/>
+        </xpath>
+        <div id="portal_client_category" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Place an Order</t>
+                <t t-set="url" t-value="'/my/orders/new'"/>
+                <t t-set="text">Send a new order straight to the factory</t>
+                <t t-set="config_card" t-value="True"/>
+            </t>
+        </div>
+    </template>
+
+    <!-- ================================================================
+         /my/orders/new — plain HTML form, same shape as the ticket form.
+         Deliberately lists products and quantities only: price is decided
+         by the server-side pricelist compute when the line is created, so
+         showing (or accepting) a client-side price here would be a lie
+         and a hole respectively.
+         ================================================================ -->
+    <template id="portal_order_new" name="New Order">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="False"/>
+            <div class="container">
+                <h2>Place an Order</h2>
+                <p class="text-muted">
+                    Tell the factory what you need — it reaches production
+                    planning as soon as you submit.
+                </p>
+                <form action="/my/orders/new" method="post" class="mt-3">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                    <div t-attf-class="mb-3 #{'has-error' if error.get('product_id') else ''}">
+                        <label class="form-label" for="product_id">Product</label>
+                        <select class="form-select" id="product_id" name="product_id" required="required">
+                            <option value="">— Select a product —</option>
+                            <t t-foreach="products" t-as="product">
+                                <option t-att-value="product.id"
+                                        t-att-selected="str(product.id) == str(form_values.get('product_id'))">
+                                    <t t-out="product.display_name"/>
+                                </option>
+                            </t>
+                        </select>
+                        <p t-if="error.get('product_id')" class="text-danger mb-0">
+                            <t t-out="error['product_id']"/>
+                        </p>
+                    </div>
+
+                    <div t-attf-class="mb-3 #{'has-error' if error.get('product_uom_qty') else ''}">
+                        <label class="form-label" for="product_uom_qty">Quantity</label>
+                        <input type="number" class="form-control" id="product_uom_qty"
+                               name="product_uom_qty" min="0.01" step="any"
+                               t-att-value="form_values.get('product_uom_qty')"
+                               required="required"/>
+                        <p t-if="error.get('product_uom_qty')" class="text-danger mb-0">
+                            <t t-out="error['product_uom_qty']"/>
+                        </p>
+                    </div>
+
+                    <div t-attf-class="mb-3 #{'has-error' if error.get('requested_delivery_date') else ''}">
+                        <label class="form-label" for="requested_delivery_date">Requested Delivery (optional)</label>
+                        <input type="date" class="form-control" id="requested_delivery_date"
+                               name="requested_delivery_date"
+                               t-att-value="form_values.get('requested_delivery_date')"/>
+                        <p t-if="error.get('requested_delivery_date')" class="text-danger mb-0">
+                            <t t-out="error['requested_delivery_date']"/>
+                        </p>
+                    </div>
+
+                    <div t-attf-class="mb-3 #{'has-error' if error.get('order_state') else ''}">
+                        <label class="form-label" for="order_state">Submission</label>
+                        <select class="form-select" id="order_state" name="order_state">
+                            <t t-foreach="order_states" t-as="state_key">
+                                <option t-att-value="state_key[0]"
+                                        t-att-selected="state_key[0] == form_values.get('order_state')">
+                                    <t t-out="state_key[1]"/>
+                                </option>
+                            </t>
+                        </select>
+                        <p t-if="error.get('order_state')" class="text-danger mb-0">
+                            <t t-out="error['order_state']"/>
+                        </p>
+                    </div>
+
+                    <a href="/my/orders" class="btn btn-link">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </t>
+    </template>
+
 </odoo>
